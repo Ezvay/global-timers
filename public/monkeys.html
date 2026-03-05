@@ -1,117 +1,58 @@
 <!DOCTYPE html>
 <html lang="pl">
-
 <head>
 <meta charset="UTF-8">
 <title>Loch Małp</title>
-
 <script src="/socket.io/socket.io.js"></script>
 
 <style>
-
-body{
-font-family:Arial;
-background:#111;
-color:white;
-text-align:center;
-}
+body{font-family:Arial;background:#111;color:white;text-align:center;}
 
 .topbar{
-display:flex;
-justify-content:space-between;
-max-width:900px;
-margin:20px auto;
+display:flex;justify-content:space-between;max-width:900px;margin:20px auto;
 }
 
 .backButton{
 background:linear-gradient(#6b4d1f,#3b2a0f);
-border:2px solid #caa64a;
-color:#ffd36a;
-padding:8px 18px;
-border-radius:8px;
-cursor:pointer;
+border:2px solid #caa64a;color:#ffd36a;
+padding:8px 18px;border-radius:8px;cursor:pointer;
 }
 
 .soundButton{
 background:linear-gradient(#1e3d1e,#0f1f0f);
-border:2px solid #5fa85f;
-color:#9aff9a;
-padding:8px 18px;
-border-radius:8px;
-cursor:pointer;
+border:2px solid #5fa85f;color:#9aff9a;
+padding:8px 18px;border-radius:8px;cursor:pointer;
 }
 
 .container{
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:12px;
-max-width:900px;
-margin:auto;
+display:grid;grid-template-columns:repeat(4,1fr);
+gap:12px;max-width:900px;margin:auto;
 }
 
 .timer{
 background:linear-gradient(#1a1a1a,#0c0c0c);
-padding:10px;
-border-radius:8px;
-border:2px solid #6a5125;
-transition:0.3s;
+padding:10px;border-radius:8px;border:2px solid #6a5125;
 }
 
-.time{
-font-size:16px;
-margin:6px 0;
-font-weight:bold;
-}
+.time{font-size:16px;margin:6px 0;font-weight:bold;}
 
-.red{
-border-color:#7a1f1f;
-background:linear-gradient(#2b0d0d,#1a0606);
-}
-
-.yellow{
-border-color:#b8972e;
-background:linear-gradient(#3a320e,#1c1707);
-}
-
-.green{
-border-color:#3fa34d;
-background:linear-gradient(#0d2a13,#07180b);
-animation:glowPulse 1.5s infinite;
-}
-
-@keyframes glowPulse{
-0%{box-shadow:0 0 10px rgba(0,255,0,0.2);}
-50%{box-shadow:0 0 25px rgba(0,255,0,0.7);}
-100%{box-shadow:0 0 10px rgba(0,255,0,0.2);}
-}
+.red{border-color:#7a1f1f;background:linear-gradient(#2b0d0d,#1a0606);}
+.yellow{border-color:#b8972e;background:linear-gradient(#3a320e,#1c1707);}
+.green{border-color:#3fa34d;background:linear-gradient(#0d2a13,#07180b);}
 
 button{
 background:linear-gradient(#6b4d1f,#3b2a0f);
-border:1px solid #caa64a;
-color:#ffd36a;
-font-size:10px;
-padding:4px 8px;
-margin:2px;
-border-radius:6px;
-cursor:pointer;
+border:1px solid #caa64a;color:#ffd36a;
+font-size:10px;padding:4px 8px;margin:2px;border-radius:6px;cursor:pointer;
 }
-
 </style>
-
 </head>
 
 <body>
 
 <div class="topbar">
-
-<button class="backButton" onclick="window.location.href='/'">
-⬅ Powrót
-</button>
-
-<button id="soundToggle" class="soundButton">
-🔊 Dźwięk ON
-</button>
-
+<button class="backButton" onclick="window.location.href='/'">⬅ Powrót</button>
+<button id="soundToggle" class="soundButton">🔊 Dźwięk ON</button>
 </div>
 
 <h1>Loch Małp</h1>
@@ -124,10 +65,9 @@ cursor:pointer;
 
 <script>
 
-const socket = io()
+const socket=io()
 
-let soundEnabled = localStorage.getItem("sound") !== "off"
-
+let soundEnabled=localStorage.getItem("sound")!=="off"
 const soundButton=document.getElementById("soundToggle")
 const alertSound=document.getElementById("alertSound")
 
@@ -143,39 +83,29 @@ localStorage.setItem("sound",soundEnabled?"on":"off")
 updateSound()
 }
 
-/* 3 sygnały */
-
 function tripleBeep(){
 
 if(!soundEnabled) return
 
-alertSound.currentTime=0
-alertSound.play()
-
+for(let i=0;i<3;i++){
 setTimeout(()=>{
 alertSound.currentTime=0
-alertSound.play()
-},400)
-
-setTimeout(()=>{
-alertSound.currentTime=0
-alertSound.play()
-},800)
-
+alertSound.play().catch(()=>{})
+},i*400)
 }
 
-/* 2 sekundowy dźwięk */
+}
 
 function longBeep(){
 
 if(!soundEnabled) return
 
 alertSound.currentTime=0
-alertSound.play()
+alertSound.play().catch(()=>{})
 
 setTimeout(()=>{
 alertSound.currentTime=0
-alertSound.play()
+alertSound.play().catch(()=>{})
 },1000)
 
 }
@@ -187,7 +117,6 @@ let m=String(Math.floor((sec%3600)/60)).padStart(2,"0")
 let s=String(sec%60).padStart(2,"0")
 
 return h+":"+m+":"+s
-
 }
 
 function createTimer(id){
@@ -196,7 +125,7 @@ let box=document.createElement("div")
 box.className="timer red"
 
 let title=document.createElement("div")
-title.innerText=id.replace("KG_","")
+title.innerText=id.replace("LM_","")
 
 let time=document.createElement("div")
 time.className="time"
@@ -229,7 +158,7 @@ let displays={}
 
 for(let i=1;i<=8;i++){
 
-let id="KG_CH"+i
+let id="LM_CH"+i
 
 let timer=createTimer(id)
 
@@ -255,34 +184,24 @@ box.classList.remove("red","yellow","green")
 
 let s=sec%60
 
-/* kolory */
-
-if(s < 30) box.classList.add("red")
-else if(s < 45) box.classList.add("yellow")
+if(s<30) box.classList.add("red")
+else if(s<45) box.classList.add("yellow")
 else box.classList.add("green")
 
-/* 3 sygnały przy 45 */
-
-if(s >=45 && s <47){
-
+if(s>=45 && s<47){
 if(!timer.beep45){
 tripleBeep()
 timer.beep45=true
 }
-
 }else{
 timer.beep45=false
 }
 
-/* 2 sekundowy dźwięk przy 60 */
-
-if(s <=1){
-
+if(s<=1){
 if(!timer.beep60){
 longBeep()
 timer.beep60=true
 }
-
 }else{
 timer.beep60=false
 }
@@ -294,6 +213,5 @@ timer.beep60=false
 })
 
 </script>
-
 </body>
 </html>
