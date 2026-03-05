@@ -13,13 +13,15 @@ font-family:Arial;
 background:#111;
 color:white;
 text-align:center;
+margin:0;
 }
+
+/* TOP BAR */
 
 .topbar{
 display:flex;
 justify-content:space-between;
-max-width:1200px;
-margin:20px auto;
+padding:20px 40px;
 }
 
 .backButton{
@@ -40,19 +42,20 @@ border-radius:8px;
 cursor:pointer;
 }
 
-/* UKŁAD TIMERÓW */
+/* TIMERS */
 
 .container{
 display:flex;
 flex-wrap:wrap;
 justify-content:center;
 gap:14px;
-max-width:1200px;
-margin:auto;
+width:100%;
+max-width:none;
+padding:20px;
 }
 
 .timer{
-width:200px;
+width:150px;
 background:linear-gradient(#1a1a1a,#0c0c0c);
 padding:12px;
 border-radius:8px;
@@ -64,6 +67,8 @@ font-size:18px;
 margin:6px 0;
 font-weight:bold;
 }
+
+/* COLORS */
 
 .grey{
 border-color:#555;
@@ -84,6 +89,8 @@ background:linear-gradient(#3a320e,#1c1707);
 border-color:#3fa34d;
 background:linear-gradient(#0d2a13,#07180b);
 }
+
+/* BUTTONS */
 
 button{
 background:linear-gradient(#6b4d1f,#3b2a0f);
@@ -181,7 +188,7 @@ updateSound()
 
 }
 
-/* FORMAT CZASU */
+/* FORMAT */
 
 function format(sec){
 
@@ -193,7 +200,27 @@ return h+":"+m+":"+s
 
 }
 
-/* TIMER */
+/* LOCAL TIMER */
+
+function startLocalTimer(id){
+
+let timer=displays[id]
+
+if(timer.local) return
+
+timer.local=setInterval(()=>{
+
+let parts=timer.time.innerText.split(":")
+let sec=parseInt(parts[0])*3600+parseInt(parts[1])*60+parseInt(parts[2])
+sec++
+
+timer.time.innerText=format(sec)
+
+},1000)
+
+}
+
+/* TIMER CREATE */
 
 function createTimer(id){
 
@@ -205,6 +232,7 @@ title.innerText=id.replace("LM_","")
 
 let time=document.createElement("div")
 time.className="time"
+time.innerText="00:00:00"
 
 let start=document.createElement("button")
 start.innerText="Start"
@@ -215,7 +243,11 @@ stop.innerText="Stop"
 let reset=document.createElement("button")
 reset.innerText="Reset"
 
-start.onclick=()=>socket.emit("start",id)
+start.onclick=()=>{
+socket.emit("start",id)
+startLocalTimer(id)
+}
+
 stop.onclick=()=>socket.emit("stop",id)
 reset.onclick=()=>socket.emit("reset",id)
 
@@ -243,6 +275,8 @@ container.appendChild(timer.box)
 displays[id]=timer
 
 }
+
+/* SERVER UPDATE */
 
 socket.on("update",(data)=>{
 
@@ -283,7 +317,7 @@ box.classList.add("green")
 
 }
 
-/* 57 minut */
+/* 57 min */
 
 if(sec >=3420 && sec <3422){
 
@@ -294,7 +328,7 @@ timer.beep57=true
 
 }
 
-/* 60 minut */
+/* 60 min */
 
 if(sec >=3600 && sec <3602){
 
