@@ -1,21 +1,128 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+<meta charset="UTF-8">
+<title>Patologiczne Timery</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+color:white;
+text-align:center;
+
+background:
+linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.85)),
+url("/background.jpg");
+
+background-size:cover;
+background-position:center;
+min-height:100vh;
+}
+
+/* LOGO */
+
+.logo{
+margin-top:40px;
+max-width:550px;
+width:85%;
+filter:drop-shadow(0 0 15px rgba(255,200,80,0.7));
+}
+
+/* WYBÓR MAP */
+
+.container{
+display:flex;
+justify-content:center;
+gap:80px;
+margin-top:60px;
+flex-wrap:wrap;
+}
+
+/* KARTY */
+
+.card{
+width:300px;
+padding:15px;
+border-radius:12px;
+
+background:rgba(0,0,0,0.65);
+
+border:2px solid #b8923a;
+
+box-shadow:
+0 0 20px rgba(0,0,0,0.8),
+0 0 15px rgba(255,200,80,0.25);
+
+transition:0.3s;
+}
+
+.card:hover{
+transform:scale(1.06);
+box-shadow:
+0 0 30px rgba(255,200,80,0.6),
+0 0 50px rgba(255,200,80,0.3);
+}
+
+.card img{
+width:100%;
+border-radius:10px;
+}
+
+.title{
+margin-top:15px;
+font-size:26px;
+font-weight:bold;
+color:#ffd36a;
+
+text-shadow:
+0 0 8px rgba(255,200,80,0.8),
+0 0 20px rgba(255,200,80,0.4);
+}
+
+.card a{
+text-decoration:none;
+color:white;
+display:block;
+}
+
+.footer{
+margin-top:80px;
+opacity:0.6;
+font-size:14px;
+}
+
+</style>
+
+</head>
+
 <body>
 
-<img src="https://i.ibb.co/gMbHXJks/Chat-GPT-Image-5-mar-2026-12-44-45.png" class="titleImage">
+<img src="/logo.png" class="logo">
 
 <div class="container">
 
 <div class="card">
 <a href="/giants.html">
-<img src="https://cz-wiki.metin2.gameforge.com/images/9/9c/Metin_Tu-Young.png">
-</a>
+<img src="https://en-wiki.metin2.gameforge.com/images/e/e9/Metin_Tu-Young.jpg">
 <div class="title">Kraina Gigantów</div>
+</a>
 </div>
 
 <div class="card">
 <a href="/monkeys.html">
 <img src="https://pl-wiki.metin2.gameforge.com/images/d/df/Lord_Ma%C5%82p.png">
-</a>
 <div class="title">Loch Małp</div>
+</a>
 </div>
 
 </div>
+
+<div class="footer">
+Patologiczne Timery
+</div>
+
+</body>
+</html>
