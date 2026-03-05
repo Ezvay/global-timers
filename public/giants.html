@@ -230,13 +230,13 @@ box.classList.remove("red","yellow","green")
 
 /* kolory */
 
-if(sec < 30){
+if(sec < 1500){
 
 box.classList.add("red")
 
 }
 
-else if(sec < 60){
+else if(sec < 1800){
 
 box.classList.add("yellow")
 
@@ -250,7 +250,7 @@ box.classList.add("green")
 
 /* 3 sygnały przy żółtym */
 
-if(sec >=30 && sec <32){
+if(sec >=1500 && sec <1502){
 
 if(!timer.beepYellow){
 tripleBeep()
@@ -261,7 +261,7 @@ timer.beepYellow=true
 
 /* 1 sygnał przy zielonym */
 
-if(sec >=60 && sec <62){
+if(sec >=1800 && sec <1802){
 
 if(!timer.beepGreen){
 singleBeep()
