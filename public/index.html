@@ -4,56 +4,59 @@
 <meta charset="UTF-8">
 <title>Timery Metin2</title>
 
-<script src="/socket.io/socket.io.js"></script>
-
 <style>
 
 body{
-    font-family: Arial, sans-serif;
-    background:#111;
-    color:white;
-    text-align:center;
+font-family:Arial;
+background:#111;
+color:white;
+text-align:center;
+margin:0;
+}
+
+h1{
+margin:15px;
 }
 
 .section{
-    margin:30px auto;
-    max-width:900px;
+margin:20px auto;
+max-width:900px;
 }
 
 .section img{
-    width:120px;
-    margin:10px;
+width:120px;
+margin:10px;
 }
 
 .container{
-    display:grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap:8px;
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:10px;
 }
 
 .timer{
-    background:#1e1e1e;
-    padding:8px;
-    border-radius:6px;
+background:#222;
+padding:8px;
+border-radius:6px;
+}
+
+.timer h3{
+margin:3px;
+font-size:12px;
 }
 
 .time{
-    font-size:14px;
-    margin:4px 0;
-}
-
-h2{
-    margin:5px;
-    font-size:16px;
+font-size:14px;
+margin:4px;
 }
 
 button{
-    margin:2px;
-    padding:3px 6px;
-    font-size:10px;
-    border:none;
-    border-radius:4px;
-    cursor:pointer;
+font-size:10px;
+padding:3px 6px;
+margin:2px;
+border:none;
+border-radius:4px;
+cursor:pointer;
 }
 
 .start{background:#28a745;color:white;}
@@ -61,6 +64,7 @@ button{
 .reset{background:#ffc107;color:black;}
 
 </style>
+
 </head>
 
 <body>
@@ -79,101 +83,110 @@ button{
 </div>
 
 
+
 <div class="section">
 
 <h2>Loch Małp</h2>
 
 <img src="https://wiki.metin2.gameforge.com/images/thumb/6/6b/Monkey_Lord.png/200px-Monkey_Lord.png">
 
-<div class="container" id="monkey"></div>
+<div class="container" id="monkeys"></div>
 
 </div>
 
 
-<script>
 
-const socket = io()
+<script>
 
 function format(sec){
 
-const h = String(Math.floor(sec/3600)).padStart(2,"0")
-const m = String(Math.floor((sec%3600)/60)).padStart(2,"0")
-const s = String(sec%60).padStart(2,"0")
+let h = String(Math.floor(sec/3600)).padStart(2,"0");
+let m = String(Math.floor((sec%3600)/60)).padStart(2,"0");
+let s = String(sec%60).padStart(2,"0");
 
-return `${h}:${m}:${s}`
+return h+":"+m+":"+s;
 
 }
 
 function createTimer(name){
 
-const div=document.createElement("div")
-div.className="timer"
+let time=0;
+let interval=null;
 
-const title=document.createElement("h2")
-title.innerText=name
+let box=document.createElement("div");
+box.className="timer";
 
-const display=document.createElement("div")
-display.className="time"
-display.innerText="00:00:00"
+let title=document.createElement("h3");
+title.innerText=name;
 
-const start=document.createElement("button")
-start.innerText="Start"
-start.className="start"
+let display=document.createElement("div");
+display.className="time";
+display.innerText="00:00:00";
 
-const stop=document.createElement("button")
-stop.innerText="Stop"
-stop.className="stop"
+let start=document.createElement("button");
+start.innerText="Start";
+start.className="start";
 
-const reset=document.createElement("button")
-reset.innerText="Reset"
-reset.className="reset"
+let stop=document.createElement("button");
+stop.innerText="Stop";
+stop.className="stop";
 
-start.onclick=()=>socket.emit("start",name)
-stop.onclick=()=>socket.emit("stop",name)
-reset.onclick=()=>socket.emit("reset",name)
+let reset=document.createElement("button");
+reset.innerText="Reset";
+reset.className="reset";
 
-div.appendChild(title)
-div.appendChild(display)
-div.appendChild(start)
-div.appendChild(stop)
-div.appendChild(reset)
 
-return {div,display}
+start.onclick=function(){
+
+if(interval) return;
+
+interval=setInterval(function(){
+
+time++;
+display.innerText=format(time);
+
+},1000);
+
+};
+
+stop.onclick=function(){
+
+clearInterval(interval);
+interval=null;
+
+};
+
+reset.onclick=function(){
+
+clearInterval(interval);
+interval=null;
+time=0;
+display.innerText="00:00:00";
+
+};
+
+
+box.appendChild(title);
+box.appendChild(display);
+box.appendChild(start);
+box.appendChild(stop);
+box.appendChild(reset);
+
+return box;
 
 }
 
-const giants=document.getElementById("giants")
-const monkey=document.getElementById("monkey")
 
-let displays={}
+let giants=document.getElementById("giants");
+let monkeys=document.getElementById("monkeys");
+
 
 for(let i=1;i<=8;i++){
 
-let id="CH"+i
-
-let g=createTimer(id)
-let m=createTimer(id)
-
-giants.appendChild(g.div)
-monkey.appendChild(m.div)
-
-displays["g"+id]=g.display
-displays["m"+id]=m.display
+giants.appendChild(createTimer("CH"+i));
+monkeys.appendChild(createTimer("CH"+i));
 
 }
-
-socket.on("update",(timers)=>{
-
-for(let id in timers){
-
-let time=format(timers[id].time)
-
-if(displays["g"+id]) displays["g"+id].innerText=time
-if(displays["m"+id]) displays["m"+id].innerText=time
-
-}
-
-})
 
 </script>
 
