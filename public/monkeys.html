@@ -63,8 +63,6 @@ margin:6px 0;
 font-weight:bold;
 }
 
-/* kolory */
-
 .grey{
 border-color:#555;
 background:#2a2a2a;
@@ -84,8 +82,6 @@ background:linear-gradient(#3a320e,#1c1707);
 border-color:#3fa34d;
 background:linear-gradient(#0d2a13,#07180b);
 }
-
-/* przyciski */
 
 button{
 background:linear-gradient(#6b4d1f,#3b2a0f);
@@ -144,8 +140,6 @@ localStorage.setItem("sound",soundEnabled?"on":"off")
 updateSound()
 }
 
-/* sygnały */
-
 function tripleBeep(){
 
 if(!soundEnabled) return
@@ -168,8 +162,6 @@ alertSound.play().catch(()=>{})
 
 }
 
-/* format czasu */
-
 function format(sec){
 
 let h=String(Math.floor(sec/3600)).padStart(2,"0")
@@ -179,8 +171,6 @@ let s=String(sec%60).padStart(2,"0")
 return h+":"+m+":"+s
 
 }
-
-/* tworzenie timerów */
 
 function createTimer(id){
 
@@ -192,7 +182,6 @@ title.innerText=id.replace("LM_","")
 
 let time=document.createElement("div")
 time.className="time"
-time.innerText="00:00:00"
 
 let start=document.createElement("button")
 start.innerText="Start"
@@ -213,7 +202,7 @@ box.appendChild(start)
 box.appendChild(stop)
 box.appendChild(reset)
 
-return {box,time,beep57:false,beep60:false}
+return {box,time,beepYellow:false,beepGreen:false}
 
 }
 
@@ -232,8 +221,6 @@ displays[id]=timer
 
 }
 
-/* update z serwera */
-
 socket.on("update",(data)=>{
 
 for(let id in data){
@@ -248,29 +235,33 @@ timer.time.innerText=format(sec)
 let box=timer.box
 box.classList.remove("grey","red","yellow","green")
 
-if(sec===0) box.classList.add("grey")
-else if(sec<3420) box.classList.add("red")
-else if(sec<3600) box.classList.add("yellow")
-else box.classList.add("green")
+if(sec===0){
+box.classList.add("grey")
+}
+else if(sec < 3420){
+box.classList.add("red")
+}
+else if(sec < 3600){
+box.classList.add("yellow")
+}
+else{
+box.classList.add("green")
+}
 
-/* 57 min */
+if(sec >=3420 && sec <3422){
 
-if(sec>=3420 && sec<3422){
-
-if(!timer.beep57){
+if(!timer.beepYellow){
 tripleBeep()
-timer.beep57=true
+timer.beepYellow=true
 }
 
 }
 
-/* 60 min */
+if(sec >=3600 && sec <3602){
 
-if(sec>=3600 && sec<3602){
-
-if(!timer.beep60){
+if(!timer.beepGreen){
 singleBeep()
-timer.beep60=true
+timer.beepGreen=true
 }
 
 }
