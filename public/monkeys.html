@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
 <meta charset="UTF-8">
 <title>Loch Małp</title>
@@ -15,188 +16,190 @@ color:white;
 text-align:center;
 }
 
-.section{
-margin:20px auto;
+.topbar{
+display:flex;
+justify-content:space-between;
 max-width:900px;
+margin:20px auto;
+}
+
+.backButton{
+background:linear-gradient(#6b4d1f,#3b2a0f);
+border:2px solid #caa64a;
+color:#ffd36a;
+padding:8px 18px;
+border-radius:8px;
+cursor:pointer;
+}
+
+.soundButton{
+background:linear-gradient(#1e3d1e,#0f1f0f);
+border:2px solid #5fa85f;
+color:#9aff9a;
+padding:8px 18px;
+border-radius:8px;
+cursor:pointer;
 }
 
 .container{
 display:grid;
-grid-template-columns:repeat(4, 1fr);
-gap:10px;
+grid-template-columns:repeat(4,1fr);
+gap:12px;
+max-width:900px;
+margin:auto;
 }
 
 .timer{
-background:#550000;
-padding:8px;
-border-radius:6px;
+background:linear-gradient(#1a1a1a,#0c0c0c);
+padding:10px;
+border-radius:8px;
+border:2px solid #6a5125;
 transition:0.3s;
 }
 
 .time{
-font-size:14px;
-margin:4px;
+font-size:16px;
+margin:6px 0;
+font-weight:bold;
+}
+
+.red{
+border-color:#7a1f1f;
+background:linear-gradient(#2b0d0d,#1a0606);
+}
+
+.yellow{
+border-color:#b8972e;
+background:linear-gradient(#3a320e,#1c1707);
+}
+
+.green{
+border-color:#3fa34d;
+background:linear-gradient(#0d2a13,#07180b);
+animation:glowPulse 1.5s infinite;
+}
+
+@keyframes glowPulse{
+0%{box-shadow:0 0 10px rgba(0,255,0,0.2);}
+50%{box-shadow:0 0 25px rgba(0,255,0,0.7);}
+100%{box-shadow:0 0 10px rgba(0,255,0,0.2);}
 }
 
 button{
+background:linear-gradient(#6b4d1f,#3b2a0f);
+border:1px solid #caa64a;
+color:#ffd36a;
 font-size:10px;
-padding:3px 6px;
+padding:4px 8px;
 margin:2px;
-border:none;
-border-radius:4px;
+border-radius:6px;
 cursor:pointer;
 }
 
-.start{background:#28a745;color:white;}
-.stop{background:#dc3545;color:white;}
-.reset{background:#ffc107;color:black;}
-
-.red{background:#550000;}
-.yellow{background:#665500;}
-.green{background:#004d00;}
-
-#soundToggle{
-margin:10px;
-padding:6px 12px;
-font-size:12px;
-}
-
-.back{
-display:inline-block;
-margin:10px;
-padding:6px 12px;
-background:#333;
-border-radius:6px;
-text-decoration:none;
-color:white;
-}
-
 </style>
+
 </head>
 
 <body>
 
-<a href="/" class="back">⬅ Powrót</a>
+<div class="topbar">
 
-<h1>Loch Małp</h1>
+<button class="backButton" onclick="window.location.href='/'">
+⬅ Powrót
+</button>
 
-<button id="soundToggle">🔊 Dźwięk: ON</button>
+<button id="soundToggle" class="soundButton">
+🔊 Dźwięk ON
+</button>
 
-<div class="section">
-<div class="container" id="monkeys"></div>
 </div>
 
-<audio id="alertSound">
-<source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
-</audio>
+<h1>Loch Małp/h1>
+
+<div class="container" id="timers"></div>
 
 <script>
 
-const socket = io();
+const socket = io()
 
-let soundEnabled = localStorage.getItem("sound") !== "off";
+let soundEnabled = localStorage.getItem("sound") !== "off"
 
-const soundButton = document.getElementById("soundToggle");
-const alertSound = document.getElementById("alertSound");
+const soundButton=document.getElementById("soundToggle")
 
-function updateSoundButton(){
-soundButton.innerText = soundEnabled ? "🔊 Dźwięk: ON" : "🔇 Dźwięk: OFF";
+function updateSound(){
+soundButton.innerText=soundEnabled?"🔊 Dźwięk ON":"🔇 Dźwięk OFF"
 }
 
-updateSoundButton();
+updateSound()
 
-soundButton.onclick = () => {
+soundButton.onclick=()=>{
 
-soundEnabled = !soundEnabled;
+soundEnabled=!soundEnabled
 
-localStorage.setItem("sound", soundEnabled ? "on" : "off");
+localStorage.setItem("sound",soundEnabled?"on":"off")
 
-updateSoundButton();
-
-};
-
-function tripleBeep(){
-
-if(!soundEnabled) return;
-
-let count = 0;
-
-let interval = setInterval(()=>{
-
-alertSound.currentTime = 0;
-alertSound.play().catch(()=>{});
-
-count++;
-
-if(count>=3){
-clearInterval(interval);
-}
-
-},400);
+updateSound()
 
 }
 
 function format(sec){
 
-let h = String(Math.floor(sec/3600)).padStart(2,"0");
-let m = String(Math.floor((sec%3600)/60)).padStart(2,"0");
-let s = String(sec%60).padStart(2,"0");
+let h=String(Math.floor(sec/3600)).padStart(2,"0")
+let m=String(Math.floor((sec%3600)/60)).padStart(2,"0")
+let s=String(sec%60).padStart(2,"0")
 
-return h+":"+m+":"+s;
+return h+":"+m+":"+s
 
 }
 
 function createTimer(id){
 
-let box=document.createElement("div");
-box.className="timer red";
+let box=document.createElement("div")
+box.className="timer red"
 
-let title=document.createElement("div");
-title.innerText=id;
+let title=document.createElement("div")
+title.innerText=id.replace("KG_","")
 
-let time=document.createElement("div");
-time.className="time";
-time.innerText="00:00:00";
+let time=document.createElement("div")
+time.className="time"
+time.innerText="00:00:00"
 
-let start=document.createElement("button");
-start.innerText="Start";
-start.className="start";
+let start=document.createElement("button")
+start.innerText="Start"
 
-let stop=document.createElement("button");
-stop.innerText="Stop";
-stop.className="stop";
+let stop=document.createElement("button")
+stop.innerText="Stop"
 
-let reset=document.createElement("button");
-reset.innerText="Reset";
-reset.className="reset";
+let reset=document.createElement("button")
+reset.innerText="Reset"
 
-start.onclick=()=>socket.emit("start",id);
-stop.onclick=()=>socket.emit("stop",id);
-reset.onclick=()=>socket.emit("reset",id);
+start.onclick=()=>socket.emit("start",id)
+stop.onclick=()=>socket.emit("stop",id)
+reset.onclick=()=>socket.emit("reset",id)
 
-box.appendChild(title);
-box.appendChild(time);
-box.appendChild(start);
-box.appendChild(stop);
-box.appendChild(reset);
+box.appendChild(title)
+box.appendChild(time)
+box.appendChild(start)
+box.appendChild(stop)
+box.appendChild(reset)
 
-return {box,time,id,warning:false};
+return {box,time}
 
 }
 
-let monkeys=document.getElementById("monkeys");
+let container=document.getElementById("timers")
 
-let displays={};
+let displays={}
 
 for(let i=1;i<=8;i++){
 
-let id="LM_CH"+i;
+let id="KG_CH"+i
 
-let timer=createTimer(id);
+let timer=createTimer(id)
 
-monkeys.appendChild(timer.box);
+container.appendChild(timer.box)
 
-displays[id]=timer;
+displays[id]=timer
 
 }
 
@@ -206,40 +209,23 @@ for(let id in data){
 
 if(displays[id]){
 
-let sec=data[id];
-let timer=displays[id];
-let box=timer.box;
+let sec=data[id]
 
-timer.time.innerText=format(sec);
+displays[id].time.innerText=format(sec)
 
-box.classList.remove("red","yellow","green");
+let box=displays[id].box
 
-if(sec < 30) box.classList.add("red");
-else if(sec < 45) box.classList.add("yellow");
-else box.classList.add("green");
+box.classList.remove("red","yellow","green")
 
-/* 3 sygnały przy 45 sekundzie */
-
-if(sec >= 45 && sec < 46){
-
-if(!timer.warning){
-
-tripleBeep();
-timer.warning=true;
+if(sec < 30) box.classList.add("red")
+else if(sec < r0) box.classList.add("yellow")
+else box.classList.add("green")
 
 }
 
 }
 
-if(sec < 45){
-timer.warning=false;
-}
-
-}
-
-}
-
-});
+})
 
 </script>
 
