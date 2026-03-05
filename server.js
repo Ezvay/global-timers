@@ -11,24 +11,35 @@ app.use(express.static("public"));
 let timers = {};
 
 for (let i = 1; i <= 8; i++) {
- timers["CH" + i] = { time: 0, running: false };
+ timers["CH"+i] = { time:0, running:false };
 }
 
-setInterval(() => {
- for (let t in timers) {
-  if (timers[t].running) timers[t].time++;
- }
- io.emit("update", timers);
-}, 1000);
+setInterval(()=>{
 
-io.on("connection", (socket) => {
+ for(let id in timers){
+  if(timers[id].running){
+   timers[id].time++;
+  }
+ }
+
+ io.emit("update", timers);
+
+},1000);
+
+
+io.on("connection",(socket)=>{
 
  socket.emit("update", timers);
 
- socket.on("start", id => timers[id].running = true);
- socket.on("stop", id => timers[id].running = false);
+ socket.on("start",(id)=>{
+  timers[id].running = true;
+ });
 
- socket.on("reset", id => {
+ socket.on("stop",(id)=>{
+  timers[id].running = false;
+ });
+
+ socket.on("reset",(id)=>{
   timers[id].running = false;
   timers[id].time = 0;
  });
