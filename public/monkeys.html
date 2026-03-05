@@ -16,6 +16,8 @@ text-align:center;
 margin:0;
 }
 
+/* TOP BAR */
+
 .topbar{
 display:flex;
 justify-content:space-between;
@@ -23,6 +25,27 @@ max-width:1200px;
 margin:20px auto;
 padding:0 20px;
 }
+
+/* LAYOUT BUTTONS */
+
+.layoutButtons{
+display:flex;
+gap:10px;
+justify-content:center;
+margin-bottom:20px;
+flex-wrap:wrap;
+}
+
+.layoutButtons button{
+background:linear-gradient(#1f3d6b,#0f1f3b);
+border:2px solid #4a8acb;
+color:#bcdcff;
+padding:6px 14px;
+border-radius:6px;
+cursor:pointer;
+}
+
+/* NAV BUTTONS */
 
 .backButton{
 background:linear-gradient(#6b4d1f,#3b2a0f);
@@ -42,7 +65,7 @@ border-radius:8px;
 cursor:pointer;
 }
 
-/* RESPONSYWNY UKŁAD TIMERÓW */
+/* CONTAINER */
 
 .container{
 display:grid;
@@ -50,9 +73,24 @@ gap:12px;
 max-width:1200px;
 margin:auto;
 padding:10px;
+}
 
-grid-template-columns:repeat(auto-fit,minmax(130px,160px));
-justify-content:center;
+/* LAYOUTS */
+
+.layout-1x8-vertical{
+grid-template-columns:1fr;
+}
+
+.layout-1x8-horizontal{
+grid-template-columns:repeat(8,1fr);
+}
+
+.layout-2x4-horizontal{
+grid-template-columns:repeat(4,1fr);
+}
+
+.layout-2x4-vertical{
+grid-template-columns:repeat(2,1fr);
 }
 
 /* TIMER */
@@ -69,8 +107,6 @@ font-size:16px;
 margin:6px 0;
 font-weight:bold;
 }
-
-/* KOLORY */
 
 .grey{
 border-color:#555;
@@ -122,7 +158,16 @@ cursor:pointer;
 
 <h1>Loch Małp</h1>
 
-<div class="container" id="timers"></div>
+<div class="layoutButtons">
+
+<button onclick="setLayout('layout-1x8-vertical')">1×8 pionowo</button>
+<button onclick="setLayout('layout-1x8-horizontal')">1×8 poziomo</button>
+<button onclick="setLayout('layout-2x4-vertical')">2×4 pionowo</button>
+<button onclick="setLayout('layout-2x4-horizontal')">2×4 poziomo</button>
+
+</div>
+
+<div class="container layout-2x4-horizontal" id="timers"></div>
 
 <script>
 
@@ -180,6 +225,23 @@ localStorage.setItem("sound",soundEnabled?"on":"off")
 updateSound()
 }
 
+/* LAYOUT SWITCH */
+
+const container=document.getElementById("timers")
+
+function setLayout(layout){
+
+container.className="container "+layout
+localStorage.setItem("layout",layout)
+
+}
+
+const savedLayout=localStorage.getItem("layout")
+
+if(savedLayout){
+container.className="container "+savedLayout
+}
+
 /* FORMAT */
 
 function format(sec){
@@ -228,10 +290,7 @@ return {box,time,beepYellow:false,beepGreen:false}
 
 }
 
-let container=document.getElementById("timers")
 let displays={}
-
-/* 8 TIMERÓW */
 
 for(let i=1;i<=8;i++){
 
@@ -244,8 +303,6 @@ container.appendChild(timer.box)
 displays[id]=timer
 
 }
-
-/* UPDATE */
 
 socket.on("update",(data)=>{
 
