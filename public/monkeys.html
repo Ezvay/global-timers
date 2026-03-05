@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="pl">
-
 <head>
 <meta charset="UTF-8">
 <title>Loch Małp</title>
@@ -9,29 +8,83 @@
 
 <style>
 
-/* identyczny CSS jak w giants.html */
+body{
+font-family:Arial;
+background:#111;
+color:white;
+text-align:center;
+}
+
+.section{
+margin:20px auto;
+max-width:900px;
+}
+
+.container{
+display:grid;
+grid-template-columns:repeat(4, 1fr);
+gap:10px;
+}
+
+.timer{
+background:#550000;
+padding:8px;
+border-radius:6px;
+transition:0.3s;
+}
+
+.time{
+font-size:14px;
+margin:4px;
+}
+
+button{
+font-size:10px;
+padding:3px 6px;
+margin:2px;
+border:none;
+border-radius:4px;
+cursor:pointer;
+}
+
+.start{background:#28a745;color:white;}
+.stop{background:#dc3545;color:white;}
+.reset{background:#ffc107;color:black;}
+
+.red{background:#550000;}
+.yellow{background:#665500;}
+.green{background:#004d00;}
+
+#soundToggle{
+margin:10px;
+padding:6px 12px;
+font-size:12px;
+}
+
+.back{
+display:inline-block;
+margin:10px;
+padding:6px 12px;
+background:#333;
+border-radius:6px;
+text-decoration:none;
+color:white;
+}
 
 </style>
-
 </head>
 
 <body>
 
-<div class="topbar">
-
-<button class="backButton" onclick="window.location.href='/'">
-⬅ Powrót
-</button>
-
-<button id="soundToggle" class="soundButton">
-🔊 Dźwięk ON
-</button>
-
-</div>
+<a href="/" class="back">⬅ Powrót</a>
 
 <h1>Loch Małp</h1>
 
-<div class="container" id="timers"></div>
+<button id="soundToggle">🔊 Dźwięk: ON</button>
+
+<div class="section">
+<div class="container" id="monkeys"></div>
+</div>
 
 <audio id="alertSound">
 <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
@@ -39,108 +92,111 @@
 
 <script>
 
-const socket=io()
+const socket = io();
 
-const alertSound=document.getElementById("alertSound")
+let soundEnabled = localStorage.getItem("sound") !== "off";
 
-let soundEnabled = localStorage.getItem("sound") !== "off"
+const soundButton = document.getElementById("soundToggle");
+const alertSound = document.getElementById("alertSound");
 
-const soundButton=document.getElementById("soundToggle")
-
-function updateSound(){
-soundButton.innerText=soundEnabled?"🔊 Dźwięk ON":"🔇 Dźwięk OFF"
+function updateSoundButton(){
+soundButton.innerText = soundEnabled ? "🔊 Dźwięk: ON" : "🔇 Dźwięk: OFF";
 }
 
-updateSound()
+updateSoundButton();
 
-soundButton.onclick=()=>{
+soundButton.onclick = () => {
 
-soundEnabled=!soundEnabled
+soundEnabled = !soundEnabled;
 
-localStorage.setItem("sound",soundEnabled?"on":"off")
+localStorage.setItem("sound", soundEnabled ? "on" : "off");
 
-updateSound()
+updateSoundButton();
 
-}
+};
 
 function tripleBeep(){
 
-if(!soundEnabled) return
+if(!soundEnabled) return;
 
-let count=0
+let count = 0;
 
-let interval=setInterval(()=>{
+let interval = setInterval(()=>{
 
-alertSound.currentTime=0
-alertSound.play()
+alertSound.currentTime = 0;
+alertSound.play().catch(()=>{});
 
-count++
+count++;
 
 if(count>=3){
-clearInterval(interval)
+clearInterval(interval);
 }
 
-},400)
+},400);
 
 }
 
 function format(sec){
 
-let h=String(Math.floor(sec/3600)).padStart(2,"0")
-let m=String(Math.floor((sec%3600)/60)).padStart(2,"0")
-let s=String(sec%60).padStart(2,"0")
+let h = String(Math.floor(sec/3600)).padStart(2,"0");
+let m = String(Math.floor((sec%3600)/60)).padStart(2,"0");
+let s = String(sec%60).padStart(2,"0");
 
-return h+":"+m+":"+s
+return h+":"+m+":"+s;
 
 }
 
 function createTimer(id){
 
-let box=document.createElement("div")
-box.className="timer red"
+let box=document.createElement("div");
+box.className="timer red";
 
-let title=document.createElement("div")
-title.innerText=id.replace("LM_","")
+let title=document.createElement("div");
+title.innerText=id;
 
-let time=document.createElement("div")
-time.className="time"
+let time=document.createElement("div");
+time.className="time";
+time.innerText="00:00:00";
 
-let start=document.createElement("button")
-start.innerText="Start"
+let start=document.createElement("button");
+start.innerText="Start";
+start.className="start";
 
-let stop=document.createElement("button")
-stop.innerText="Stop"
+let stop=document.createElement("button");
+stop.innerText="Stop";
+stop.className="stop";
 
-let reset=document.createElement("button")
-reset.innerText="Reset"
+let reset=document.createElement("button");
+reset.innerText="Reset";
+reset.className="reset";
 
-start.onclick=()=>socket.emit("start",id)
-stop.onclick=()=>socket.emit("stop",id)
-reset.onclick=()=>socket.emit("reset",id)
+start.onclick=()=>socket.emit("start",id);
+stop.onclick=()=>socket.emit("stop",id);
+reset.onclick=()=>socket.emit("reset",id);
 
-box.appendChild(title)
-box.appendChild(time)
-box.appendChild(start)
-box.appendChild(stop)
-box.appendChild(reset)
+box.appendChild(title);
+box.appendChild(time);
+box.appendChild(start);
+box.appendChild(stop);
+box.appendChild(reset);
 
-return {box,time,warning:false}
+return {box,time,id,warning:false};
 
 }
 
-let container=document.getElementById("timers")
+let monkeys=document.getElementById("monkeys");
 
-let displays={}
+let displays={};
 
 for(let i=1;i<=8;i++){
 
-let id="LM_CH"+i
+let id="LM_CH"+i;
 
-let timer=createTimer(id)
+let timer=createTimer(id);
 
-container.appendChild(timer.box)
+monkeys.appendChild(timer.box);
 
-displays[id]=timer
+displays[id]=timer;
 
 }
 
@@ -150,41 +206,38 @@ for(let id in data){
 
 if(displays[id]){
 
-let sec=data[id]
+let sec=data[id];
+let timer=displays[id];
+let box=timer.box;
 
-let timer=displays[id]
+timer.time.innerText=format(sec);
 
-timer.time.innerText=format(sec)
+box.classList.remove("red","yellow","green");
 
-let box=timer.box
+if(sec < 30) box.classList.add("red");
+else if(sec < 45) box.classList.add("yellow");
+else box.classList.add("green");
 
-box.classList.remove("red","yellow","green")
-
-if(sec < 3300) box.classList.add("red")
-else if(sec < 3600) box.classList.add("yellow")
-else box.classList.add("green")
-
-if(sec >= 3570 && sec < 3600){
+if(sec >= 45 && sec < 46){
 
 if(!timer.warning){
 
-tripleBeep()
-
-timer.warning=true
-
-}
-
-}
-
-if(sec < 3570){
-timer.warning=false
-}
+tripleBeep();
+timer.warning=true;
 
 }
 
 }
 
-})
+if(sec < 45){
+timer.warning=false;
+}
+
+}
+
+}
+
+});
 
 </script>
 
