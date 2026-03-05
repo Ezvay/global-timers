@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Kraina Gigantów</title>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:#111;
+color:white;
+text-align:center;
+}
+
+.container{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:10px;
+max-width:900px;
+margin:auto;
+}
+
+.timer{
+background:#550000;
+padding:8px;
+border-radius:6px;
+}
+
+.time{
+font-size:16px;
+margin:4px;
+}
+
+button{
+font-size:10px;
+padding:3px 6px;
+margin:2px;
+border:none;
+border-radius:4px;
+cursor:pointer;
+}
+
+.start{background:#28a745;color:white;}
+.stop{background:#dc3545;color:white;}
+.reset{background:#ffc107;color:black;}
+
+.red{background:#550000;}
+.yellow{background:#665500;}
+.green{background:#004d00;}
+
+</style>
+</head>
+
+<body>
+
+<h1>Kraina Gigantów</h1>
+
+<a href="/">← Powrót</a>
+
+<div class="container" id="timers"></div>
+
+<script>
+
+const socket = io()
+
+function format(sec){
+
+let h = String(Math.floor(sec/3600)).padStart(2,"0")
+let m = String(Math.floor((sec%3600)/60)).padStart(2,"0")
+let s = String(sec%60).padStart(2,"0")
+
+return h+":"+m+":"+s
+
+}
+
+function createTimer(id){
+
+let box=document.createElement("div")
+box.className="timer red"
+
+let title=document.createElement("div")
+title.innerText=id
+
+let time=document.createElement("div")
+time.className="time"
+time.innerText="00:00:00"
+
+let start=document.createElement("button")
+start.innerText="Start"
+start.className="start"
+
+let stop=document.createElement("button")
+stop.innerText="Stop"
+stop.className="stop"
+
+let reset=document.createElement("button")
+reset.innerText="Reset"
+reset.className="reset"
+
+start.onclick=()=>socket.emit("start",id)
+stop.onclick=()=>socket.emit("stop",id)
+reset.onclick=()=>socket.emit("reset",id)
+
+box.appendChild(title)
+box.appendChild(time)
+box.appendChild(start)
+box.appendChild(stop)
+box.appendChild(reset)
+
+return {box,time}
+
+}
+
+let container=document.getElementById("timers")
+let displays={}
+
+for(let i=1;i<=8;i++){
+
+let id="KG_CH"+i
+
+let timer=createTimer(id)
+
+container.appendChild(timer.box)
+
+displays[id]=timer
+
+}
+
+socket.on("update",(data)=>{
+
+for(let id in data){
+
+if(displays[id]){
+
+let sec=data[id]
+
+displays[id].time.innerText=format(sec)
+
+let box=displays[id].box
+
+box.classList.remove("red","yellow","green")
+
+if(sec < 1500) box.classList.add("red")
+else if(sec < 1800) box.classList.add("yellow")
+else box.classList.add("green")
+
+}
+
+}
+
+})
+
+</script>
+
+</body>
+</html>
