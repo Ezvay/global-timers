@@ -13,6 +13,7 @@ font-family:Arial;
 background:#111;
 color:white;
 text-align:center;
+margin:0;
 }
 
 .topbar{
@@ -20,6 +21,7 @@ display:flex;
 justify-content:space-between;
 max-width:1200px;
 margin:20px auto;
+padding:0 20px;
 }
 
 .backButton{
@@ -41,16 +43,15 @@ cursor:pointer;
 }
 
 .container{
-display:flex;
-flex-wrap:wrap;
-justify-content:center;
+display:grid;
 gap:12px;
 max-width:1200px;
 margin:auto;
+padding:10px;
+grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
 }
 
 .timer{
-width:130px;
 background:linear-gradient(#1a1a1a,#0c0c0c);
 padding:10px;
 border-radius:8px;
@@ -87,7 +88,7 @@ button{
 background:linear-gradient(#6b4d1f,#3b2a0f);
 border:1px solid #caa64a;
 color:#ffd36a;
-font-size:10px;
+font-size:11px;
 padding:4px 8px;
 margin:2px;
 border-radius:6px;
@@ -115,18 +116,49 @@ cursor:pointer;
 
 <div class="container" id="timers"></div>
 
-<audio id="alertSound">
-<source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
-</audio>
-
 <script>
 
 const socket = io()
 
+/* AUDIO SYSTEM */
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+
+function beep(duration=0.15,freq=800){
+
+if(!soundEnabled) return
+
+const osc=audioCtx.createOscillator()
+const gain=audioCtx.createGain()
+
+osc.connect(gain)
+gain.connect(audioCtx.destination)
+
+osc.frequency.value=freq
+osc.start()
+
+gain.gain.setValueAtTime(0.2,audioCtx.currentTime)
+gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+duration)
+
+osc.stop(audioCtx.currentTime+duration)
+
+}
+
+function tripleBeep(){
+beep()
+setTimeout(()=>beep(),250)
+setTimeout(()=>beep(),500)
+}
+
+function singleBeep(){
+beep(0.7,600)
+}
+
+/* SOUND TOGGLE */
+
 let soundEnabled = localStorage.getItem("sound") !== "off"
 
 const soundButton=document.getElementById("soundToggle")
-const alertSound=document.getElementById("alertSound")
 
 function updateSound(){
 soundButton.innerText=soundEnabled?"🔊 Dźwięk ON":"🔇 Dźwięk OFF"
@@ -140,27 +172,7 @@ localStorage.setItem("sound",soundEnabled?"on":"off")
 updateSound()
 }
 
-function tripleBeep(){
-
-if(!soundEnabled) return
-
-for(let i=0;i<3;i++){
-setTimeout(()=>{
-alertSound.currentTime=0
-alertSound.play().catch(()=>{})
-},i*400)
-}
-
-}
-
-function singleBeep(){
-
-if(!soundEnabled) return
-
-alertSound.currentTime=0
-alertSound.play().catch(()=>{})
-
-}
+/* FORMAT TIME */
 
 function format(sec){
 
@@ -171,6 +183,8 @@ let s=String(sec%60).padStart(2,"0")
 return h+":"+m+":"+s
 
 }
+
+/* CREATE TIMER */
 
 function createTimer(id){
 
@@ -209,6 +223,8 @@ return {box,time,beepYellow:false,beepGreen:false}
 let container=document.getElementById("timers")
 let displays={}
 
+/* CREATE 8 TIMERS */
+
 for(let i=1;i<=8;i++){
 
 let id="LM_CH"+i
@@ -220,6 +236,8 @@ container.appendChild(timer.box)
 displays[id]=timer
 
 }
+
+/* UPDATE FROM SERVER */
 
 socket.on("update",(data)=>{
 
@@ -233,22 +251,25 @@ let timer=displays[id]
 timer.time.innerText=format(sec)
 
 let box=timer.box
+
 box.classList.remove("grey","red","yellow","green")
 
 if(sec===0){
 box.classList.add("grey")
 }
-else if(sec < 3420){
+else if(sec<3420){
 box.classList.add("red")
 }
-else if(sec < 3600){
+else if(sec<3600){
 box.classList.add("yellow")
 }
 else{
 box.classList.add("green")
 }
 
-if(sec >=3420 && sec <3422){
+/* 57 MIN WARNING */
+
+if(sec>=3420 && sec<3422){
 
 if(!timer.beepYellow){
 tripleBeep()
@@ -257,7 +278,9 @@ timer.beepYellow=true
 
 }
 
-if(sec >=3600 && sec <3602){
+/* 60 MIN READY */
+
+if(sec>=3600 && sec<3602){
 
 if(!timer.beepGreen){
 singleBeep()
