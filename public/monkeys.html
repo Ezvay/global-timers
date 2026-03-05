@@ -16,8 +16,6 @@ text-align:center;
 margin:0;
 }
 
-/* TOP BAR */
-
 .topbar{
 display:flex;
 justify-content:space-between;
@@ -42,15 +40,12 @@ border-radius:8px;
 cursor:pointer;
 }
 
-/* TIMERS */
-
 .container{
 display:flex;
 flex-wrap:wrap;
 justify-content:center;
 gap:14px;
 width:100%;
-max-width:none;
 padding:20px;
 }
 
@@ -67,8 +62,6 @@ font-size:18px;
 margin:6px 0;
 font-weight:bold;
 }
-
-/* COLORS */
 
 .grey{
 border-color:#555;
@@ -89,8 +82,6 @@ background:linear-gradient(#3a320e,#1c1707);
 border-color:#3fa34d;
 background:linear-gradient(#0d2a13,#07180b);
 }
-
-/* BUTTONS */
 
 button{
 background:linear-gradient(#6b4d1f,#3b2a0f);
@@ -128,6 +119,9 @@ cursor:pointer;
 
 const socket = io()
 
+let timers = {}
+let displays = {}
+
 /* AUDIO */
 
 let audioCtx = new (window.AudioContext || window.webkitAudioContext)()
@@ -143,7 +137,6 @@ osc.connect(gain)
 gain.connect(audioCtx.destination)
 
 osc.frequency.value=freq
-osc.type="sine"
 
 osc.start()
 
@@ -155,17 +148,13 @@ osc.stop(audioCtx.currentTime+duration)
 }
 
 function tripleBeep(){
-
 beep()
-setTimeout(()=>beep(),400)
-setTimeout(()=>beep(),800)
-
+setTimeout(()=>beep(),300)
+setTimeout(()=>beep(),600)
 }
 
 function longBeep(){
-
-beep(0.6,700)
-
+beep(0.6,600)
 }
 
 /* SOUND */
@@ -181,46 +170,28 @@ soundButton.innerText=soundEnabled?"🔊 Dźwięk ON":"🔇 Dźwięk OFF"
 updateSound()
 
 soundButton.onclick=()=>{
-
 soundEnabled=!soundEnabled
 localStorage.setItem("sound",soundEnabled?"on":"off")
 updateSound()
-
 }
 
 /* FORMAT */
 
 function format(sec){
 
-let h=String(Math.floor(sec/3600)).padStart(2,"0")
-let m=String(Math.floor((sec%3600)/60)).padStart(2,"0")
-let s=String(sec%60).padStart(2,"0")
+sec = Number(sec) || 0
 
-return h+":"+m+":"+s
+let h=Math.floor(sec/3600)
+let m=Math.floor((sec%3600)/60)
+let s=Math.floor(sec%60)
 
-}
-
-/* LOCAL TIMER */
-
-function startLocalTimer(id){
-
-let timer=displays[id]
-
-if(timer.local) return
-
-timer.local=setInterval(()=>{
-
-let parts=timer.time.innerText.split(":")
-let sec=parseInt(parts[0])*3600+parseInt(parts[1])*60+parseInt(parts[2])
-sec++
-
-timer.time.innerText=format(sec)
-
-},1000)
+return String(h).padStart(2,"0")+":"+
+       String(m).padStart(2,"0")+":"+
+       String(s).padStart(2,"0")
 
 }
 
-/* TIMER CREATE */
+/* CREATE TIMER */
 
 function createTimer(id){
 
@@ -243,11 +214,7 @@ stop.innerText="Stop"
 let reset=document.createElement("button")
 reset.innerText="Reset"
 
-start.onclick=()=>{
-socket.emit("start",id)
-startLocalTimer(id)
-}
-
+start.onclick=()=>socket.emit("start",id)
 stop.onclick=()=>socket.emit("stop",id)
 reset.onclick=()=>socket.emit("reset",id)
 
@@ -262,7 +229,6 @@ return {box,time,beep57:false,beep60:false}
 }
 
 let container=document.getElementById("timers")
-let displays={}
 
 for(let i=1;i<=8;i++){
 
@@ -280,46 +246,37 @@ displays[id]=timer
 
 socket.on("update",(data)=>{
 
-for(let id in data){
+timers=data
 
-if(displays[id]){
+})
 
-let sec=data[id]
-let timer=displays[id]
+/* RENDER LOOP */
+
+setInterval(()=>{
+
+for(let id in timers){
+
+let t = timers[id]
+
+let sec = Number(t.time) || 0
+
+if(t.running){
+sec += Math.floor((Date.now() - (t.lastStart || Date.now())) / 1000)
+}
+
+let timer = displays[id]
 
 timer.time.innerText=format(sec)
 
 let box=timer.box
-
 box.classList.remove("grey","red","yellow","green")
 
-if(sec === 0){
+if(sec===0) box.classList.add("grey")
+else if(sec<3420) box.classList.add("red")
+else if(sec<3600) box.classList.add("yellow")
+else box.classList.add("green")
 
-box.classList.add("grey")
-
-}
-
-else if(sec < 3420){
-
-box.classList.add("red")
-
-}
-
-else if(sec < 3600){
-
-box.classList.add("yellow")
-
-}
-
-else{
-
-box.classList.add("green")
-
-}
-
-/* 57 min */
-
-if(sec >=3420 && sec <3422){
+if(sec>=3420 && sec<3422){
 
 if(!timer.beep57){
 tripleBeep()
@@ -328,9 +285,7 @@ timer.beep57=true
 
 }
 
-/* 60 min */
-
-if(sec >=3600 && sec <3602){
+if(sec>=3600 && sec<3602){
 
 if(!timer.beep60){
 longBeep()
@@ -341,9 +296,7 @@ timer.beep60=true
 
 }
 
-}
-
-})
+},200)
 
 </script>
 
