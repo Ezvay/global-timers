@@ -2,19 +2,42 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>Kraina Gigantów TEST</title>
+<title>Kraina Gigantów</title>
 
 <script src="/socket.io/socket.io.js"></script>
 
 <style>
 
-body{font-family:Arial;background:#111;color:white;text-align:center;}
+body{
+font-family:Arial;
+background:#111;
+color:white;
+text-align:center;
+}
 
 .topbar{
 display:flex;
 justify-content:space-between;
 max-width:900px;
 margin:20px auto;
+}
+
+.backButton{
+background:linear-gradient(#6b4d1f,#3b2a0f);
+border:2px solid #caa64a;
+color:#ffd36a;
+padding:8px 18px;
+border-radius:8px;
+cursor:pointer;
+}
+
+.soundButton{
+background:linear-gradient(#1e3d1e,#0f1f0f);
+border:2px solid #5fa85f;
+color:#9aff9a;
+padding:8px 18px;
+border-radius:8px;
+cursor:pointer;
 }
 
 .container{
@@ -26,10 +49,10 @@ margin:auto;
 }
 
 .timer{
-background:#1a1a1a;
+background:linear-gradient(#1a1a1a,#0c0c0c);
 padding:10px;
 border-radius:8px;
-border:2px solid #555;
+border:2px solid #6a5125;
 }
 
 .time{
@@ -38,11 +61,25 @@ margin:6px 0;
 font-weight:bold;
 }
 
-.red{background:#2b0d0d;border-color:#7a1f1f;}
-.yellow{background:#3a320e;border-color:#b8972e;}
-.green{background:#0d2a13;border-color:#3fa34d;}
+.red{
+border-color:#7a1f1f;
+background:linear-gradient(#2b0d0d,#1a0606);
+}
+
+.yellow{
+border-color:#b8972e;
+background:linear-gradient(#3a320e,#1c1707);
+}
+
+.green{
+border-color:#3fa34d;
+background:linear-gradient(#0d2a13,#07180b);
+}
 
 button{
+background:linear-gradient(#6b4d1f,#3b2a0f);
+border:1px solid #caa64a;
+color:#ffd36a;
 font-size:10px;
 padding:4px 8px;
 margin:2px;
@@ -55,7 +92,19 @@ cursor:pointer;
 
 <body>
 
-<h1>Kraina Gigantów TEST</h1>
+<div class="topbar">
+
+<button class="backButton" onclick="window.location.href='/'">
+⬅ Powrót
+</button>
+
+<button id="soundToggle" class="soundButton">
+🔊 Dźwięk ON
+</button>
+
+</div>
+
+<h1>Kraina Gigantów</h1>
 
 <div class="container" id="timers"></div>
 
@@ -65,18 +114,45 @@ cursor:pointer;
 
 <script>
 
-const socket=io()
+const socket = io()
+
+let soundEnabled = localStorage.getItem("sound") !== "off"
+
+const soundButton=document.getElementById("soundToggle")
 const alertSound=document.getElementById("alertSound")
 
-function tripleBeep(){
-for(let i=0;i<3;i++){
-setTimeout(()=>{alertSound.currentTime=0;alertSound.play()},i*400)
+function updateSound(){
+soundButton.innerText=soundEnabled?"🔊 Dźwięk ON":"🔇 Dźwięk OFF"
 }
+
+updateSound()
+
+soundButton.onclick=()=>{
+soundEnabled=!soundEnabled
+localStorage.setItem("sound",soundEnabled?"on":"off")
+updateSound()
+}
+
+function tripleBeep(){
+
+if(!soundEnabled) return
+
+for(let i=0;i<3;i++){
+setTimeout(()=>{
+alertSound.currentTime=0
+alertSound.play().catch(()=>{})
+},i*400)
+}
+
 }
 
 function singleBeep(){
+
+if(!soundEnabled) return
+
 alertSound.currentTime=0
-alertSound.play()
+alertSound.play().catch(()=>{})
+
 }
 
 function format(sec){
@@ -119,7 +195,7 @@ box.appendChild(start)
 box.appendChild(stop)
 box.appendChild(reset)
 
-return {box,time,yellow:false,green:false}
+return {box,time,beepYellow:false,beepGreen:false}
 
 }
 
@@ -129,9 +205,11 @@ let displays={}
 for(let i=1;i<=8;i++){
 
 let id="KG_CH"+i
+
 let timer=createTimer(id)
 
 container.appendChild(timer.box)
+
 displays[id]=timer
 
 }
@@ -150,17 +228,27 @@ timer.time.innerText=format(sec)
 let box=timer.box
 box.classList.remove("red","yellow","green")
 
-if(sec<30){
+/* kolory */
+
+if(sec < 30){
+
 box.classList.add("red")
+
 }
 
-else if(sec<45){
+else if(sec < 60){
 
 box.classList.add("yellow")
 
-if(!timer.yellow){
+}
+
+/* żółty alarm */
+
+if(sec >=30 && sec <32){
+
+if(!timer.beepYellow){
 tripleBeep()
-timer.yellow=true
+timer.beepYellow=true
 }
 
 }
@@ -169,9 +257,15 @@ else{
 
 box.classList.add("green")
 
-if(!timer.green){
+}
+
+/* zielony alarm */
+
+if(sec >=60 && sec <62){
+
+if(!timer.beepGreen){
 singleBeep()
-timer.green=true
+timer.beepGreen=true
 }
 
 }
