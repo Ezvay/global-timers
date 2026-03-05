@@ -13,47 +13,85 @@ font-family:Arial;
 background:#111;
 color:white;
 text-align:center;
-margin:0;
 }
 
 .topbar{
 display:flex;
 justify-content:space-between;
-padding:20px 40px;
+max-width:1200px;
+margin:20px auto;
+}
+
+.backButton{
+background:linear-gradient(#6b4d1f,#3b2a0f);
+border:2px solid #caa64a;
+color:#ffd36a;
+padding:8px 18px;
+border-radius:8px;
+cursor:pointer;
+}
+
+.soundButton{
+background:linear-gradient(#1e3d1e,#0f1f0f);
+border:2px solid #5fa85f;
+color:#9aff9a;
+padding:8px 18px;
+border-radius:8px;
+cursor:pointer;
 }
 
 .container{
 display:flex;
 flex-wrap:wrap;
 justify-content:center;
-gap:14px;
-padding:20px;
+gap:12px;
+max-width:1200px;
+margin:auto;
 }
 
 .timer{
-width:140px;
-padding:12px;
+width:130px;
+background:linear-gradient(#1a1a1a,#0c0c0c);
+padding:10px;
 border-radius:8px;
 border:2px solid #6a5125;
-background:#1a1a1a;
 }
 
 .time{
-font-size:18px;
-font-weight:bold;
+font-size:16px;
 margin:6px 0;
+font-weight:bold;
 }
 
-.grey{background:#333;border-color:#555;}
-.red{background:#2b0d0d;border-color:#7a1f1f;}
-.yellow{background:#3a320e;border-color:#b8972e;}
-.green{background:#0d2a13;border-color:#3fa34d;}
+/* kolory */
+
+.grey{
+border-color:#555;
+background:#2a2a2a;
+}
+
+.red{
+border-color:#7a1f1f;
+background:linear-gradient(#2b0d0d,#1a0606);
+}
+
+.yellow{
+border-color:#b8972e;
+background:linear-gradient(#3a320e,#1c1707);
+}
+
+.green{
+border-color:#3fa34d;
+background:linear-gradient(#0d2a13,#07180b);
+}
+
+/* przyciski */
 
 button{
-background:#6b4d1f;
+background:linear-gradient(#6b4d1f,#3b2a0f);
 border:1px solid #caa64a;
 color:#ffd36a;
-font-size:11px;
+font-size:10px;
 padding:4px 8px;
 margin:2px;
 border-radius:6px;
@@ -66,60 +104,33 @@ cursor:pointer;
 <body>
 
 <div class="topbar">
-<button onclick="window.location.href='/'">⬅ Powrót</button>
-<button id="soundToggle">🔊 Dźwięk ON</button>
+
+<button class="backButton" onclick="window.location.href='/'">
+⬅ Powrót
+</button>
+
+<button id="soundToggle" class="soundButton">
+🔊 Dźwięk ON
+</button>
+
 </div>
 
 <h1>Loch Małp</h1>
 
 <div class="container" id="timers"></div>
 
+<audio id="alertSound">
+<source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
+</audio>
+
 <script>
 
 const socket = io()
 
-let timers={}
-let displays={}
-
-/* AUDIO */
-
-let audioCtx=new (window.AudioContext||window.webkitAudioContext)()
-
-function beep(time=0.15,freq=800){
-
-if(!soundEnabled) return
-
-let osc=audioCtx.createOscillator()
-let gain=audioCtx.createGain()
-
-osc.connect(gain)
-gain.connect(audioCtx.destination)
-
-osc.frequency.value=freq
-osc.start()
-
-gain.gain.setValueAtTime(0.2,audioCtx.currentTime)
-gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+time)
-
-osc.stop(audioCtx.currentTime+time)
-
-}
-
-function tripleBeep(){
-beep()
-setTimeout(()=>beep(),250)
-setTimeout(()=>beep(),500)
-}
-
-function longBeep(){
-beep(0.8,600)
-}
-
-/* SOUND */
-
-let soundEnabled=localStorage.getItem("sound")!=="off"
+let soundEnabled = localStorage.getItem("sound") !== "off"
 
 const soundButton=document.getElementById("soundToggle")
+const alertSound=document.getElementById("alertSound")
 
 function updateSound(){
 soundButton.innerText=soundEnabled?"🔊 Dźwięk ON":"🔇 Dźwięk OFF"
@@ -133,23 +144,43 @@ localStorage.setItem("sound",soundEnabled?"on":"off")
 updateSound()
 }
 
-/* FORMAT */
+/* sygnały */
 
-function format(sec){
+function tripleBeep(){
 
-sec=Math.max(0,Math.floor(sec))
+if(!soundEnabled) return
 
-let h=Math.floor(sec/3600)
-let m=Math.floor((sec%3600)/60)
-let s=sec%60
-
-return String(h).padStart(2,"0")+":"+
-       String(m).padStart(2,"0")+":"+
-       String(s).padStart(2,"0")
+for(let i=0;i<3;i++){
+setTimeout(()=>{
+alertSound.currentTime=0
+alertSound.play().catch(()=>{})
+},i*400)
+}
 
 }
 
-/* TIMER */
+function singleBeep(){
+
+if(!soundEnabled) return
+
+alertSound.currentTime=0
+alertSound.play().catch(()=>{})
+
+}
+
+/* format czasu */
+
+function format(sec){
+
+let h=String(Math.floor(sec/3600)).padStart(2,"0")
+let m=String(Math.floor((sec%3600)/60)).padStart(2,"0")
+let s=String(sec%60).padStart(2,"0")
+
+return h+":"+m+":"+s
+
+}
+
+/* tworzenie timerów */
 
 function createTimer(id){
 
@@ -187,6 +218,7 @@ return {box,time,beep57:false,beep60:false}
 }
 
 let container=document.getElementById("timers")
+let displays={}
 
 for(let i=1;i<=8;i++){
 
@@ -200,34 +232,20 @@ displays[id]=timer
 
 }
 
-/* SYNC */
+/* update z serwera */
 
 socket.on("update",(data)=>{
-timers=data
-})
 
-/* LOOP */
+for(let id in data){
 
-setInterval(()=>{
+if(displays[id]){
 
-for(let id in timers){
-
-let t=timers[id]
-
-let sec=t.time
-
-if(t.running){
-
-sec+=Math.floor((Date.now()-t.lastStart)/1000)
-
-}
-
+let sec=data[id]
 let timer=displays[id]
 
 timer.time.innerText=format(sec)
 
 let box=timer.box
-
 box.classList.remove("grey","red","yellow","green")
 
 if(sec===0) box.classList.add("grey")
@@ -235,9 +253,9 @@ else if(sec<3420) box.classList.add("red")
 else if(sec<3600) box.classList.add("yellow")
 else box.classList.add("green")
 
-/* dźwięk */
+/* 57 min */
 
-if(sec>=3420 && sec<3421){
+if(sec>=3420 && sec<3422){
 
 if(!timer.beep57){
 tripleBeep()
@@ -246,10 +264,12 @@ timer.beep57=true
 
 }
 
-if(sec>=3600 && sec<3601){
+/* 60 min */
+
+if(sec>=3600 && sec<3602){
 
 if(!timer.beep60){
-longBeep()
+singleBeep()
 timer.beep60=true
 }
 
@@ -257,7 +277,9 @@ timer.beep60=true
 
 }
 
-},200)
+}
+
+})
 
 </script>
 
