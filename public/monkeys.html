@@ -31,20 +31,20 @@ padding:20px;
 }
 
 .timer{
-width:150px;
-background:#1a1a1a;
+width:140px;
 padding:12px;
 border-radius:8px;
 border:2px solid #6a5125;
+background:#1a1a1a;
 }
 
 .time{
 font-size:18px;
-margin:6px 0;
 font-weight:bold;
+margin:6px 0;
 }
 
-.grey{background:#2a2a2a;border-color:#555;}
+.grey{background:#333;border-color:#555;}
 .red{background:#2b0d0d;border-color:#7a1f1f;}
 .yellow{background:#3a320e;border-color:#b8972e;}
 .green{background:#0d2a13;border-color:#3fa34d;}
@@ -83,25 +83,25 @@ let displays={}
 
 /* AUDIO */
 
-let audioCtx=new(window.AudioContext||window.webkitAudioContext)()
+let audioCtx=new (window.AudioContext||window.webkitAudioContext)()
 
-function beep(d=0.15,f=800){
+function beep(time=0.15,freq=800){
 
 if(!soundEnabled) return
 
-let o=audioCtx.createOscillator()
-let g=audioCtx.createGain()
+let osc=audioCtx.createOscillator()
+let gain=audioCtx.createGain()
 
-o.connect(g)
-g.connect(audioCtx.destination)
+osc.connect(gain)
+gain.connect(audioCtx.destination)
 
-o.frequency.value=f
-o.start()
+osc.frequency.value=freq
+osc.start()
 
-g.gain.setValueAtTime(0.2,audioCtx.currentTime)
-g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+d)
+gain.gain.setValueAtTime(0.2,audioCtx.currentTime)
+gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+time)
 
-o.stop(audioCtx.currentTime+d)
+osc.stop(audioCtx.currentTime+time)
 
 }
 
@@ -112,7 +112,7 @@ setTimeout(()=>beep(),500)
 }
 
 function longBeep(){
-beep(0.6,600)
+beep(0.8,600)
 }
 
 /* SOUND */
@@ -149,7 +149,7 @@ return String(h).padStart(2,"0")+":"+
 
 }
 
-/* CREATE TIMER */
+/* TIMER */
 
 function createTimer(id){
 
@@ -172,22 +172,9 @@ stop.innerText="Stop"
 let reset=document.createElement("button")
 reset.innerText="Reset"
 
-/* natychmiastowa reakcja */
-
-start.onclick=()=>{
-startLocal(id)
-socket.emit("start",id)
-}
-
-stop.onclick=()=>{
-stopLocal(id)
-socket.emit("stop",id)
-}
-
-reset.onclick=()=>{
-resetLocal(id)
-socket.emit("reset",id)
-}
+start.onclick=()=>socket.emit("start",id)
+stop.onclick=()=>socket.emit("stop",id)
+reset.onclick=()=>socket.emit("reset",id)
 
 box.appendChild(title)
 box.appendChild(time)
@@ -199,49 +186,11 @@ return {box,time,beep57:false,beep60:false}
 
 }
 
-/* LOCAL CONTROL */
-
-function startLocal(id){
-
-let t=timers[id]
-
-if(!t.running){
-
-t.running=true
-t.lastStart=Date.now()
-
-}
-
-}
-
-function stopLocal(id){
-
-let t=timers[id]
-
-if(t.running){
-
-t.time+=Math.floor((Date.now()-t.lastStart)/1000)
-t.running=false
-
-}
-
-}
-
-function resetLocal(id){
-
-timers[id]={time:0,running:false,lastStart:0}
-
-}
-
-/* CREATE ALL */
-
 let container=document.getElementById("timers")
 
 for(let i=1;i<=8;i++){
 
 let id="LM_CH"+i
-
-timers[id]={time:0,running:false,lastStart:0}
 
 let timer=createTimer(id)
 
@@ -251,15 +200,15 @@ displays[id]=timer
 
 }
 
-/* SERVER SYNC */
+/* SYNC */
 
 socket.on("update",(data)=>{
 timers=data
 })
 
-/* RENDER LOOP */
+/* LOOP */
 
-function render(){
+setInterval(()=>{
 
 for(let id in timers){
 
@@ -286,7 +235,7 @@ else if(sec<3420) box.classList.add("red")
 else if(sec<3600) box.classList.add("yellow")
 else box.classList.add("green")
 
-/* dźwięki */
+/* dźwięk */
 
 if(sec>=3420 && sec<3421){
 
@@ -308,11 +257,7 @@ timer.beep60=true
 
 }
 
-requestAnimationFrame(render)
-
-}
-
-render()
+},200)
 
 </script>
 
