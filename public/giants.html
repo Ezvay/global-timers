@@ -13,13 +13,34 @@ font-family:Arial;
 background:#111;
 color:white;
 text-align:center;
+margin:0;
 }
+
+/* TOP BAR */
 
 .topbar{
 display:flex;
 justify-content:space-between;
-max-width:900px;
+max-width:1200px;
 margin:20px auto;
+padding:0 20px;
+}
+
+.layoutButtons{
+display:flex;
+gap:10px;
+justify-content:center;
+margin-bottom:20px;
+flex-wrap:wrap;
+}
+
+.layoutButtons button{
+background:linear-gradient(#1f3d6b,#0f1f3b);
+border:2px solid #4a8acb;
+color:#bcdcff;
+padding:6px 14px;
+border-radius:6px;
+cursor:pointer;
 }
 
 .backButton{
@@ -40,13 +61,33 @@ border-radius:8px;
 cursor:pointer;
 }
 
+/* GRID */
+
 .container{
 display:grid;
-grid-template-columns:repeat(4,1fr);
 gap:12px;
-max-width:900px;
+max-width:1200px;
 margin:auto;
+padding:10px;
 }
+
+.layout-1x8-vertical{
+grid-template-columns:1fr;
+}
+
+.layout-1x8-horizontal{
+grid-template-columns:repeat(8,1fr);
+}
+
+.layout-2x4-horizontal{
+grid-template-columns:repeat(4,1fr);
+}
+
+.layout-2x4-vertical{
+grid-template-columns:repeat(2,1fr);
+}
+
+/* TIMER */
 
 .timer{
 background:linear-gradient(#1a1a1a,#0c0c0c);
@@ -59,6 +100,11 @@ border:2px solid #6a5125;
 font-size:16px;
 margin:6px 0;
 font-weight:bold;
+}
+
+.grey{
+border-color:#555;
+background:#2a2a2a;
 }
 
 .red{
@@ -80,7 +126,7 @@ button{
 background:linear-gradient(#6b4d1f,#3b2a0f);
 border:1px solid #caa64a;
 color:#ffd36a;
-font-size:10px;
+font-size:11px;
 padding:4px 8px;
 margin:2px;
 border-radius:6px;
@@ -106,20 +152,60 @@ cursor:pointer;
 
 <h1>Kraina Gigantów</h1>
 
-<div class="container" id="timers"></div>
+<div class="layoutButtons">
 
-<audio id="alertSound">
-<source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
-</audio>
+<button onclick="setLayout('layout-1x8-vertical')">1×8 pionowo</button>
+<button onclick="setLayout('layout-1x8-horizontal')">1×8 poziomo</button>
+<button onclick="setLayout('layout-2x4-vertical')">2×4 pionowo</button>
+<button onclick="setLayout('layout-2x4-horizontal')">2×4 poziomo</button>
+
+</div>
+
+<div class="container layout-2x4-horizontal" id="timers"></div>
 
 <script>
 
 const socket = io()
 
+/* AUDIO */
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+
+function beep(duration=0.15,freq=800){
+
+if(!soundEnabled) return
+
+const osc=audioCtx.createOscillator()
+const gain=audioCtx.createGain()
+
+osc.connect(gain)
+gain.connect(audioCtx.destination)
+
+osc.frequency.value=freq
+osc.start()
+
+gain.gain.setValueAtTime(0.2,audioCtx.currentTime)
+gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+duration)
+
+osc.stop(audioCtx.currentTime+duration)
+
+}
+
+function tripleBeep(){
+beep()
+setTimeout(()=>beep(),250)
+setTimeout(()=>beep(),500)
+}
+
+function singleBeep(){
+beep(0.7,600)
+}
+
+/* SOUND */
+
 let soundEnabled = localStorage.getItem("sound") !== "off"
 
 const soundButton=document.getElementById("soundToggle")
-const alertSound=document.getElementById("alertSound")
 
 function updateSound(){
 soundButton.innerText=soundEnabled?"🔊 Dźwięk ON":"🔇 Dźwięk OFF"
@@ -133,27 +219,24 @@ localStorage.setItem("sound",soundEnabled?"on":"off")
 updateSound()
 }
 
-function tripleBeep(){
+/* LAYOUT */
 
-if(!soundEnabled) return
+const container=document.getElementById("timers")
 
-for(let i=0;i<3;i++){
-setTimeout(()=>{
-alertSound.currentTime=0
-alertSound.play().catch(()=>{})
-},i*400)
-}
+function setLayout(layout){
+
+container.className="container "+layout
+localStorage.setItem("layout",layout)
 
 }
 
-function singleBeep(){
+const savedLayout=localStorage.getItem("layout")
 
-if(!soundEnabled) return
-
-alertSound.currentTime=0
-alertSound.play().catch(()=>{})
-
+if(savedLayout){
+container.className="container "+savedLayout
 }
+
+/* FORMAT */
 
 function format(sec){
 
@@ -165,10 +248,12 @@ return h+":"+m+":"+s
 
 }
 
+/* TIMER */
+
 function createTimer(id){
 
 let box=document.createElement("div")
-box.className="timer red"
+box.className="timer grey"
 
 let title=document.createElement("div")
 title.innerText=id.replace("KG_","")
@@ -199,7 +284,6 @@ return {box,time,beepYellow:false,beepGreen:false}
 
 }
 
-let container=document.getElementById("timers")
 let displays={}
 
 for(let i=1;i<=8;i++){
@@ -226,31 +310,23 @@ let timer=displays[id]
 timer.time.innerText=format(sec)
 
 let box=timer.box
-box.classList.remove("red","yellow","green")
 
-/* kolory */
+box.classList.remove("grey","red","yellow","green")
 
-if(sec < 1500){
-
+if(sec===0){
+box.classList.add("grey")
+}
+else if(sec<1500){
 box.classList.add("red")
-
 }
-
-else if(sec < 1800){
-
+else if(sec<1800){
 box.classList.add("yellow")
-
 }
-
 else{
-
 box.classList.add("green")
-
 }
 
-/* 3 sygnały przy żółtym */
-
-if(sec >=1500 && sec <1502){
+if(sec>=1500 && sec<1502){
 
 if(!timer.beepYellow){
 tripleBeep()
@@ -259,9 +335,7 @@ timer.beepYellow=true
 
 }
 
-/* 1 sygnał przy zielonym */
-
-if(sec >=1800 && sec <1802){
+if(sec>=1800 && sec<1802){
 
 if(!timer.beepGreen){
 singleBeep()
