@@ -95,11 +95,10 @@ function createTimer(name){
 
 let key="timer_"+name
 
-let saved=localStorage.getItem(key)
+let data=JSON.parse(localStorage.getItem(key) || "{}")
 
-let time=saved ? parseInt(saved) : 0
-
-let interval=null
+let startTime=data.start || null
+let paused=data.paused || 0
 
 let box=document.createElement("div")
 box.className="timer"
@@ -109,7 +108,7 @@ title.innerText=name
 
 let display=document.createElement("div")
 display.className="time"
-display.innerText=format(time)
+display.innerText="00:00:00"
 
 let start=document.createElement("button")
 start.innerText="Start"
@@ -123,39 +122,67 @@ let reset=document.createElement("button")
 reset.innerText="Reset"
 reset.className="reset"
 
+
 start.onclick=function(){
 
-if(interval) return
+if(!startTime){
 
-interval=setInterval(function(){
+startTime=Date.now()-paused*1000
 
-time++
-display.innerText=format(time)
-
-localStorage.setItem(key,time)
-
-},1000)
+localStorage.setItem(key,JSON.stringify({
+start:startTime,
+paused:0
+}))
 
 }
+
+}
+
 
 stop.onclick=function(){
 
-clearInterval(interval)
-interval=null
+if(startTime){
+
+paused=Math.floor((Date.now()-startTime)/1000)
+
+startTime=null
+
+localStorage.setItem(key,JSON.stringify({
+start:null,
+paused:paused
+}))
 
 }
+
+}
+
 
 reset.onclick=function(){
 
-clearInterval(interval)
-interval=null
-time=0
+startTime=null
+paused=0
 
 display.innerText="00:00:00"
 
-localStorage.setItem(key,time)
+localStorage.removeItem(key)
 
 }
+
+
+setInterval(function(){
+
+let sec=paused
+
+if(startTime){
+
+sec=Math.floor((Date.now()-startTime)/1000)
+
+}
+
+display.innerText=format(sec)
+
+},500)
+
 
 box.appendChild(title)
 box.appendChild(display)
@@ -166,6 +193,7 @@ box.appendChild(reset)
 return box
 
 }
+
 
 let giants=document.getElementById("giants")
 let monkeys=document.getElementById("monkeys")
