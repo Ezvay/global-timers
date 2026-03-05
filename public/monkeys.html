@@ -40,14 +40,44 @@ border-radius:8px;
 cursor:pointer;
 }
 
-/* RESPONSYWNE TIMERY */
+/* GRID */
 
 .container{
 display:grid;
-grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+grid-template-columns:repeat(4,1fr);
 gap:12px;
 max-width:900px;
 margin:auto;
+}
+
+/* wąskie */
+
+@media (max-width:900px){
+
+.container{
+grid-template-columns:repeat(2,1fr);
+}
+
+}
+
+/* bardzo niskie */
+
+@media (max-height:650px){
+
+.container{
+grid-template-columns:1fr;
+}
+
+}
+
+/* wysokie i wąskie */
+
+@media (max-width:500px) and (min-height:800px){
+
+.container{
+grid-template-columns:repeat(8,1fr);
+}
+
 }
 
 .timer{
@@ -61,6 +91,11 @@ border:2px solid #6a5125;
 font-size:18px;
 margin:6px 0;
 font-weight:bold;
+}
+
+.grey{
+border-color:#555;
+background:linear-gradient(#2a2a2a,#111);
 }
 
 .red{
@@ -114,7 +149,7 @@ cursor:pointer;
 
 const socket = io()
 
-/* AUDIO SYSTEM (stabilny) */
+/* AUDIO */
 
 let audioCtx = new (window.AudioContext || window.webkitAudioContext)()
 
@@ -143,7 +178,6 @@ osc.stop(audioCtx.currentTime+duration)
 function tripleBeep(){
 
 beep()
-
 setTimeout(()=>beep(),400)
 setTimeout(()=>beep(),800)
 
@@ -155,7 +189,7 @@ beep(0.6,700)
 
 }
 
-/* SOUND TOGGLE */
+/* SOUND */
 
 let soundEnabled = localStorage.getItem("sound") !== "off"
 
@@ -170,14 +204,12 @@ updateSound()
 soundButton.onclick=()=>{
 
 soundEnabled=!soundEnabled
-
 localStorage.setItem("sound",soundEnabled?"on":"off")
-
 updateSound()
 
 }
 
-/* FORMAT TIME */
+/* FORMAT */
 
 function format(sec){
 
@@ -194,7 +226,7 @@ return h+":"+m+":"+s
 function createTimer(id){
 
 let box=document.createElement("div")
-box.className="timer red"
+box.className="timer grey"
 
 let title=document.createElement("div")
 title.innerText=id.replace("LM_","")
@@ -240,8 +272,6 @@ displays[id]=timer
 
 }
 
-/* UPDATE */
-
 socket.on("update",(data)=>{
 
 for(let id in data){
@@ -254,13 +284,34 @@ let timer=displays[id]
 timer.time.innerText=format(sec)
 
 let box=timer.box
-box.classList.remove("red","yellow","green")
 
-if(sec < 3420) box.classList.add("red")
-else if(sec < 3600) box.classList.add("yellow")
-else box.classList.add("green")
+box.classList.remove("grey","red","yellow","green")
 
-/* 57 minut */
+if(sec === 0){
+
+box.classList.add("grey")
+
+}
+
+else if(sec < 3420){
+
+box.classList.add("red")
+
+}
+
+else if(sec < 3600){
+
+box.classList.add("yellow")
+
+}
+
+else{
+
+box.classList.add("green")
+
+}
+
+/* 57 min */
 
 if(sec >=3420 && sec <3422){
 
@@ -271,7 +322,7 @@ timer.beep57=true
 
 }
 
-/* 60 minut */
+/* 60 min */
 
 if(sec >=3600 && sec <3602){
 
