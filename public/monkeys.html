@@ -170,6 +170,8 @@ clearInterval(interval)
 
 }
 
+/* FORMAT CZASU */
+
 function format(sec){
 
 let h=String(Math.floor(sec/3600)).padStart(2,"0")
@@ -179,6 +181,8 @@ let s=String(sec%60).padStart(2,"0")
 return h+":"+m+":"+s
 
 }
+
+/* TWORZENIE TIMERA */
 
 function createTimer(id){
 
@@ -211,7 +215,7 @@ box.appendChild(start)
 box.appendChild(stop)
 box.appendChild(reset)
 
-return {box,time,warning:false}
+return {box,time,warn45:false,warn60:false}
 
 }
 
@@ -246,25 +250,46 @@ let box=timer.box
 
 box.classList.remove("red","yellow","green")
 
-if(sec < 30) box.classList.add("red")
-else if(sec < 60) box.classList.add("yellow")
+let s = sec % 60
+
+if(s < 30) box.classList.add("red")
+else if(s < 60) box.classList.add("yellow")
 else box.classList.add("green")
 
-/* 3 SYGNAŁY PRZY 45 SEKUNDZIE */
+/* 3 SYGNAŁY PRZY 45 */
 
-if(sec >= 45 && sec < 46){
+if(s >= 45 && s < 46){
 
-if(!timer.warning){
+if(!timer.warn45){
 
 tripleBeep()
-timer.warning=true
+timer.warn45=true
 
 }
 
 }
 
-if(sec < 45){
-timer.warning=false
+if(s < 45){
+timer.warn45=false
+}
+
+/* 1 SYGNAŁ PRZY 60 */
+
+if(s === 0){
+
+if(!timer.warn60){
+
+alertSound.currentTime=0
+alertSound.play().catch(()=>{})
+
+timer.warn60=true
+
+}
+
+}
+
+if(s > 1){
+timer.warn60=false
 }
 
 }
