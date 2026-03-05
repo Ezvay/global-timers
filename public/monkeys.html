@@ -148,7 +148,7 @@ alertSound.play().catch(()=>{})
 
 }
 
-/* 2 sekundowy dźwięk */
+/* długi sygnał */
 
 function longBeep(){
 
@@ -204,7 +204,7 @@ box.appendChild(start)
 box.appendChild(stop)
 box.appendChild(reset)
 
-return {box,time,beep45:false,beep60:false}
+return {box,time,beep57:false,beep60:false}
 
 }
 
@@ -239,24 +239,24 @@ box.classList.remove("red","yellow","green")
 
 /* kolory */
 
-if(sec < 30) box.classList.add("red")
-else if(sec < 45) box.classList.add("yellow")
+if(sec < 3420) box.classList.add("red")
+else if(sec < 3600) box.classList.add("yellow")
 else box.classList.add("green")
 
-/* 45 sekund */
+/* 57 minut */
 
-if(sec >=45 && sec <47){
+if(sec >=3420 && sec <3422){
 
-if(!timer.beep45){
+if(!timer.beep57){
 tripleBeep()
-timer.beep45=true
+timer.beep57=true
 }
 
 }
 
-/* 60 sekund */
+/* 60 minut */
 
-if(sec >=60 && sec <62){
+if(sec >=3600 && sec <3602){
 
 if(!timer.beep60){
 longBeep()
