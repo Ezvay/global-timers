@@ -138,39 +138,47 @@ soundButton.innerText=soundEnabled?"🔊 Dźwięk ON":"🔇 Dźwięk OFF"
 updateSound()
 
 soundButton.onclick=()=>{
-
 soundEnabled=!soundEnabled
-
 localStorage.setItem("sound",soundEnabled?"on":"off")
-
 updateSound()
-
 }
 
-/* 3 SYGNAŁY */
+/* 3 sygnały */
 
 function tripleBeep(){
 
 if(!soundEnabled) return
 
-let count=0
-
-let interval=setInterval(()=>{
-
 alertSound.currentTime=0
-alertSound.play().catch(()=>{})
+alertSound.play()
 
-count++
-
-if(count>=3){
-clearInterval(interval)
-}
-
+setTimeout(()=>{
+alertSound.currentTime=0
+alertSound.play()
 },400)
 
+setTimeout(()=>{
+alertSound.currentTime=0
+alertSound.play()
+},800)
+
 }
 
-/* FORMAT CZASU */
+/* 2 sekundowy dźwięk */
+
+function longBeep(){
+
+if(!soundEnabled) return
+
+alertSound.currentTime=0
+alertSound.play()
+
+setTimeout(()=>{
+alertSound.currentTime=0
+alertSound.play()
+},1000)
+
+}
 
 function format(sec){
 
@@ -182,8 +190,6 @@ return h+":"+m+":"+s
 
 }
 
-/* TWORZENIE TIMERA */
-
 function createTimer(id){
 
 let box=document.createElement("div")
@@ -194,7 +200,6 @@ title.innerText=id.replace("KG_","")
 
 let time=document.createElement("div")
 time.className="time"
-time.innerText="00:00:00"
 
 let start=document.createElement("button")
 start.innerText="Start"
@@ -215,12 +220,11 @@ box.appendChild(start)
 box.appendChild(stop)
 box.appendChild(reset)
 
-return {box,time,warn45:false,warn60:false}
+return {box,time,beep45:false,beep60:false}
 
 }
 
 let container=document.getElementById("timers")
-
 let displays={}
 
 for(let i=1;i<=8;i++){
@@ -247,49 +251,40 @@ let timer=displays[id]
 timer.time.innerText=format(sec)
 
 let box=timer.box
-
 box.classList.remove("red","yellow","green")
 
-let s = sec % 60
+let s=sec%60
+
+/* kolory */
 
 if(s < 30) box.classList.add("red")
-else if(s < 60) box.classList.add("yellow")
+else if(s < 45) box.classList.add("yellow")
 else box.classList.add("green")
 
-/* 3 SYGNAŁY PRZY 45 */
+/* 3 sygnały przy 45 */
 
-if(s >= 45 && s < 46){
+if(s >=45 && s <47){
 
-if(!timer.warn45){
-
+if(!timer.beep45){
 tripleBeep()
-timer.warn45=true
-
+timer.beep45=true
 }
 
+}else{
+timer.beep45=false
 }
 
-if(s < 45){
-timer.warn45=false
+/* 2 sekundowy dźwięk przy 60 */
+
+if(s <=1){
+
+if(!timer.beep60){
+longBeep()
+timer.beep60=true
 }
 
-/* 1 SYGNAŁ PRZY 60 */
-
-if(s === 0){
-
-if(!timer.warn60){
-
-alertSound.currentTime=0
-alertSound.play().catch(()=>{})
-
-timer.warn60=true
-
-}
-
-}
-
-if(s > 1){
-timer.warn60=false
+}else{
+timer.beep60=false
 }
 
 }
