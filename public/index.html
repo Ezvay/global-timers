@@ -213,8 +213,8 @@ let state="red";
 // Kraina Gigantów
 if(id.startsWith("KG")){
 
-if(sec < 30) state="red";
-else if(sec < 60) state="yellow";
+if(sec < 1500) state="red";
+else if(sec < 1800) state="yellow";
 else state="green";
 
 }
@@ -223,7 +223,7 @@ else state="green";
 // Loch Małp
 if(id.startsWith("LM")){
 
-if(sec < 3000) state="red";
+if(sec < 3300) state="red";
 else if(sec < 3600) state="yellow";
 else state="green";
 
