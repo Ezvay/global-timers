@@ -42,14 +42,20 @@ border-radius:8px;
 cursor:pointer;
 }
 
+/* RESPONSYWNY UKŁAD TIMERÓW */
+
 .container{
 display:grid;
 gap:12px;
 max-width:1200px;
 margin:auto;
 padding:10px;
-grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+
+grid-template-columns:repeat(auto-fit,minmax(130px,160px));
+justify-content:center;
 }
+
+/* TIMER */
 
 .timer{
 background:linear-gradient(#1a1a1a,#0c0c0c);
@@ -63,6 +69,8 @@ font-size:16px;
 margin:6px 0;
 font-weight:bold;
 }
+
+/* KOLORY */
 
 .grey{
 border-color:#555;
@@ -120,7 +128,7 @@ cursor:pointer;
 
 const socket = io()
 
-/* AUDIO SYSTEM */
+/* AUDIO */
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
 
@@ -154,7 +162,7 @@ function singleBeep(){
 beep(0.7,600)
 }
 
-/* SOUND TOGGLE */
+/* SOUND */
 
 let soundEnabled = localStorage.getItem("sound") !== "off"
 
@@ -172,7 +180,7 @@ localStorage.setItem("sound",soundEnabled?"on":"off")
 updateSound()
 }
 
-/* FORMAT TIME */
+/* FORMAT */
 
 function format(sec){
 
@@ -184,7 +192,7 @@ return h+":"+m+":"+s
 
 }
 
-/* CREATE TIMER */
+/* TIMER */
 
 function createTimer(id){
 
@@ -223,7 +231,7 @@ return {box,time,beepYellow:false,beepGreen:false}
 let container=document.getElementById("timers")
 let displays={}
 
-/* CREATE 8 TIMERS */
+/* 8 TIMERÓW */
 
 for(let i=1;i<=8;i++){
 
@@ -237,7 +245,7 @@ displays[id]=timer
 
 }
 
-/* UPDATE FROM SERVER */
+/* UPDATE */
 
 socket.on("update",(data)=>{
 
@@ -267,8 +275,6 @@ else{
 box.classList.add("green")
 }
 
-/* 57 MIN WARNING */
-
 if(sec>=3420 && sec<3422){
 
 if(!timer.beepYellow){
@@ -277,8 +283,6 @@ timer.beepYellow=true
 }
 
 }
-
-/* 60 MIN READY */
 
 if(sec>=3600 && sec<3602){
 
