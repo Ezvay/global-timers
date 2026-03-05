@@ -27,9 +27,10 @@ gap:10px;
 }
 
 .timer{
-background:#222;
+background:#550000;
 padding:8px;
 border-radius:6px;
+transition:0.3s;
 }
 
 .time{
@@ -49,6 +50,10 @@ cursor:pointer;
 .start{background:#28a745;color:white;}
 .stop{background:#dc3545;color:white;}
 .reset{background:#ffc107;color:black;}
+
+.red{background:#550000;}
+.yellow{background:#665500;}
+.green{background:#004d00;}
 
 </style>
 </head>
@@ -85,7 +90,7 @@ return h+":"+m+":"+s;
 function createTimer(id){
 
 let box=document.createElement("div");
-box.className="timer";
+box.className="timer red";
 
 let title=document.createElement("div");
 title.innerText=id;
@@ -116,7 +121,7 @@ box.appendChild(start);
 box.appendChild(stop);
 box.appendChild(reset);
 
-return {box,time};
+return {box,time,id};
 
 }
 
@@ -135,7 +140,7 @@ let timer=createTimer(id);
 
 giants.appendChild(timer.box);
 
-displays[id]=timer.time;
+displays[id]=timer;
 
 }
 
@@ -149,7 +154,7 @@ let timer=createTimer(id);
 
 monkeys.appendChild(timer.box);
 
-displays[id]=timer.time;
+displays[id]=timer;
 
 }
 
@@ -160,7 +165,33 @@ for(let id in data){
 
 if(displays[id]){
 
-displays[id].innerText=format(data[id]);
+let sec=data[id];
+
+displays[id].time.innerText=format(sec);
+
+let box=displays[id].box;
+
+box.classList.remove("red","yellow","green");
+
+
+// Kraina Gigantów
+if(id.startsWith("KG")){
+
+if(sec < 1500) box.classList.add("red");
+else if(sec < 1800) box.classList.add("yellow");
+else box.classList.add("green");
+
+}
+
+
+// Loch Małp
+if(id.startsWith("LM")){
+
+if(sec < 3000) box.classList.add("red");
+else if(sec < 3600) box.classList.add("yellow");
+else box.classList.add("green");
+
+}
 
 }
 
