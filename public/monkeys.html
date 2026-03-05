@@ -40,9 +40,11 @@ border-radius:8px;
 cursor:pointer;
 }
 
+/* RESPONSYWNE TIMERY */
+
 .container{
 display:grid;
-grid-template-columns:repeat(4,1fr);
+grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
 gap:12px;
 max-width:900px;
 margin:auto;
@@ -56,7 +58,7 @@ border:2px solid #6a5125;
 }
 
 .time{
-font-size:16px;
+font-size:18px;
 margin:6px 0;
 font-weight:bold;
 }
@@ -108,18 +110,56 @@ cursor:pointer;
 
 <div class="container" id="timers"></div>
 
-<audio id="alertSound">
-<source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
-</audio>
-
 <script>
 
 const socket = io()
 
+/* AUDIO SYSTEM (stabilny) */
+
+let audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+
+function beep(duration=0.15,freq=800){
+
+if(!soundEnabled) return
+
+let osc=audioCtx.createOscillator()
+let gain=audioCtx.createGain()
+
+osc.connect(gain)
+gain.connect(audioCtx.destination)
+
+osc.frequency.value=freq
+osc.type="sine"
+
+osc.start()
+
+gain.gain.setValueAtTime(0.2,audioCtx.currentTime)
+gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+duration)
+
+osc.stop(audioCtx.currentTime+duration)
+
+}
+
+function tripleBeep(){
+
+beep()
+
+setTimeout(()=>beep(),400)
+setTimeout(()=>beep(),800)
+
+}
+
+function longBeep(){
+
+beep(0.6,700)
+
+}
+
+/* SOUND TOGGLE */
+
 let soundEnabled = localStorage.getItem("sound") !== "off"
 
 const soundButton=document.getElementById("soundToggle")
-const alertSound=document.getElementById("alertSound")
 
 function updateSound(){
 soundButton.innerText=soundEnabled?"🔊 Dźwięk ON":"🔇 Dźwięk OFF"
@@ -128,41 +168,16 @@ soundButton.innerText=soundEnabled?"🔊 Dźwięk ON":"🔇 Dźwięk OFF"
 updateSound()
 
 soundButton.onclick=()=>{
+
 soundEnabled=!soundEnabled
+
 localStorage.setItem("sound",soundEnabled?"on":"off")
+
 updateSound()
-}
-
-/* 3 sygnały */
-
-function tripleBeep(){
-
-if(!soundEnabled) return
-
-for(let i=0;i<3;i++){
-setTimeout(()=>{
-alertSound.currentTime=0
-alertSound.play().catch(()=>{})
-},i*400)
-}
 
 }
 
-/* długi sygnał */
-
-function longBeep(){
-
-if(!soundEnabled) return
-
-alertSound.currentTime=0
-alertSound.play().catch(()=>{})
-
-setTimeout(()=>{
-alertSound.currentTime=0
-alertSound.play().catch(()=>{})
-},1000)
-
-}
+/* FORMAT TIME */
 
 function format(sec){
 
@@ -173,6 +188,8 @@ let s=String(sec%60).padStart(2,"0")
 return h+":"+m+":"+s
 
 }
+
+/* TIMER */
 
 function createTimer(id){
 
@@ -223,6 +240,8 @@ displays[id]=timer
 
 }
 
+/* UPDATE */
+
 socket.on("update",(data)=>{
 
 for(let id in data){
@@ -236,8 +255,6 @@ timer.time.innerText=format(sec)
 
 let box=timer.box
 box.classList.remove("red","yellow","green")
-
-/* kolory */
 
 if(sec < 3420) box.classList.add("red")
 else if(sec < 3600) box.classList.add("yellow")
