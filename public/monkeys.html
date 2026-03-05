@@ -118,6 +118,10 @@ cursor:pointer;
 
 <div class="container" id="timers"></div>
 
+<audio id="alertSound">
+<source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
+</audio>
+
 <script>
 
 const socket = io()
@@ -125,6 +129,7 @@ const socket = io()
 let soundEnabled = localStorage.getItem("sound") !== "off"
 
 const soundButton=document.getElementById("soundToggle")
+const alertSound=document.getElementById("alertSound")
 
 function updateSound(){
 soundButton.innerText=soundEnabled?"🔊 Dźwięk ON":"🔇 Dźwięk OFF"
@@ -139,6 +144,29 @@ soundEnabled=!soundEnabled
 localStorage.setItem("sound",soundEnabled?"on":"off")
 
 updateSound()
+
+}
+
+/* 3 SYGNAŁY */
+
+function tripleBeep(){
+
+if(!soundEnabled) return
+
+let count=0
+
+let interval=setInterval(()=>{
+
+alertSound.currentTime=0
+alertSound.play().catch(()=>{})
+
+count++
+
+if(count>=3){
+clearInterval(interval)
+}
+
+},400)
 
 }
 
@@ -183,7 +211,7 @@ box.appendChild(start)
 box.appendChild(stop)
 box.appendChild(reset)
 
-return {box,time}
+return {box,time,warning:false}
 
 }
 
@@ -210,16 +238,34 @@ for(let id in data){
 if(displays[id]){
 
 let sec=data[id]
+let timer=displays[id]
 
-displays[id].time.innerText=format(sec)
+timer.time.innerText=format(sec)
 
-let box=displays[id].box
+let box=timer.box
 
 box.classList.remove("red","yellow","green")
 
 if(sec < 30) box.classList.add("red")
-else if(sec < r0) box.classList.add("yellow")
+else if(sec < 60) box.classList.add("yellow")
 else box.classList.add("green")
+
+/* 3 SYGNAŁY PRZY 45 SEKUNDZIE */
+
+if(sec >= 45 && sec < 46){
+
+if(!timer.warning){
+
+tripleBeep()
+timer.warning=true
+
+}
+
+}
+
+if(sec < 45){
+timer.warning=false
+}
 
 }
 
