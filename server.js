@@ -1,98 +1,103 @@
-const express = require("express")
-const http = require("http")
-const { Server } = require("socket.io")
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 
-const app = express()
-const server = http.createServer(app)
-const io = new Server(server)
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-app.use(express.static("public"))
+app.use(express.static("public"));
 
-const timers = {}
+let timers = {};
 
-/* tworzymy timery */
-
-function createTimers(prefix){
+function initTimers(){
 
 for(let i=1;i<=8;i++){
 
-let id = prefix + "_CH" + i
-
-timers[id] = {
-time:0,
-running:false,
-lastStart:0
-}
+timers["KG_CH"+i]={start:null,paused:0}
+timers["LM_CH"+i]={start:null,paused:0}
 
 }
 
 }
 
-createTimers("LM")
-createTimers("KG")
+initTimers()
 
-/* socket */
+function getTime(t){
+
+if(t.start){
+
+return Math.floor((Date.now()-t.start)/1000)
+
+}else{
+
+return t.paused
+
+}
+
+}
+
+setInterval(()=>{
+
+let output={}
+
+for(let id in timers){
+
+output[id]=getTime(timers[id])
+
+}
+
+io.emit("update",output)
+
+},1000)
+
+
 
 io.on("connection",(socket)=>{
 
-socket.emit("update",timers)
+let output={}
 
-/* start */
+for(let id in timers){
+
+output[id]=getTime(timers[id])
+
+}
+
+socket.emit("update",output)
+
 
 socket.on("start",(id)=>{
 
-let t = timers[id]
+let t=timers[id]
 
-if(!t.running){
+if(!t.start){
 
-t.running = true
-t.lastStart = Date.now()
+t.start=Date.now()-t.paused*1000
 
 }
 
-io.emit("update",timers)
-
 })
-
-/* stop */
 
 socket.on("stop",(id)=>{
 
-let t = timers[id]
+let t=timers[id]
 
-if(t.running){
+if(t.start){
 
-t.time += Math.floor((Date.now()-t.lastStart)/1000)
-t.running = false
+t.paused=Math.floor((Date.now()-t.start)/1000)
+
+t.start=null
 
 }
 
-io.emit("update",timers)
-
 })
-
-/* reset */
 
 socket.on("reset",(id)=>{
 
-timers[id] = {
-time:0,
-running:false,
-lastStart:0
-}
-
-io.emit("update",timers)
+timers[id]={start:null,paused:0}
 
 })
 
 })
 
-/* port */
-
-const PORT = process.env.PORT || 3000
-
-server.listen(PORT,()=>{
-
-console.log("Server running on port "+PORT)
-
-})
+server.listen(process.env.PORT || 3000)
