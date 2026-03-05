@@ -1,12 +1,107 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Timery Metin2</title>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<style>
+
+body{
+    font-family: Arial, sans-serif;
+    background:#111;
+    color:white;
+    text-align:center;
+}
+
+.section{
+    margin:30px auto;
+    max-width:900px;
+}
+
+.section img{
+    width:120px;
+    margin:10px;
+}
+
+.container{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:8px;
+}
+
+.timer{
+    background:#1e1e1e;
+    padding:8px;
+    border-radius:6px;
+}
+
+.time{
+    font-size:14px;
+    margin:4px 0;
+}
+
+h2{
+    margin:5px;
+    font-size:16px;
+}
+
+button{
+    margin:2px;
+    padding:3px 6px;
+    font-size:10px;
+    border:none;
+    border-radius:4px;
+    cursor:pointer;
+}
+
+.start{background:#28a745;color:white;}
+.stop{background:#dc3545;color:white;}
+.reset{background:#ffc107;color:black;}
+
+</style>
+</head>
+
+<body>
+
+<h1>Respawn Timery</h1>
+
+
+<div class="section">
+
+<h2>Kraina Gigantów</h2>
+
+<img src="https://wiki.metin2.gameforge.com/images/thumb/5/5d/Metin_of_Trees.png/200px-Metin_of_Trees.png">
+
+<div class="container" id="giants"></div>
+
+</div>
+
+
+<div class="section">
+
+<h2>Loch Małp</h2>
+
+<img src="https://wiki.metin2.gameforge.com/images/thumb/6/6b/Monkey_Lord.png/200px-Monkey_Lord.png">
+
+<div class="container" id="monkey"></div>
+
+</div>
+
+
 <script>
 
 const socket = io()
 
 function format(sec){
-const h=String(Math.floor(sec/3600)).padStart(2,"0")
-const m=String(Math.floor((sec%3600)/60)).padStart(2,"0")
-const s=String(sec%60).padStart(2,"0")
+
+const h = String(Math.floor(sec/3600)).padStart(2,"0")
+const m = String(Math.floor((sec%3600)/60)).padStart(2,"0")
+const s = String(sec%60).padStart(2,"0")
+
 return `${h}:${m}:${s}`
+
 }
 
 function createTimer(name){
@@ -56,14 +151,14 @@ for(let i=1;i<=8;i++){
 
 let id="CH"+i
 
-let t1=createTimer(id)
-let t2=createTimer(id)
+let g=createTimer(id)
+let m=createTimer(id)
 
-giants.appendChild(t1.div)
-monkey.appendChild(t2.div)
+giants.appendChild(g.div)
+monkey.appendChild(m.div)
 
-displays["giants"+id]=t1.display
-displays["monkey"+id]=t2.display
+displays["g"+id]=g.display
+displays["m"+id]=m.display
 
 }
 
@@ -73,11 +168,14 @@ for(let id in timers){
 
 let time=format(timers[id].time)
 
-if(displays["giants"+id]) displays["giants"+id].innerText=time
-if(displays["monkey"+id]) displays["monkey"+id].innerText=time
+if(displays["g"+id]) displays["g"+id].innerText=time
+if(displays["m"+id]) displays["m"+id].innerText=time
 
 }
 
 })
 
 </script>
+
+</body>
+</html>
