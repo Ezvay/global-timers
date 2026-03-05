@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
 <meta charset="UTF-8">
 <title>Loch Małp</title>
@@ -8,57 +9,27 @@
 
 <style>
 
-body{
-font-family:Arial;
-background:#111;
-color:white;
-text-align:center;
-}
-
-.container{
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:10px;
-max-width:900px;
-margin:auto;
-}
-
-.timer{
-background:#550000;
-padding:8px;
-border-radius:6px;
-}
-
-.time{
-font-size:16px;
-margin:4px;
-}
-
-button{
-font-size:10px;
-padding:3px 6px;
-margin:2px;
-border:none;
-border-radius:4px;
-cursor:pointer;
-}
-
-.start{background:#28a745;color:white;}
-.stop{background:#dc3545;color:white;}
-.reset{background:#ffc107;color:black;}
-
-.red{background:#550000;}
-.yellow{background:#665500;}
-.green{background:#004d00;}
+/* identyczny CSS jak w giants.html */
 
 </style>
+
 </head>
 
 <body>
 
-<h1>Loch Małp</h1>
+<div class="topbar">
 
-<a href="/">← Powrót</a>
+<button class="backButton" onclick="window.location.href='/'">
+⬅ Powrót
+</button>
+
+<button id="soundToggle" class="soundButton">
+🔊 Dźwięk ON
+</button>
+
+</div>
+
+<h1>Loch Małp</h1>
 
 <div class="container" id="timers"></div>
 
@@ -68,18 +39,40 @@ cursor:pointer;
 
 <script>
 
-const socket = io()
+const socket=io()
 
 const alertSound=document.getElementById("alertSound")
 
+let soundEnabled = localStorage.getItem("sound") !== "off"
+
+const soundButton=document.getElementById("soundToggle")
+
+function updateSound(){
+soundButton.innerText=soundEnabled?"🔊 Dźwięk ON":"🔇 Dźwięk OFF"
+}
+
+updateSound()
+
+soundButton.onclick=()=>{
+
+soundEnabled=!soundEnabled
+
+localStorage.setItem("sound",soundEnabled?"on":"off")
+
+updateSound()
+
+}
+
 function tripleBeep(){
+
+if(!soundEnabled) return
 
 let count=0
 
 let interval=setInterval(()=>{
 
 alertSound.currentTime=0
-alertSound.play().catch(()=>{})
+alertSound.play()
 
 count++
 
@@ -93,9 +86,9 @@ clearInterval(interval)
 
 function format(sec){
 
-let h = String(Math.floor(sec/3600)).padStart(2,"0")
-let m = String(Math.floor((sec%3600)/60)).padStart(2,"0")
-let s = String(sec%60).padStart(2,"0")
+let h=String(Math.floor(sec/3600)).padStart(2,"0")
+let m=String(Math.floor((sec%3600)/60)).padStart(2,"0")
+let s=String(sec%60).padStart(2,"0")
 
 return h+":"+m+":"+s
 
@@ -107,23 +100,19 @@ let box=document.createElement("div")
 box.className="timer red"
 
 let title=document.createElement("div")
-title.innerText=id
+title.innerText=id.replace("LM_","")
 
 let time=document.createElement("div")
 time.className="time"
-time.innerText="00:00:00"
 
 let start=document.createElement("button")
 start.innerText="Start"
-start.className="start"
 
 let stop=document.createElement("button")
 stop.innerText="Stop"
-stop.className="stop"
 
 let reset=document.createElement("button")
 reset.innerText="Reset"
-reset.className="reset"
 
 start.onclick=()=>socket.emit("start",id)
 stop.onclick=()=>socket.emit("stop",id)
@@ -140,6 +129,7 @@ return {box,time,warning:false}
 }
 
 let container=document.getElementById("timers")
+
 let displays={}
 
 for(let i=1;i<=8;i++){
@@ -174,12 +164,14 @@ if(sec < 3300) box.classList.add("red")
 else if(sec < 3600) box.classList.add("yellow")
 else box.classList.add("green")
 
-// ostrzeżenie 30s przed
 if(sec >= 3570 && sec < 3600){
 
 if(!timer.warning){
+
 tripleBeep()
+
 timer.warning=true
+
 }
 
 }
