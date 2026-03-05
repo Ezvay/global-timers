@@ -214,8 +214,8 @@ let state="red";
 if(id.startsWith("KG")){
 
 if(sec < 30) state="red";
-else if(sec < 45) state="yellow";
-else if(sec >= 60) state="green";
+else if(sec < 60) state="yellow";
+else state="green";
 
 }
 
