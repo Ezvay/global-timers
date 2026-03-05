@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>Timery Metin2</title>
+<title>Respawn Timery</title>
 
 <script src="/socket.io/socket.io.js"></script>
 
@@ -32,11 +32,6 @@ padding:8px;
 border-radius:6px;
 }
 
-.timer h3{
-margin:3px;
-font-size:12px;
-}
-
 .time{
 font-size:14px;
 margin:4px;
@@ -56,7 +51,6 @@ cursor:pointer;
 .reset{background:#ffc107;color:black;}
 
 </style>
-
 </head>
 
 <body>
@@ -64,107 +58,100 @@ cursor:pointer;
 <h1>Respawn Timery</h1>
 
 <div class="section">
-
 <h2>Kraina Gigantów</h2>
-
 <div class="container" id="giants"></div>
-
 </div>
-
 
 <div class="section">
-
 <h2>Loch Małp</h2>
-
 <div class="container" id="monkeys"></div>
-
 </div>
-
 
 
 <script>
 
-const socket=io()
+const socket = io();
 
 function format(sec){
 
-let h=String(Math.floor(sec/3600)).padStart(2,"0")
-let m=String(Math.floor((sec%3600)/60)).padStart(2,"0")
-let s=String(sec%60).padStart(2,"0")
+let h = String(Math.floor(sec/3600)).padStart(2,"0");
+let m = String(Math.floor((sec%3600)/60)).padStart(2,"0");
+let s = String(sec%60).padStart(2,"0");
 
-return h+":"+m+":"+s
+return h+":"+m+":"+s;
 
 }
 
 function createTimer(id){
 
-let box=document.createElement("div")
-box.className="timer"
+let box=document.createElement("div");
+box.className="timer";
 
-let title=document.createElement("h3")
-title.innerText=id
+let title=document.createElement("div");
+title.innerText=id;
 
-let time=document.createElement("div")
-time.className="time"
-time.innerText="00:00:00"
+let time=document.createElement("div");
+time.className="time";
+time.innerText="00:00:00";
 
-let start=document.createElement("button")
-start.className="start"
-start.innerText="Start"
+let start=document.createElement("button");
+start.innerText="Start";
+start.className="start";
 
-let stop=document.createElement("button")
-stop.className="stop"
-stop.innerText="Stop"
+let stop=document.createElement("button");
+stop.innerText="Stop";
+stop.className="stop";
 
-let reset=document.createElement("button")
-reset.className="reset"
-reset.innerText="Reset"
+let reset=document.createElement("button");
+reset.innerText="Reset";
+reset.className="reset";
 
-start.onclick=()=>socket.emit("start",id)
-stop.onclick=()=>socket.emit("stop",id)
-reset.onclick=()=>socket.emit("reset",id)
+start.onclick=()=>socket.emit("start",id);
+stop.onclick=()=>socket.emit("stop",id);
+reset.onclick=()=>socket.emit("reset",id);
 
-box.appendChild(title)
-box.appendChild(time)
-box.appendChild(start)
-box.appendChild(stop)
-box.appendChild(reset)
+box.appendChild(title);
+box.appendChild(time);
+box.appendChild(start);
+box.appendChild(stop);
+box.appendChild(reset);
 
-return {box,time}
+return {box,time};
 
 }
 
+let giants=document.getElementById("giants");
+let monkeys=document.getElementById("monkeys");
 
-let giants=document.getElementById("giants")
-let monkeys=document.getElementById("monkeys")
+let displays={};
 
-let displays={}
 
+// Kraina Gigantów
 for(let i=1;i<=8;i++){
 
-let id="KG_CH"+i
+let id="KG_CH"+i;
 
-let t=createTimer("CH"+i)
+let timer=createTimer(id);
 
-giants.appendChild(t.box)
+giants.appendChild(timer.box);
 
-displays[id]=t.time
+displays[id]=timer.time;
 
 }
 
 
+// Loch Małp
 for(let i=1;i<=8;i++){
 
-let id="LM_CH"+i
+let id="LM_CH"+i;
 
-let t=createTimer("CH"+i)
+let timer=createTimer(id);
 
-monkeys.appendChild(t.box)
+monkeys.appendChild(timer.box);
 
-displays[id]=t.time
+displays[id]=timer.time;
 
 }
-
 
 
 socket.on("update",(data)=>{
@@ -173,13 +160,13 @@ for(let id in data){
 
 if(displays[id]){
 
-displays[id].innerText=format(data[id])
+displays[id].innerText=format(data[id]);
 
 }
 
 }
 
-})
+});
 
 </script>
 
