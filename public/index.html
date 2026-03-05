@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Timery Metin2</title>
+
+<style>
+
+body{
+    font-family: Arial, sans-serif;
+    background:#111;
+    color:white;
+    text-align:center;
+}
+
+.section{
+    margin:30px auto;
+    max-width:900px;
+}
+
+.section img{
+    width:120px;
+    margin:10px;
+}
+
+.container{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:8px;
+}
+
+.timer{
+    background:#1e1e1e;
+    padding:8px;
+    border-radius:6px;
+}
+
+.time{
+    font-size:14px;
+    margin:4px 0;
+}
+
+h2{
+    margin:5px;
+    font-size:16px;
+}
+
+button{
+    margin:2px;
+    padding:3px 6px;
+    font-size:10px;
+    border:none;
+    border-radius:4px;
+    cursor:pointer;
+}
+
+.start{background:#28a745;color:white;}
+.stop{background:#dc3545;color:white;}
+.reset{background:#ffc107;color:black;}
+
+</style>
+</head>
+
+<body>
+
+<h1>Respawn Timery</h1>
+
+
+<div class="section">
+
+<h2>Kraina Gigantów</h2>
+
+<img src="https://en-wiki.metin2.gameforge.com/images/e/e9/Metin_Tu-Young.jpg">
+
+<div class="container" id="giants"></div>
+
+</div>
+
+
+<div class="section">
+
+<h2>Loch Małp</h2>
+
+<img src="https://pl-wiki.metin2.gameforge.com/images/d/df/Lord_Ma%C5%82p.png">
+
+<div class="container" id="monkey"></div>
+
+</div>
+
+
+
+<script>
+
+function createTimer(name){
+
+let time = 0
+let interval = null
+
+const div = document.createElement("div")
+div.className="timer"
+
+const title = document.createElement("h2")
+title.innerText=name
+
+const display=document.createElement("div")
+display.className="time"
+display.innerText="00:00:00"
+
+const start=document.createElement("button")
+start.innerText="Start"
+start.className="start"
+
+const stop=document.createElement("button")
+stop.innerText="Stop"
+stop.className="stop"
+
+const reset=document.createElement("button")
+reset.innerText="Reset"
+reset.className="reset"
+
+
+start.onclick=()=>{
+if(interval) return
+interval=setInterval(()=>{
+time++
+display.innerText=format(time)
+},1000)
+}
+
+stop.onclick=()=>{
+clearInterval(interval)
+interval=null
+}
+
+reset.onclick=()=>{
+clearInterval(interval)
+interval=null
+time=0
+display.innerText="00:00:00"
+}
+
+div.appendChild(title)
+div.appendChild(display)
+div.appendChild(start)
+div.appendChild(stop)
+div.appendChild(reset)
+
+return div
+
+}
+
+function format(sec){
+
+const h=String(Math.floor(sec/3600)).padStart(2,"0")
+const m=String(Math.floor((sec%3600)/60)).padStart(2,"0")
+const s=String(sec%60).padStart(2,"0")
+
+return `${h}:${m}:${s}`
+
+}
+
+
+const giants=document.getElementById("giants")
+const monkey=document.getElementById("monkey")
+
+
+for(let i=1;i<=8;i++){
+
+giants.appendChild(createTimer("CH"+i))
+monkey.appendChild(createTimer("CH"+i))
+
+}
+
+</script>
+
+</body>
+</html>
