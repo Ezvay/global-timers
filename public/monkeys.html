@@ -18,7 +18,7 @@ text-align:center;
 .topbar{
 display:flex;
 justify-content:space-between;
-max-width:900px;
+max-width:1200px;
 margin:20px auto;
 }
 
@@ -40,49 +40,21 @@ border-radius:8px;
 cursor:pointer;
 }
 
-/* GRID */
+/* UKŁAD TIMERÓW */
 
 .container{
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:12px;
-max-width:900px;
+display:flex;
+flex-wrap:wrap;
+justify-content:center;
+gap:14px;
+max-width:1200px;
 margin:auto;
 }
 
-/* wąskie */
-
-@media (max-width:900px){
-
-.container{
-grid-template-columns:repeat(2,1fr);
-}
-
-}
-
-/* bardzo niskie */
-
-@media (max-height:650px){
-
-.container{
-grid-template-columns:1fr;
-}
-
-}
-
-/* wysokie i wąskie */
-
-@media (max-width:500px) and (min-height:800px){
-
-.container{
-grid-template-columns:repeat(8,1fr);
-}
-
-}
-
 .timer{
+width:200px;
 background:linear-gradient(#1a1a1a,#0c0c0c);
-padding:10px;
+padding:12px;
 border-radius:8px;
 border:2px solid #6a5125;
 }
@@ -117,7 +89,7 @@ button{
 background:linear-gradient(#6b4d1f,#3b2a0f);
 border:1px solid #caa64a;
 color:#ffd36a;
-font-size:10px;
+font-size:11px;
 padding:4px 8px;
 margin:2px;
 border-radius:6px;
@@ -209,7 +181,7 @@ updateSound()
 
 }
 
-/* FORMAT */
+/* FORMAT CZASU */
 
 function format(sec){
 
@@ -311,7 +283,7 @@ box.classList.add("green")
 
 }
 
-/* 57 min */
+/* 57 minut */
 
 if(sec >=3420 && sec <3422){
 
@@ -322,7 +294,7 @@ timer.beep57=true
 
 }
 
-/* 60 min */
+/* 60 minut */
 
 if(sec >=3600 && sec <3602){
 
