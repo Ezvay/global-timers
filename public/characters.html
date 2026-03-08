@@ -16,22 +16,8 @@ text-align:center;
 margin:0;
 }
 
-h1{
-margin-top:20px;
-}
-
-.backButton{
-margin:20px;
-padding:8px 20px;
-border-radius:8px;
-border:2px solid #caa64a;
-background:#3b2a0f;
-color:#ffd36a;
-cursor:pointer;
-}
-
 .container{
-max-width:1000px;
+max-width:1100px;
 margin:auto;
 padding:20px;
 display:grid;
@@ -56,16 +42,6 @@ margin:6px 0;
 border-radius:6px;
 }
 
-.taskLeft{
-display:flex;
-align-items:center;
-gap:8px;
-}
-
-.task img{
-width:22px;
-}
-
 .timer{
 font-size:12px;
 color:#aaa;
@@ -75,10 +51,6 @@ color:#aaa;
 </head>
 
 <body>
-
-<button class="backButton" onclick="window.location.href='/'">
-⬅ Powrót
-</button>
 
 <h1>Postacie</h1>
 
@@ -98,21 +70,49 @@ const characters = [
 "Yodasz"
 ]
 
-const tasks = [
-{name:"KU1",icon:"https://en-wiki.metin2.gameforge.com/images/2/2e/Skill_Book.png"},
-{name:"KU2",icon:"https://en-wiki.metin2.gameforge.com/images/2/2e/Skill_Book.png"},
-{name:"KU3",icon:"https://en-wiki.metin2.gameforge.com/images/2/2e/Skill_Book.png"},
-{name:"KU4",icon:"https://en-wiki.metin2.gameforge.com/images/2/2e/Skill_Book.png"},
-{name:"KU5",icon:"https://en-wiki.metin2.gameforge.com/images/2/2e/Skill_Book.png"},
-{name:"Polymorph",icon:"https://en-wiki.metin2.gameforge.com/images/7/70/Polymorph_Marble.png"},
-{name:"Biolog",icon:"https://en-wiki.metin2.gameforge.com/images/f/f4/Orc_Tooth.png"},
-{name:"Medal",icon:"https://en-wiki.metin2.gameforge.com/images/9/95/Horse_Medal.png"}
+const container=document.getElementById("characters")
+
+const tasks=[
+"KU1","KU2","KU3","KU4","KU5",
+"Polymorph",
+"Biolog"
 ]
 
-const container=document.getElementById("characters")
-const displays={}
+let checkboxes={}
+let medalTimers={}
 
-/* tworzenie postaci */
+/* TIMER MEDALU */
+
+function startHorseTimer(el,end){
+
+function update(){
+
+let diff=end-Date.now()
+
+if(diff<=0){
+
+el.innerText="GOTOWE"
+return
+
+}
+
+let h=Math.floor(diff/3600000)
+let m=Math.floor((diff%3600000)/60000)
+let s=Math.floor((diff%60000)/1000)
+
+el.innerText=
+h.toString().padStart(2,"0")+":"+
+m.toString().padStart(2,"0")+":"+
+s.toString().padStart(2,"0")
+
+}
+
+update()
+setInterval(update,1000)
+
+}
+
+/* GENEROWANIE POSTACI */
 
 characters.forEach(char=>{
 
@@ -124,87 +124,103 @@ title.innerText=char
 
 box.appendChild(title)
 
+/* KU i inne */
+
 tasks.forEach(task=>{
 
 let row=document.createElement("div")
 row.className="task"
 
-let left=document.createElement("div")
-left.className="taskLeft"
-
-let icon=document.createElement("img")
-icon.src=task.icon
-
 let label=document.createElement("span")
-label.innerText=task.name
+label.innerText=task
 
-left.appendChild(icon)
-left.appendChild(label)
+let cb=document.createElement("input")
+cb.type="checkbox"
 
-let checkbox=document.createElement("input")
-checkbox.type="checkbox"
-
-checkbox.onchange=()=>{
-
-if(task.name==="Medal" && checkbox.checked){
-
-socket.emit("horseMedal",char)
-
-}else{
+cb.onchange=()=>{
 
 socket.emit("toggleTask",{
 char:char,
-task:task.name,
-value:checkbox.checked
+task:task,
+value:cb.checked
 })
 
 }
 
-}
+checkboxes[char+"_"+task]=cb
 
-row.appendChild(left)
-row.appendChild(checkbox)
+row.appendChild(label)
+row.appendChild(cb)
 
 box.appendChild(row)
 
 })
 
-/* dowodzenie */
+/* Dowodzenie */
 
 if(char==="Suczka" || char==="Czantorianka"){
 
 let row=document.createElement("div")
 row.className="task"
 
-row.innerHTML=`
-<div class="taskLeft">
-<img src="https://en-wiki.metin2.gameforge.com/images/2/2e/Skill_Book.png">
-<span>Dowodzenie</span>
-</div>
-<input type="checkbox" onchange="toggleDowodzenie('${char}',this)">
-`
+let label=document.createElement("span")
+label.innerText="Dowodzenie"
+
+let cb=document.createElement("input")
+cb.type="checkbox"
+
+cb.onchange=()=>{
+
+socket.emit("toggleTask",{
+char:char,
+task:"Dowodzenie",
+value:cb.checked
+})
+
+}
+
+checkboxes[char+"_Dowodzenie"]=cb
+
+row.appendChild(label)
+row.appendChild(cb)
 
 box.appendChild(row)
 
 }
 
-container.appendChild(box)
+/* Medal konny */
 
-displays[char]=box
+let row=document.createElement("div")
+row.className="task"
 
-})
+let label=document.createElement("span")
+label.innerText="Medal konny"
 
-function toggleDowodzenie(char,el){
+let btn=document.createElement("button")
+btn.innerText="Oddaj"
 
-socket.emit("toggleTask",{
-char:char,
-task:"Dowodzenie",
-value:el.checked
-})
+let timer=document.createElement("div")
+timer.className="timer"
+
+btn.onclick=()=>{
+
+socket.emit("horseMedal",char)
 
 }
 
-/* update z serwera */
+row.appendChild(label)
+row.appendChild(btn)
+
+box.appendChild(row)
+box.appendChild(timer)
+
+medalTimers[char]=timer
+
+container.appendChild(box)
+
+})
+
+/* UPDATE Z SERWERA */
 
 socket.on("charactersUpdate",(data)=>{
 
@@ -214,11 +230,17 @@ let tasks=data[char]
 
 for(let task in tasks){
 
-let checkbox=document.querySelector(
-`input[data-char="${char}"][data-task="${task}"]`
-)
+if(task==="horseTimer") continue
 
-if(checkbox) checkbox.checked=tasks[task]
+let cb=checkboxes[char+"_"+task]
+
+if(cb) cb.checked=tasks[task]
+
+}
+
+if(tasks.horseTimer){
+
+startHorseTimer(medalTimers[char],tasks.horseTimer)
 
 }
 
