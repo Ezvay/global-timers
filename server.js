@@ -21,7 +21,6 @@ if(!timers[id]) timers[id]=0
 intervals[id]=setInterval(()=>{
 
 timers[id]++
-
 io.emit("update",timers)
 
 },1000)
@@ -39,7 +38,6 @@ function resetTimer(id){
 
 timers[id]=0
 stopTimer(id)
-
 io.emit("update",timers)
 
 }
@@ -64,8 +62,8 @@ Yodasz:{}
    RESET GODZINA
 ====================== */
 
-let resetHour = 0
-let resetMinute = 0
+let resetHour = 23
+let resetMinute = 59
 let lastResetDay = null
 
 function checkReset(){
@@ -76,11 +74,11 @@ const polish = new Date(
 now.toLocaleString("en-US",{timeZone:"Europe/Warsaw"})
 )
 
-const h = polish.getHours()
-const m = polish.getMinutes()
+const hour = polish.getHours()
+const minute = polish.getMinutes()
 const day = polish.toDateString()
 
-if(h===resetHour && m===resetMinute && lastResetDay!==day){
+if(hour === resetHour && minute === resetMinute && lastResetDay !== day){
 
 for(let char in characters){
 
@@ -100,7 +98,7 @@ io.emit("charactersUpdate",characters)
 
 }
 
-setInterval(checkReset,60000)
+setInterval(checkReset,30000)
 
 /* ======================
    SOCKET
@@ -111,8 +109,6 @@ io.on("connection",(socket)=>{
 socket.on("start",(id)=>startTimer(id))
 socket.on("stop",(id)=>stopTimer(id))
 socket.on("reset",(id)=>resetTimer(id))
-
-/* task */
 
 socket.on("toggleTask",(data)=>{
 
@@ -126,8 +122,6 @@ io.emit("charactersUpdate",characters)
 
 })
 
-/* medal */
-
 socket.on("horseMedal",(char)=>{
 
 if(!characters[char]) characters[char]={}
@@ -139,16 +133,14 @@ io.emit("charactersUpdate",characters)
 
 })
 
-/* ustaw reset */
-
 socket.on("setResetTime",(data)=>{
 
 resetHour = data.hour
 resetMinute = data.minute
 
-})
+io.emit("resetTime",{hour:resetHour,minute:resetMinute})
 
-/* manual reset */
+})
 
 socket.on("manualReset",()=>{
 
@@ -167,6 +159,7 @@ io.emit("charactersUpdate",characters)
 })
 
 socket.emit("charactersUpdate",characters)
+socket.emit("resetTime",{hour:resetHour,minute:resetMinute})
 
 })
 
