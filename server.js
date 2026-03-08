@@ -61,12 +61,14 @@ Yodasz:{}
 }
 
 /* ======================
-   RESET O PÓŁNOCY (PL)
+   RESET GODZINA
 ====================== */
 
-let lastReset=null
+let resetHour = 0
+let resetMinute = 0
+let lastResetDay = null
 
-function checkDailyReset(){
+function checkReset(){
 
 const now = new Date()
 
@@ -74,23 +76,23 @@ const polish = new Date(
 now.toLocaleString("en-US",{timeZone:"Europe/Warsaw"})
 )
 
-const today = polish.toDateString()
+const h = polish.getHours()
+const m = polish.getMinutes()
+const day = polish.toDateString()
 
-if(lastReset!==today){
+if(h===resetHour && m===resetMinute && lastResetDay!==day){
 
 for(let char in characters){
 
-let old=characters[char]
+let old = characters[char]
 
-characters[char]={
-
+characters[char] = {
 horseTimer: old.horseTimer || null
-
 }
 
 }
 
-lastReset=today
+lastResetDay = day
 
 io.emit("charactersUpdate",characters)
 
@@ -98,7 +100,7 @@ io.emit("charactersUpdate",characters)
 
 }
 
-setInterval(checkDailyReset,60000)
+setInterval(checkReset,60000)
 
 /* ======================
    SOCKET
@@ -106,13 +108,11 @@ setInterval(checkDailyReset,60000)
 
 io.on("connection",(socket)=>{
 
-/* timery */
-
 socket.on("start",(id)=>startTimer(id))
 socket.on("stop",(id)=>stopTimer(id))
 socket.on("reset",(id)=>resetTimer(id))
 
-/* checklist */
+/* task */
 
 socket.on("toggleTask",(data)=>{
 
@@ -126,13 +126,41 @@ io.emit("charactersUpdate",characters)
 
 })
 
-/* medal konny */
+/* medal */
 
 socket.on("horseMedal",(char)=>{
 
 if(!characters[char]) characters[char]={}
 
-characters[char].horseTimer = Date.now() + (23*60*60*1000)
+characters[char].horseTimer =
+Date.now() + (23*60*60*1000)
+
+io.emit("charactersUpdate",characters)
+
+})
+
+/* ustaw reset */
+
+socket.on("setResetTime",(data)=>{
+
+resetHour = data.hour
+resetMinute = data.minute
+
+})
+
+/* manual reset */
+
+socket.on("manualReset",()=>{
+
+for(let char in characters){
+
+let old = characters[char]
+
+characters[char] = {
+horseTimer: old.horseTimer || null
+}
+
+}
 
 io.emit("charactersUpdate",characters)
 
