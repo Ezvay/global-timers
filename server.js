@@ -1,103 +1,147 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
+const express = require("express")
+const app = express()
+const http = require("http").createServer(app)
+const io = require("socket.io")(http)
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+app.use(express.static("public"))
 
-app.use(express.static("public"));
+/* =========================
+   TIMERY
+========================= */
 
-let timers = {};
+let timers = {}
+let intervals = {}
 
-function initTimers(){
+function startTimer(id){
 
-for(let i=1;i<=8;i++){
+if(intervals[id]) return
 
-timers["KG_CH"+i]={start:null,paused:0}
-timers["LM_CH"+i]={start:null,paused:0}
+if(!timers[id]) timers[id]=0
 
-}
+intervals[id]=setInterval(()=>{
 
-}
+timers[id]++
 
-initTimers()
-
-function getTime(t){
-
-if(t.start){
-
-return Math.floor((Date.now()-t.start)/1000)
-
-}else{
-
-return t.paused
-
-}
-
-}
-
-setInterval(()=>{
-
-let output={}
-
-for(let id in timers){
-
-output[id]=getTime(timers[id])
-
-}
-
-io.emit("update",output)
+io.emit("update",timers)
 
 },1000)
 
+}
 
+function stopTimer(id){
+
+clearInterval(intervals[id])
+intervals[id]=null
+
+}
+
+function resetTimer(id){
+
+timers[id]=0
+stopTimer(id)
+
+io.emit("update",timers)
+
+}
+
+/* =========================
+   POSTACIE
+========================= */
+
+let characters = {
+
+Medal:{},
+Bieluszek:{},
+Pojara:{},
+Suczka:{},
+Czantorianka:{},
+EwaZajączkowska:{},
+Yodasz:{}
+
+}
+
+/* =========================
+   RESET O PÓŁNOCY (POLSKA)
+========================= */
+
+let lastReset = null
+
+function checkDailyReset(){
+
+const now = new Date()
+
+const polish = new Date(
+now.toLocaleString("en-US",{timeZone:"Europe/Warsaw"})
+)
+
+const today = polish.toDateString()
+
+if(lastReset !== today){
+
+characters = {
+Medal:{},
+Bieluszek:{},
+Pojara:{},
+Suczka:{},
+Czantorianka:{},
+EwaZajączkowska:{},
+Yodasz:{}
+}
+
+lastReset = today
+
+io.emit("charactersUpdate",characters)
+
+}
+
+}
+
+setInterval(checkDailyReset,60000)
+
+/* =========================
+   SOCKET
+========================= */
 
 io.on("connection",(socket)=>{
 
-let output={}
+/* timery */
 
-for(let id in timers){
+socket.on("start",(id)=>startTimer(id))
+socket.on("stop",(id)=>stopTimer(id))
+socket.on("reset",(id)=>resetTimer(id))
 
-output[id]=getTime(timers[id])
+/* checklist */
 
-}
+socket.on("toggleTask",(data)=>{
 
-socket.emit("update",output)
+const {char,task,value}=data
 
+if(!characters[char]) characters[char]={}
 
-socket.on("start",(id)=>{
+characters[char][task]=value
 
-let t=timers[id]
-
-if(!t.start){
-
-t.start=Date.now()-t.paused*1000
-
-}
+io.emit("charactersUpdate",characters)
 
 })
 
-socket.on("stop",(id)=>{
+/* medal konny */
 
-let t=timers[id]
+socket.on("horseMedal",(char)=>{
 
-if(t.start){
+if(!characters[char]) characters[char]={}
 
-t.paused=Math.floor((Date.now()-t.start)/1000)
+characters[char].horseTimer = Date.now() + (23*60*60*1000)
 
-t.start=null
-
-}
+io.emit("charactersUpdate",characters)
 
 })
 
-socket.on("reset",(id)=>{
-
-timers[id]={start:null,paused:0}
+socket.emit("charactersUpdate",characters)
 
 })
 
-})
+http.listen(3000,()=>{
 
-server.listen(process.env.PORT || 3000)
+console.log("Server działa")
+
+})
