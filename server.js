@@ -5,9 +5,9 @@ const io = require("socket.io")(http)
 
 app.use(express.static("public"))
 
-/* =========================
+/* ======================
    TIMERY
-========================= */
+====================== */
 
 let timers = {}
 let intervals = {}
@@ -44,9 +44,9 @@ io.emit("update",timers)
 
 }
 
-/* =========================
+/* ======================
    POSTACIE
-========================= */
+====================== */
 
 let characters = {
 
@@ -60,11 +60,11 @@ Yodasz:{}
 
 }
 
-/* =========================
-   RESET O PÓŁNOCY (POLSKA)
-========================= */
+/* ======================
+   RESET O PÓŁNOCY (PL)
+====================== */
 
-let lastReset = null
+let lastReset=null
 
 function checkDailyReset(){
 
@@ -76,19 +76,21 @@ now.toLocaleString("en-US",{timeZone:"Europe/Warsaw"})
 
 const today = polish.toDateString()
 
-if(lastReset !== today){
+if(lastReset!==today){
 
-characters = {
-Medal:{},
-Bieluszek:{},
-Pojara:{},
-Suczka:{},
-Czantorianka:{},
-EwaZajączkowska:{},
-Yodasz:{}
+for(let char in characters){
+
+let old=characters[char]
+
+characters[char]={
+
+horseTimer: old.horseTimer || null
+
 }
 
-lastReset = today
+}
+
+lastReset=today
 
 io.emit("charactersUpdate",characters)
 
@@ -98,9 +100,9 @@ io.emit("charactersUpdate",characters)
 
 setInterval(checkDailyReset,60000)
 
-/* =========================
+/* ======================
    SOCKET
-========================= */
+====================== */
 
 io.on("connection",(socket)=>{
 
