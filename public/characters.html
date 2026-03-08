@@ -16,13 +16,54 @@ text-align:center;
 margin:0;
 }
 
+/* NAVBAR */
+
+.topnav{
+display:flex;
+justify-content:space-between;
+align-items:center;
+max-width:1100px;
+margin:20px auto 0 auto;
+padding:0 20px;
+}
+
+.navLeft{
+display:flex;
+gap:10px;
+}
+
+.navRight{
+display:flex;
+gap:10px;
+}
+
+.navButton{
+background:linear-gradient(#6b4d1f,#3b2a0f);
+border:2px solid #caa64a;
+color:#ffd36a;
+padding:8px 16px;
+border-radius:8px;
+cursor:pointer;
+font-weight:bold;
+transition:0.2s;
+}
+
+.navButton:hover{
+transform:scale(1.05);
+box-shadow:0 0 8px rgba(255,200,100,0.5);
+}
+
+/* PANEL USTAWIEŃ */
+
 .topbar{
 display:flex;
 flex-direction:column;
 align-items:center;
 gap:10px;
-margin-top:20px;
+margin-top:10px;
 }
+
+/* GRID POSTACI */
 
 .container{
 max-width:1100px;
@@ -32,6 +73,8 @@ grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
 gap:20px;
 padding:20px;
 }
+
+/* KARTA POSTACI */
 
 .character{
 background:linear-gradient(#1a1a1a,#0c0c0c);
@@ -73,6 +116,7 @@ width:20px;
 .timer{
 font-size:12px;
 color:#aaa;
+margin-top:4px;
 }
 
 button{
@@ -88,6 +132,30 @@ border-radius:6px;
 </head>
 
 <body>
+
+<!-- NAVBAR -->
+
+<div class="topnav">
+
+<div class="navLeft">
+
+<button class="navButton" onclick="window.location.href='/'">
+⬅ Powrót
+</button>
+
+<button class="navButton" onclick="window.location.href='/giants.html'">
+Kraina Gigantów
+</button>
+
+<button class="navButton" onclick="window.location.href='/monkeys.html'">
+Loch Małp
+</button>
+
+</div>
+
+</div>
+
+<!-- PANEL GÓRNY -->
 
 <div class="topbar">
 
@@ -150,9 +218,7 @@ const container=document.getElementById("characters")
 const checkboxes={}
 const medalTimers={}
 
-/* ======================
-   CLOCK
-====================== */
+/* ZEGAR POLSKI */
 
 function updateClock(){
 
@@ -174,9 +240,7 @@ h+":"+m+":"+s
 setInterval(updateClock,1000)
 updateClock()
 
-/* ======================
-   TIMER MEDALU
-====================== */
+/* TIMER MEDALU */
 
 function startTimer(el,end){
 
@@ -205,9 +269,7 @@ setInterval(update,1000)
 
 }
 
-/* ======================
-   GENEROWANIE POSTACI
-====================== */
+/* GENEROWANIE POSTACI */
 
 for(let char in characters){
 
@@ -259,9 +321,7 @@ container.appendChild(box)
 
 }
 
-/* ======================
-   TASK
-====================== */
+/* TASK */
 
 function createTask(box,char,name,icon){
 
@@ -301,9 +361,7 @@ socket.emit("horseMedal",char)
 
 }
 
-/* ======================
-   RESET
-====================== */
+/* RESET */
 
 function setReset(){
 
@@ -320,9 +378,7 @@ socket.emit("manualReset")
 
 }
 
-/* ======================
-   UPDATE
-====================== */
+/* UPDATE */
 
 socket.on("charactersUpdate",(data)=>{
 
