@@ -16,41 +16,107 @@ text-align:center;
 margin:0;
 }
 
+/* TOP BAR */
+
+.topbar{
+display:flex;
+justify-content:space-between;
+max-width:1100px;
+margin:20px auto;
+}
+
+.backButton{
+background:linear-gradient(#6b4d1f,#3b2a0f);
+border:2px solid #caa64a;
+color:#ffd36a;
+padding:8px 20px;
+border-radius:8px;
+cursor:pointer;
+}
+
+/* GRID */
+
 .container{
 max-width:1100px;
 margin:auto;
-padding:20px;
 display:grid;
-grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
 gap:20px;
+padding:20px;
 }
 
+/* POSTAĆ */
+
 .character{
-background:#1b1b1b;
-border:2px solid #444;
+
+background:linear-gradient(#1a1a1a,#0c0c0c);
+border:2px solid #6a5125;
 border-radius:10px;
-padding:15px;
+padding:12px;
+
 }
+
+.characterHeader{
+display:flex;
+align-items:center;
+gap:10px;
+margin-bottom:10px;
+}
+
+.characterHeader img{
+width:34px;
+}
+
+/* TASK */
 
 .task{
 display:flex;
 align-items:center;
 justify-content:space-between;
-background:#222;
+background:#1f1f1f;
 padding:6px 10px;
-margin:6px 0;
+margin:5px 0;
 border-radius:6px;
+border:1px solid #333;
+}
+
+.taskLeft{
+display:flex;
+align-items:center;
+gap:8px;
+}
+
+.taskLeft img{
+width:20px;
 }
 
 .timer{
 font-size:12px;
 color:#aaa;
+margin-top:4px;
+}
+
+button{
+background:linear-gradient(#6b4d1f,#3b2a0f);
+border:1px solid #caa64a;
+color:#ffd36a;
+padding:3px 8px;
+border-radius:6px;
+cursor:pointer;
 }
 
 </style>
 </head>
 
 <body>
+
+<div class="topbar">
+
+<button class="backButton" onclick="window.location.href='/'">
+⬅ Powrót
+</button>
+
+</div>
 
 <h1>Postacie</h1>
 
@@ -60,26 +126,32 @@ color:#aaa;
 
 const socket = io()
 
-const characters = [
-"Medal",
-"Bieluszek",
-"Pojara",
-"Suczka",
-"Czantorianka",
-"EwaZajączkowska",
-"Yodasz"
-]
+const characters = {
+
+Medal:"https://en-wiki.metin2.gameforge.com/images/4/4e/Warrior.png",
+Bieluszek:"https://en-wiki.metin2.gameforge.com/images/3/3e/Ninja.png",
+Pojara:"https://en-wiki.metin2.gameforge.com/images/6/6c/Shaman.png",
+Suczka:"https://en-wiki.metin2.gameforge.com/images/6/6c/Shaman.png",
+Czantorianka:"https://en-wiki.metin2.gameforge.com/images/6/6c/Shaman.png",
+EwaZajączkowska:"https://en-wiki.metin2.gameforge.com/images/4/4e/Warrior.png",
+Yodasz:"https://en-wiki.metin2.gameforge.com/images/7/7a/Sura.png"
+
+}
+
+const icons = {
+
+KU:"https://en-wiki.metin2.gameforge.com/images/2/2e/Skill_Book.png",
+Poly:"https://en-wiki.metin2.gameforge.com/images/7/70/Polymorph_Marble.png",
+Biolog:"https://en-wiki.metin2.gameforge.com/images/f/f4/Orc_Tooth.png",
+Medal:"https://en-wiki.metin2.gameforge.com/images/9/95/Horse_Medal.png",
+Dowodzenie:"https://en-wiki.metin2.gameforge.com/images/2/2e/Skill_Book.png"
+
+}
 
 const container=document.getElementById("characters")
 
-const tasks=[
-"KU1","KU2","KU3","KU4","KU5",
-"Polymorph",
-"Biolog"
-]
-
-let checkboxes={}
-let medalTimers={}
+const checkboxes={}
+const medalTimers={}
 
 /* TIMER MEDALU */
 
@@ -114,113 +186,109 @@ setInterval(update,1000)
 
 /* GENEROWANIE POSTACI */
 
-characters.forEach(char=>{
+for(let char in characters){
 
 let box=document.createElement("div")
 box.className="character"
 
-let title=document.createElement("h2")
-title.innerText=char
+let header=document.createElement("div")
+header.className="characterHeader"
 
-box.appendChild(title)
+header.innerHTML=`
+<img src="${characters[char]}">
+<b>${char}</b>
+`
 
-/* KU i inne */
+box.appendChild(header)
 
-tasks.forEach(task=>{
+/* KU */
 
-let row=document.createElement("div")
-row.className="task"
+for(let i=1;i<=5;i++){
 
-let label=document.createElement("span")
-label.innerText=task
-
-let cb=document.createElement("input")
-cb.type="checkbox"
-
-cb.onchange=()=>{
-
-socket.emit("toggleTask",{
-char:char,
-task:task,
-value:cb.checked
-})
+createTask(box,char,"KU"+i,icons.KU)
 
 }
 
-checkboxes[char+"_"+task]=cb
+/* inne */
 
-row.appendChild(label)
-row.appendChild(cb)
+createTask(box,char,"Polymorph",icons.Poly)
+createTask(box,char,"Biolog",icons.Biolog)
 
-box.appendChild(row)
-
-})
-
-/* Dowodzenie */
+/* dowodzenie */
 
 if(char==="Suczka" || char==="Czantorianka"){
 
-let row=document.createElement("div")
-row.className="task"
-
-let label=document.createElement("span")
-label.innerText="Dowodzenie"
-
-let cb=document.createElement("input")
-cb.type="checkbox"
-
-cb.onchange=()=>{
-
-socket.emit("toggleTask",{
-char:char,
-task:"Dowodzenie",
-value:cb.checked
-})
+createTask(box,char,"Dowodzenie",icons.Dowodzenie)
 
 }
 
-checkboxes[char+"_Dowodzenie"]=cb
+/* medal */
 
-row.appendChild(label)
-row.appendChild(cb)
+let medalRow=document.createElement("div")
+medalRow.className="task"
 
-box.appendChild(row)
+medalRow.innerHTML=`
+<div class="taskLeft">
+<img src="${icons.Medal}">
+Medal konny
+</div>
+<button onclick="giveMedal('${char}')">Oddaj</button>
+`
 
-}
-
-/* Medal konny */
-
-let row=document.createElement("div")
-row.className="task"
-
-let label=document.createElement("span")
-label.innerText="Medal konny"
-
-let btn=document.createElement("button")
-btn.innerText="Oddaj"
+box.appendChild(medalRow)
 
 let timer=document.createElement("div")
 timer.className="timer"
 
-btn.onclick=()=>{
-
-socket.emit("horseMedal",char)
-
-}
-
-row.appendChild(label)
-row.appendChild(btn)
-
-box.appendChild(row)
 box.appendChild(timer)
 
 medalTimers[char]=timer
 
 container.appendChild(box)
 
+}
+
+/* funkcje */
+
+function createTask(box,char,name,icon){
+
+let row=document.createElement("div")
+row.className="task"
+
+let left=document.createElement("div")
+left.className="taskLeft"
+
+left.innerHTML=`<img src="${icon}">${name}`
+
+let cb=document.createElement("input")
+cb.type="checkbox"
+
+cb.onchange=()=>{
+
+socket.emit("toggleTask",{
+char:char,
+task:name,
+value:cb.checked
 })
 
-/* UPDATE Z SERWERA */
+}
+
+checkboxes[char+"_"+name]=cb
+
+row.appendChild(left)
+row.appendChild(cb)
+
+box.appendChild(row)
+
+}
+
+function giveMedal(char){
+
+socket.emit("horseMedal",char)
+
+}
+
+/* update */
 
 socket.on("charactersUpdate",(data)=>{
 
