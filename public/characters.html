@@ -18,9 +18,10 @@ margin:0;
 
 .topbar{
 display:flex;
-justify-content:center;
-gap:20px;
-margin:20px;
+flex-direction:column;
+align-items:center;
+gap:10px;
+margin-top:20px;
 }
 
 .container{
@@ -90,14 +91,27 @@ border-radius:6px;
 
 <div class="topbar">
 
-Reset:
-<input id="resetHour" type="number" min="0" max="23" value="0">
-:
-<input id="resetMinute" type="number" min="0" max="59" value="0">
+<div>
+Czas PL: <span id="clock"></span>
+</div>
 
-<button onclick="setReset()">Ustaw reset</button>
+<div>
+Reset: <span id="resetDisplay"></span>
+</div>
+
+<div>
+
+Ustaw reset:
+
+<input id="resetHour" type="number" min="0" max="23" value="23">
+:
+<input id="resetMinute" type="number" min="0" max="59" value="59">
+
+<button onclick="setReset()">Ustaw</button>
 
 <button onclick="manualReset()">Manual reset</button>
+
+</div>
 
 </div>
 
@@ -127,7 +141,7 @@ KU:"/icons/skillbook.png",
 Poly:"/icons/polymorph.png",
 Bio:"/icons/orctooth.png",
 Medal:"/icons/horsemedal.png",
-Dow:"/icons/sunzi.png"
+Dow:"/icons/skillbook.png"
 
 }
 
@@ -135,6 +149,34 @@ const container=document.getElementById("characters")
 
 const checkboxes={}
 const medalTimers={}
+
+/* ======================
+   CLOCK
+====================== */
+
+function updateClock(){
+
+const now = new Date()
+
+const polish = new Date(
+now.toLocaleString("en-US",{timeZone:"Europe/Warsaw"})
+)
+
+let h = polish.getHours().toString().padStart(2,"0")
+let m = polish.getMinutes().toString().padStart(2,"0")
+let s = polish.getSeconds().toString().padStart(2,"0")
+
+document.getElementById("clock").innerText =
+h+":"+m+":"+s
+
+}
+
+setInterval(updateClock,1000)
+updateClock()
+
+/* ======================
+   TIMER MEDALU
+====================== */
 
 function startTimer(el,end){
 
@@ -162,6 +204,10 @@ update()
 setInterval(update,1000)
 
 }
+
+/* ======================
+   GENEROWANIE POSTACI
+====================== */
 
 for(let char in characters){
 
@@ -213,6 +259,10 @@ container.appendChild(box)
 
 }
 
+/* ======================
+   TASK
+====================== */
+
 function createTask(box,char,name,icon){
 
 let row=document.createElement("div")
@@ -251,6 +301,10 @@ socket.emit("horseMedal",char)
 
 }
 
+/* ======================
+   RESET
+====================== */
+
 function setReset(){
 
 socket.emit("setResetTime",{
@@ -265,6 +319,10 @@ function manualReset(){
 socket.emit("manualReset")
 
 }
+
+/* ======================
+   UPDATE
+====================== */
 
 socket.on("charactersUpdate",(data)=>{
 
@@ -289,6 +347,15 @@ startTimer(medalTimers[char],tasks.horseTimer)
 }
 
 }
+
+})
+
+socket.on("resetTime",(data)=>{
+
+let h=data.hour.toString().padStart(2,"0")
+let m=data.minute.toString().padStart(2,"0")
+
+document.getElementById("resetDisplay").innerText=h+":"+m
 
 })
 
