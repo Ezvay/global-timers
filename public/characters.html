@@ -16,8 +16,6 @@ text-align:center;
 margin:0;
 }
 
-/* NAVBAR */
-
 .topnav{
 display:flex;
 justify-content:space-between;
@@ -32,11 +30,6 @@ display:flex;
 gap:10px;
 }
 
-.navRight{
-display:flex;
-gap:10px;
-}
-
 .navButton{
 background:linear-gradient(#6b4d1f,#3b2a0f);
 border:2px solid #caa64a;
@@ -45,15 +38,7 @@ padding:8px 16px;
 border-radius:8px;
 cursor:pointer;
 font-weight:bold;
-transition:0.2s;
 }
-
-.navButton:hover{
-transform:scale(1.05);
-box-shadow:0 0 8px rgba(255,200,100,0.5);
-}
-
-/* PANEL USTAWIEŃ */
 
 .topbar{
 display:flex;
@@ -63,8 +48,6 @@ gap:10px;
 margin-top:10px;
 }
 
-/* GRID POSTACI */
-
 .container{
 max-width:1100px;
 margin:auto;
@@ -73,8 +56,6 @@ grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
 gap:20px;
 padding:20px;
 }
-
-/* KARTA POSTACI */
 
 .character{
 background:linear-gradient(#1a1a1a,#0c0c0c);
@@ -117,6 +98,14 @@ width:20px;
 font-size:12px;
 color:#aaa;
 margin-top:4px;
+}
+
+.addTask{
+margin-top:6px;
+font-size:12px;
+background:#222;
+padding:4px;
+border-radius:6px;
 }
 
 button{
@@ -214,25 +203,28 @@ const container=document.getElementById("characters")
 const checkboxes={}
 const medalTimers={}
 
+/* CLOCK */
+
 function updateClock(){
 
-const now = new Date()
+const now=new Date()
 
-const polish = new Date(
+const polish=new Date(
 now.toLocaleString("en-US",{timeZone:"Europe/Warsaw"})
 )
 
-let h = polish.getHours().toString().padStart(2,"0")
-let m = polish.getMinutes().toString().padStart(2,"0")
-let s = polish.getSeconds().toString().padStart(2,"0")
+let h=polish.getHours().toString().padStart(2,"0")
+let m=polish.getMinutes().toString().padStart(2,"0")
+let s=polish.getSeconds().toString().padStart(2,"0")
 
-document.getElementById("clock").innerText =
-h+":"+m+":"+s
+clock.innerText=h+":"+m+":"+s
 
 }
 
 setInterval(updateClock,1000)
 updateClock()
+
+/* TIMER MEDAL */
 
 function startTimer(el,end){
 
@@ -261,116 +253,7 @@ setInterval(update,1000)
 
 }
 
-/* GENEROWANIE POSTACI */
-
-for(let char in characters){
-
-let box=document.createElement("div")
-box.className="character"
-
-let header=document.createElement("div")
-header.className="header"
-
-header.innerHTML=`
-<img src="${characters[char]}">
-<b>${char}</b>
-`
-
-box.appendChild(header)
-
-/* MEDAL */
-
-if(char==="Medal"){
-createTask(box,char,"KU1",icons.KU)
-createTask(box,char,"KU2",icons.KU)
-createTask(box,char,"KU3",icons.KU)
-createTask(box,char,"Biolog",icons.Bio)
-addMedal(box,char)
-}
-
-/* BIELUSZEK */
-
-if(char==="Bieluszek"){
-createTask(box,char,"KU2",icons.KU)
-createTask(box,char,"KU3",icons.KU)
-createTask(box,char,"KU4",icons.KU)
-createTask(box,char,"KU5",icons.KU)
-createTask(box,char,"Biolog",icons.Bio)
-addMedal(box,char)
-}
-
-/* POJARA */
-
-if(char==="Pojara"){
-createTask(box,char,"KU1",icons.KU)
-createTask(box,char,"Biolog",icons.Bio)
-addMedal(box,char)
-}
-
-/* SUCZKA */
-
-if(char==="Suczka"){
-createTask(box,char,"KU1",icons.KU)
-createTask(box,char,"KU2",icons.KU)
-createTask(box,char,"KU3",icons.KU)
-createTask(box,char,"Biolog",icons.Bio)
-createTask(box,char,"Dowodzenie",icons.Dow)
-}
-
-/* CZANTORIANKA */
-
-if(char==="Czantorianka"){
-createTask(box,char,"KU1",icons.KU)
-createTask(box,char,"KU2",icons.KU)
-createTask(box,char,"KU3",icons.KU)
-createTask(box,char,"Biolog",icons.Bio)
-createTask(box,char,"Dowodzenie",icons.Dow)
-addMedal(box,char)
-}
-
-/* EWA */
-
-if(char==="EwaZajączkowska"){
-createTask(box,char,"KU4",icons.KU)
-createTask(box,char,"KU5",icons.KU)
-createTask(box,char,"Biolog",icons.Bio)
-}
-
-/* YODASZ */
-
-if(char==="Yodasz"){
-createTask(box,char,"KU5",icons.KU)
-createTask(box,char,"Biolog",icons.Bio)
-addMedal(box,char)
-}
-
-container.appendChild(box)
-
-}
-
-function addMedal(box,char){
-
-let row=document.createElement("div")
-row.className="task"
-
-row.innerHTML=`
-<div class="taskLeft">
-<img src="${icons.Medal}">
-Medal konny
-</div>
-<button onclick="giveMedal('${char}')">Oddaj</button>
-`
-
-box.appendChild(row)
-
-let timer=document.createElement("div")
-timer.className="timer"
-
-box.appendChild(timer)
-
-medalTimers[char]=timer
-
-}
+/* CREATE TASK */
 
 function createTask(box,char,name,icon){
 
@@ -400,7 +283,162 @@ checkboxes[char+"_"+name]=cb
 row.appendChild(left)
 row.appendChild(cb)
 
+/* REMOVE BUTTON */
+
+let remove=document.createElement("button")
+remove.innerText="X"
+
+remove.onclick=()=>{
+row.remove()
+}
+
+row.appendChild(remove)
+
 box.appendChild(row)
+
+}
+
+/* ADD TASK PANEL */
+
+function addTaskPanel(box,char){
+
+let panel=document.createElement("div")
+panel.className="addTask"
+
+panel.innerHTML=`
+<select id="task_${char}">
+<option value="KU">KU</option>
+<option value="Polymorph">Polymorph</option>
+<option value="Biolog">Biolog</option>
+<option value="Dowodzenie">Dowodzenie</option>
+</select>
+
+<button onclick="addTask('${char}')">Dodaj</button>
+`
+
+box.appendChild(panel)
+
+}
+
+function addTask(char){
+
+let select=document.getElementById("task_"+char)
+
+let task=select.value
+
+let box=[...document.getElementsByClassName("character")]
+.find(b=>b.innerText.includes(char))
+
+let icon=icons.KU
+
+if(task==="Polymorph") icon=icons.Poly
+if(task==="Biolog") icon=icons.Bio
+if(task==="Dowodzenie") icon=icons.Dow
+
+createTask(box,char,task,icon)
+
+}
+
+/* GENERATE CHARACTERS */
+
+for(let char in characters){
+
+let box=document.createElement("div")
+box.className="character"
+
+let header=document.createElement("div")
+header.className="header"
+
+header.innerHTML=`
+<img src="${characters[char]}">
+<b>${char}</b>
+`
+
+box.appendChild(header)
+
+/* MEDAL */
+
+if(char==="Medal"){
+createTask(box,char,"KU1",icons.KU)
+createTask(box,char,"KU2",icons.KU)
+createTask(box,char,"KU3",icons.KU)
+createTask(box,char,"Biolog",icons.Bio)
+createTask(box,char,"Polymorph",icons.Poly)
+addMedal(box,char)
+}
+
+if(char==="Bieluszek"){
+createTask(box,char,"KU2",icons.KU)
+createTask(box,char,"KU3",icons.KU)
+createTask(box,char,"KU4",icons.KU)
+createTask(box,char,"KU5",icons.KU)
+createTask(box,char,"Biolog",icons.Bio)
+addMedal(box,char)
+}
+
+if(char==="Pojara"){
+createTask(box,char,"KU1",icons.KU)
+createTask(box,char,"Biolog",icons.Bio)
+addMedal(box,char)
+}
+
+if(char==="Suczka"){
+createTask(box,char,"KU1",icons.KU)
+createTask(box,char,"KU2",icons.KU)
+createTask(box,char,"KU3",icons.KU)
+createTask(box,char,"Biolog",icons.Bio)
+createTask(box,char,"Dowodzenie",icons.Dow)
+}
+
+if(char==="Czantorianka"){
+createTask(box,char,"KU1",icons.KU)
+createTask(box,char,"KU2",icons.KU)
+createTask(box,char,"KU3",icons.KU)
+createTask(box,char,"Biolog",icons.Bio)
+createTask(box,char,"Dowodzenie",icons.Dow)
+addMedal(box,char)
+}
+
+if(char==="EwaZajączkowska"){
+createTask(box,char,"KU4",icons.KU)
+createTask(box,char,"KU5",icons.KU)
+createTask(box,char,"Biolog",icons.Bio)
+}
+
+if(char==="Yodasz"){
+createTask(box,char,"KU5",icons.KU)
+createTask(box,char,"Biolog",icons.Bio)
+createTask(box,char,"Polymorph",icons.Poly)
+addMedal(box,char)
+}
+
+addTaskPanel(box,char)
+
+container.appendChild(box)
+
+}
+
+function addMedal(box,char){
+
+let row=document.createElement("div")
+row.className="task"
+
+row.innerHTML=`
+<div class="taskLeft">
+<img src="${icons.Medal}">
+Medal konny
+</div>
+<button onclick="giveMedal('${char}')">Oddaj</button>
+`
+
+box.appendChild(row)
+
+let timer=document.createElement("div")
+timer.className="timer"
+
+box.appendChild(timer)
+
+medalTimers[char]=timer
 
 }
 
@@ -456,7 +494,7 @@ socket.on("resetTime",(data)=>{
 let h=data.hour.toString().padStart(2,"0")
 let m=data.minute.toString().padStart(2,"0")
 
-document.getElementById("resetDisplay").innerText=h+":"+m
+resetDisplay.innerText=h+":"+m
 
 })
 
