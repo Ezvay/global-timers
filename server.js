@@ -4,6 +4,63 @@ const http = require("http").createServer(app)
 const io = require("socket.io")(http)
 const fs = require("fs")
 
+/* ======================
+   HASŁO DO CHARACTERS
+====================== */
+
+const PASSWORD = "platforma"
+
+app.use((req,res,next)=>{
+
+if(req.path === "/characters.html"){
+
+if(req.query.password !== PASSWORD){
+
+return res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Logowanie</title>
+<style>
+body{
+background:#111;
+color:white;
+font-family:Arial;
+text-align:center;
+margin-top:100px;
+}
+input{
+padding:8px;
+font-size:16px;
+}
+button{
+padding:8px 16px;
+font-size:16px;
+cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<h2>Strona chroniona hasłem</h2>
+
+<form method="GET">
+<input type="password" name="password" placeholder="Hasło">
+<button>Zaloguj</button>
+</form>
+
+</body>
+</html>
+`)
+}
+
+}
+
+next()
+
+})
+
 app.use(express.static("public"))
 
 /* ======================
@@ -22,9 +79,7 @@ try{
 const data = JSON.parse(fs.readFileSync("data.json"))
 
 timers = data.timers || {}
-
 characters = data.characters || {}
-
 tasks = data.tasks || {}
 
 resetHour = data.resetHour || 23
@@ -90,7 +145,6 @@ intervals[id]=null
 function resetTimer(id){
 
 timers[id]=0
-
 stopTimer(id)
 
 saveData()
@@ -147,15 +201,9 @@ setInterval(checkReset,30000)
 
 io.on("connection",(socket)=>{
 
-/* TIMERY */
-
 socket.on("start",(id)=>startTimer(id))
-
 socket.on("stop",(id)=>stopTimer(id))
-
 socket.on("reset",(id)=>resetTimer(id))
-
-/* CHECKBOX */
 
 socket.on("toggleTask",(data)=>{
 
@@ -171,8 +219,6 @@ io.emit("charactersUpdate",characters)
 
 })
 
-/* DODAWANIE TASKA */
-
 socket.on("addTask",(data)=>{
 
 const {char,task}=data
@@ -187,8 +233,6 @@ io.emit("tasksUpdate",tasks)
 
 })
 
-/* USUWANIE TASKA */
-
 socket.on("removeTask",(data)=>{
 
 const {char,task}=data
@@ -202,12 +246,9 @@ delete characters[char][task]
 saveData()
 
 io.emit("tasksUpdate",tasks)
-
 io.emit("charactersUpdate",characters)
 
 })
-
-/* MEDAL */
 
 socket.on("horseMedal",(char)=>{
 
@@ -222,12 +263,9 @@ io.emit("charactersUpdate",characters)
 
 })
 
-/* RESET TIME */
-
 socket.on("setResetTime",(data)=>{
 
 resetHour = data.hour
-
 resetMinute = data.minute
 
 saveData()
@@ -235,8 +273,6 @@ saveData()
 io.emit("resetTime",{hour:resetHour,minute:resetMinute})
 
 })
-
-/* MANUAL RESET */
 
 socket.on("manualReset",()=>{
 
@@ -256,14 +292,9 @@ io.emit("charactersUpdate",characters)
 
 })
 
-/* SYNC */
-
 socket.emit("update",timers)
-
 socket.emit("charactersUpdate",characters)
-
 socket.emit("tasksUpdate",tasks)
-
 socket.emit("resetTime",{hour:resetHour,minute:resetMinute})
 
 })
