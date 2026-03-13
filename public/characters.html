@@ -133,8 +133,6 @@ border-radius:6px;
 
 <body>
 
-<!-- NAVBAR -->
-
 <div class="topnav">
 
 <div class="navLeft">
@@ -154,8 +152,6 @@ Loch Małp
 </div>
 
 </div>
-
-<!-- PANEL GÓRNY -->
 
 <div class="topbar">
 
@@ -218,8 +214,6 @@ const container=document.getElementById("characters")
 const checkboxes={}
 const medalTimers={}
 
-/* ZEGAR POLSKI */
-
 function updateClock(){
 
 const now = new Date()
@@ -239,8 +233,6 @@ h+":"+m+":"+s
 
 setInterval(updateClock,1000)
 updateClock()
-
-/* TIMER MEDALU */
 
 function startTimer(el,end){
 
@@ -286,16 +278,77 @@ header.innerHTML=`
 
 box.appendChild(header)
 
-for(let i=1;i<=5;i++){
-createTask(box,char,"KU"+i,icons.KU)
+/* MEDAL */
+
+if(char==="Medal"){
+createTask(box,char,"KU1",icons.KU)
+createTask(box,char,"KU2",icons.KU)
+createTask(box,char,"KU3",icons.KU)
+createTask(box,char,"Biolog",icons.Bio)
+addMedal(box,char)
 }
 
-createTask(box,char,"Polymorph",icons.Poly)
-createTask(box,char,"Biolog",icons.Bio)
+/* BIELUSZEK */
 
-if(char==="Suczka" || char==="Czantorianka"){
+if(char==="Bieluszek"){
+createTask(box,char,"KU2",icons.KU)
+createTask(box,char,"KU3",icons.KU)
+createTask(box,char,"KU4",icons.KU)
+createTask(box,char,"KU5",icons.KU)
+createTask(box,char,"Biolog",icons.Bio)
+addMedal(box,char)
+}
+
+/* POJARA */
+
+if(char==="Pojara"){
+createTask(box,char,"KU1",icons.KU)
+createTask(box,char,"Biolog",icons.Bio)
+addMedal(box,char)
+}
+
+/* SUCZKA */
+
+if(char==="Suczka"){
+createTask(box,char,"KU1",icons.KU)
+createTask(box,char,"KU2",icons.KU)
+createTask(box,char,"KU3",icons.KU)
+createTask(box,char,"Biolog",icons.Bio)
 createTask(box,char,"Dowodzenie",icons.Dow)
 }
+
+/* CZANTORIANKA */
+
+if(char==="Czantorianka"){
+createTask(box,char,"KU1",icons.KU)
+createTask(box,char,"KU2",icons.KU)
+createTask(box,char,"KU3",icons.KU)
+createTask(box,char,"Biolog",icons.Bio)
+createTask(box,char,"Dowodzenie",icons.Dow)
+addMedal(box,char)
+}
+
+/* EWA */
+
+if(char==="EwaZajączkowska"){
+createTask(box,char,"KU4",icons.KU)
+createTask(box,char,"KU5",icons.KU)
+createTask(box,char,"Biolog",icons.Bio)
+}
+
+/* YODASZ */
+
+if(char==="Yodasz"){
+createTask(box,char,"KU5",icons.KU)
+createTask(box,char,"Biolog",icons.Bio)
+addMedal(box,char)
+}
+
+container.appendChild(box)
+
+}
+
+function addMedal(box,char){
 
 let row=document.createElement("div")
 row.className="task"
@@ -317,11 +370,7 @@ box.appendChild(timer)
 
 medalTimers[char]=timer
 
-container.appendChild(box)
-
 }
-
-/* TASK */
 
 function createTask(box,char,name,icon){
 
@@ -361,8 +410,6 @@ socket.emit("horseMedal",char)
 
 }
 
-/* RESET */
-
 function setReset(){
 
 socket.emit("setResetTime",{
@@ -377,8 +424,6 @@ function manualReset(){
 socket.emit("manualReset")
 
 }
-
-/* UPDATE */
 
 socket.on("charactersUpdate",(data)=>{
 
