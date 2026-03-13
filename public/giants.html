@@ -39,13 +39,23 @@ background:rgba(168,85,247,0.08);
 box-shadow:0 0 20px rgba(168,85,247,0.3);
 }
 
-.sectionTitle{
+.sectionHeader{
+display:flex;
+justify-content:center;
+align-items:center;
+gap:10px;
 font-size:20px;
-margin-bottom:10px;
 cursor:pointer;
 }
 
-/* PANEL GŁOŚNOŚCI */
+.toggleBtn{
+background:#333;
+border:1px solid #777;
+color:white;
+padding:2px 8px;
+cursor:pointer;
+border-radius:4px;
+}
 
 .volumePanel{
 max-width:400px;
@@ -126,49 +136,70 @@ cursor:pointer;
 
 </div>
 
-<div style="margin-bottom:15px">
-
-<button onclick="openTopOnly()">Pokaż tylko GÓRĘ</button>
-<button onclick="openBottomOnly()">Pokaż tylko DÓŁ</button>
-
-</div>
-
 <div class="volumePanel">
-
 <b>Głośność powiadomień</b><br><br>
-
 <input type="range" id="volumeSlider" min="0" max="1" step="0.05">
-
 </div>
 
 <div id="sectionTop" class="section active">
-<div class="sectionTitle">GÓRA</div>
+
+<div class="sectionHeader">
+<span>GÓRA</span>
+<button class="toggleBtn" onclick="toggleSection('top')">-</button>
+</div>
+
 <div class="container layout-2x4-horizontal" id="timersTop"></div>
+
 </div>
 
 <div id="sectionBottom" class="section">
-<div class="sectionTitle">DÓŁ</div>
+
+<div class="sectionHeader">
+<span>DÓŁ</span>
+<button class="toggleBtn" onclick="toggleSection('bottom')">-</button>
+</div>
+
 <div class="container layout-2x4-horizontal" id="timersBottom"></div>
+
 </div>
 
 <script>
 
 const socket = io()
 
-const params = new URLSearchParams(window.location.search)
-const viewMode = params.get("view")
+let activeSection="top"
 
-function openTopOnly(){
-window.open("/giants.html?view=top","_blank")
+/* ZWIJANIE SEKCJI */
+
+function toggleSection(section){
+
+const container =
+section==="top" ?
+document.getElementById("timersTop") :
+document.getElementById("timersBottom")
+
+if(container.style.display==="none"){
+container.style.display="grid"
+localStorage.setItem(section+"Hidden","false")
+}
+else{
+container.style.display="none"
+localStorage.setItem(section+"Hidden","true")
 }
 
-function openBottomOnly(){
-window.open("/giants.html?view=bottom","_blank")
+}
+
+/* PRZYWRACANIE ZWINIĘCIA */
+
+if(localStorage.getItem("topHidden")==="true"){
+document.getElementById("timersTop").style.display="none"
+}
+
+if(localStorage.getItem("bottomHidden")==="true"){
+document.getElementById("timersBottom").style.display="none"
 }
 
 /* AKTYWNA SEKCJA */
-
-let activeSection="top"
 
 const sectionTop=document.getElementById("sectionTop")
 const sectionBottom=document.getElementById("sectionBottom")
@@ -338,16 +369,6 @@ let timer=createTimer(id,"bottom")
 document.getElementById("timersBottom").appendChild(timer.box)
 displays[id]=timer
 
-}
-
-/* UKRYWANIE SEKCJI */
-
-if(viewMode==="top"){
-sectionBottom.style.display="none"
-}
-
-if(viewMode==="bottom"){
-sectionTop.style.display="none"
 }
 
 /* UPDATE */
