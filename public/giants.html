@@ -57,24 +57,37 @@ cursor:pointer;
 border-radius:4px;
 }
 
+/* MNIEJSZE KAFELKI LAYOUTU */
+
 .layoutBar{
-margin-bottom:10px;
+display:flex;
+justify-content:center;
+gap:4px;
+margin-bottom:8px;
 }
 
-.layoutBtn{
+.layoutTile{
+width:22px;
+height:22px;
 background:#222;
 border:1px solid #666;
-color:#ddd;
-padding:2px 6px;
-margin:2px;
-font-size:11px;
-border-radius:4px;
+border-radius:3px;
+display:grid;
+gap:1px;
+padding:2px;
 cursor:pointer;
 }
 
-.layoutBtn:hover{
+.layoutTile:hover{
 background:#444;
 }
+
+.layoutTile div{
+background:#bbb;
+border-radius:1px;
+}
+
+/* GŁOŚNOŚĆ */
 
 .volumePanel{
 max-width:350px;
@@ -84,6 +97,8 @@ border:2px solid #444;
 border-radius:8px;
 padding:8px;
 }
+
+/* GRID TIMERÓW */
 
 .container{
 display:grid;
@@ -95,6 +110,8 @@ padding:10px;
 .layout-1x8-horizontal{grid-template-columns:repeat(8,1fr);}
 .layout-2x4-horizontal{grid-template-columns:repeat(4,1fr);}
 .layout-2x4-vertical{grid-template-columns:repeat(2,1fr);}
+
+/* TIMER */
 
 .timer{
 background:linear-gradient(#1a1a1a,#0c0c0c);
@@ -151,6 +168,8 @@ cursor:pointer;
 <input type="range" id="volumeSlider" min="0" max="1" step="0.05">
 </div>
 
+<!-- GÓRA -->
+
 <div id="sectionTop" class="section active">
 
 <div class="sectionHeader">
@@ -159,15 +178,30 @@ cursor:pointer;
 </div>
 
 <div class="layoutBar">
-<button class="layoutBtn" onclick="setLayout('top','layout-1x8-vertical')">1×8 pion</button>
-<button class="layoutBtn" onclick="setLayout('top','layout-1x8-horizontal')">1×8 poziom</button>
-<button class="layoutBtn" onclick="setLayout('top','layout-2x4-vertical')">2×4 pion</button>
-<button class="layoutBtn" onclick="setLayout('top','layout-2x4-horizontal')">2×4 poziom</button>
+
+<div class="layoutTile" onclick="setLayout('top','layout-1x8-vertical')" style="grid-template-columns:1fr;grid-template-rows:repeat(4,1fr)">
+<div></div><div></div><div></div><div></div>
+</div>
+
+<div class="layoutTile" onclick="setLayout('top','layout-1x8-horizontal')" style="grid-template-columns:repeat(4,1fr)">
+<div></div><div></div><div></div><div></div>
+</div>
+
+<div class="layoutTile" onclick="setLayout('top','layout-2x4-vertical')" style="grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)">
+<div></div><div></div><div></div><div></div>
+</div>
+
+<div class="layoutTile" onclick="setLayout('top','layout-2x4-horizontal')" style="grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(2,1fr)">
+<div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+</div>
+
 </div>
 
 <div class="container layout-2x4-horizontal" id="timersTop"></div>
 
 </div>
+
+<!-- DÓŁ -->
 
 <div id="sectionBottom" class="section">
 
@@ -177,10 +211,23 @@ cursor:pointer;
 </div>
 
 <div class="layoutBar">
-<button class="layoutBtn" onclick="setLayout('bottom','layout-1x8-vertical')">1×8 pion</button>
-<button class="layoutBtn" onclick="setLayout('bottom','layout-1x8-horizontal')">1×8 poziom</button>
-<button class="layoutBtn" onclick="setLayout('bottom','layout-2x4-vertical')">2×4 pion</button>
-<button class="layoutBtn" onclick="setLayout('bottom','layout-2x4-horizontal')">2×4 poziom</button>
+
+<div class="layoutTile" onclick="setLayout('bottom','layout-1x8-vertical')" style="grid-template-columns:1fr;grid-template-rows:repeat(4,1fr)">
+<div></div><div></div><div></div><div></div>
+</div>
+
+<div class="layoutTile" onclick="setLayout('bottom','layout-1x8-horizontal')" style="grid-template-columns:repeat(4,1fr)">
+<div></div><div></div><div></div><div></div>
+</div>
+
+<div class="layoutTile" onclick="setLayout('bottom','layout-2x4-vertical')" style="grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)">
+<div></div><div></div><div></div><div></div>
+</div>
+
+<div class="layoutTile" onclick="setLayout('bottom','layout-2x4-horizontal')" style="grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(2,1fr)">
+<div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+</div>
+
 </div>
 
 <div class="container layout-2x4-horizontal" id="timersBottom"></div>
@@ -219,6 +266,8 @@ sectionBottom.classList.add("active")
 sectionTop.classList.remove("active")
 }
 
+/* GŁOŚNOŚĆ */
+
 let volume = parseFloat(localStorage.getItem("volume")) || 0.2
 const volumeSlider=document.getElementById("volumeSlider")
 
@@ -228,6 +277,8 @@ volumeSlider.oninput=()=>{
 volume=volumeSlider.value
 localStorage.setItem("volume",volume)
 }
+
+/* AUDIO */
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
 
