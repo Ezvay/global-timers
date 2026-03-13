@@ -26,39 +26,38 @@ margin:20px auto;
 padding:0 20px;
 }
 
-.layoutButtons{
-display:flex;
-gap:10px;
-justify-content:center;
-margin-bottom:20px;
-flex-wrap:wrap;
+/* SEKCJE */
+
+.section{
+max-width:1200px;
+margin:20px auto;
+padding:15px;
+border-radius:12px;
+border:2px solid transparent;
+transition:0.3s;
 }
 
-.layoutButtons button{
-background:linear-gradient(#1f3d6b,#0f1f3b);
-border:2px solid #4a8acb;
-color:#bcdcff;
-padding:6px 14px;
-border-radius:6px;
+.section.active{
+border-color:#a855f7;
+background:rgba(168,85,247,0.08);
+box-shadow:0 0 20px rgba(168,85,247,0.3);
+}
+
+.sectionTitle{
+font-size:20px;
+margin-bottom:10px;
 cursor:pointer;
 }
 
-.backButton{
-background:linear-gradient(#6b4d1f,#3b2a0f);
-border:2px solid #caa64a;
-color:#ffd36a;
-padding:8px 18px;
+/* PANEL DŹWIĘKU */
+
+.soundPanel{
+max-width:600px;
+margin:10px auto;
+background:#1a1a1a;
+border:2px solid #444;
 border-radius:8px;
-cursor:pointer;
-}
-
-.soundButton{
-background:linear-gradient(#1e3d1e,#0f1f0f);
-border:2px solid #5fa85f;
-color:#9aff9a;
-padding:8px 18px;
-border-radius:8px;
-cursor:pointer;
+padding:10px;
 }
 
 /* GRID */
@@ -66,26 +65,13 @@ cursor:pointer;
 .container{
 display:grid;
 gap:12px;
-max-width:1200px;
-margin:auto;
 padding:10px;
 }
 
-.layout-1x8-vertical{
-grid-template-columns:1fr;
-}
-
-.layout-1x8-horizontal{
-grid-template-columns:repeat(8,1fr);
-}
-
-.layout-2x4-horizontal{
-grid-template-columns:repeat(4,1fr);
-}
-
-.layout-2x4-vertical{
-grid-template-columns:repeat(2,1fr);
-}
+.layout-1x8-vertical{grid-template-columns:1fr;}
+.layout-1x8-horizontal{grid-template-columns:repeat(8,1fr);}
+.layout-2x4-horizontal{grid-template-columns:repeat(4,1fr);}
+.layout-2x4-vertical{grid-template-columns:repeat(2,1fr);}
 
 /* TIMER */
 
@@ -112,25 +98,10 @@ font-size:11px;
 padding:4px;
 }
 
-.grey{
-border-color:#555;
-background:#2a2a2a;
-}
-
-.red{
-border-color:#7a1f1f;
-background:linear-gradient(#2b0d0d,#1a0606);
-}
-
-.yellow{
-border-color:#b8972e;
-background:linear-gradient(#3a320e,#1c1707);
-}
-
-.green{
-border-color:#3fa34d;
-background:linear-gradient(#0d2a13,#07180b);
-}
+.grey{border-color:#555;background:#2a2a2a;}
+.red{border-color:#7a1f1f;background:#2b0d0d;}
+.yellow{border-color:#b8972e;background:#3a320e;}
+.green{border-color:#3fa34d;background:#0d2a13;}
 
 button{
 background:linear-gradient(#6b4d1f,#3b2a0f);
@@ -143,11 +114,6 @@ border-radius:6px;
 cursor:pointer;
 }
 
-.sectionTitle{
-font-size:20px;
-margin-top:30px;
-}
-
 </style>
 </head>
 
@@ -155,19 +121,15 @@ margin-top:30px;
 
 <div class="topbar">
 
-<button class="backButton" onclick="window.location.href='/'">
+<button onclick="window.location.href='/'">
 ⬅ Powrót
-</button>
-
-<button id="soundToggle" class="soundButton">
-🔊 Dźwięk ON
 </button>
 
 </div>
 
 <h1>Kraina Gigantów</h1>
 
-<div class="layoutButtons">
+<div style="margin-bottom:15px">
 
 <button onclick="setLayout('layout-1x8-vertical')">1×8 pionowo</button>
 <button onclick="setLayout('layout-1x8-horizontal')">1×8 poziomo</button>
@@ -176,22 +138,49 @@ margin-top:30px;
 
 </div>
 
-<div style="margin-bottom:20px">
+<div style="margin-bottom:15px">
 
 <button onclick="openTopOnly()">Pokaż tylko GÓRĘ</button>
 <button onclick="openBottomOnly()">Pokaż tylko DÓŁ</button>
 
 </div>
 
-<div class="sectionTitle" id="topTitle">GÓRA</div>
-<div class="container layout-2x4-horizontal" id="timersTop"></div>
+<div class="soundPanel">
 
-<div class="sectionTitle" id="bottomTitle">DÓŁ</div>
+<b>Panel dźwięków</b><br><br>
+
+<label>
+<input type="checkbox" id="soundTop"> Dźwięk GÓRA
+</label>
+
+<label>
+<input type="checkbox" id="soundBottom"> Dźwięk DÓŁ
+</label>
+
+<br><br>
+
+<label>
+Głośność
+<input type="range" id="volume" min="0" max="1" step="0.1">
+</label>
+
+</div>
+
+<div id="sectionTop" class="section active">
+<div class="sectionTitle">GÓRA</div>
+<div class="container layout-2x4-horizontal" id="timersTop"></div>
+</div>
+
+<div id="sectionBottom" class="section">
+<div class="sectionTitle">DÓŁ</div>
 <div class="container layout-2x4-horizontal" id="timersBottom"></div>
+</div>
 
 <script>
 
 const socket = io()
+
+/* URL PARAM */
 
 const params = new URLSearchParams(window.location.search)
 const viewMode = params.get("view")
@@ -204,13 +193,62 @@ function openBottomOnly(){
 window.open("/giants.html?view=bottom","_blank")
 }
 
+/* AKTYWNA SEKCJA */
+
+let activeSection="top"
+
+const sectionTop=document.getElementById("sectionTop")
+const sectionBottom=document.getElementById("sectionBottom")
+
+sectionTop.onclick=()=>{
+activeSection="top"
+sectionTop.classList.add("active")
+sectionBottom.classList.remove("active")
+}
+
+sectionBottom.onclick=()=>{
+activeSection="bottom"
+sectionBottom.classList.add("active")
+sectionTop.classList.remove("active")
+}
+
+/* PANEL DŹWIĘKÓW */
+
+let soundTop = localStorage.getItem("soundTop") !== "off"
+let soundBottom = localStorage.getItem("soundBottom") !== "off"
+let volume = parseFloat(localStorage.getItem("volume")) || 0.2
+
+const soundTopCheckbox = document.getElementById("soundTop")
+const soundBottomCheckbox = document.getElementById("soundBottom")
+const volumeSlider = document.getElementById("volume")
+
+soundTopCheckbox.checked=soundTop
+soundBottomCheckbox.checked=soundBottom
+volumeSlider.value=volume
+
+soundTopCheckbox.onchange=()=>{
+soundTop=soundTopCheckbox.checked
+localStorage.setItem("soundTop",soundTop?"on":"off")
+}
+
+soundBottomCheckbox.onchange=()=>{
+soundBottom=soundBottomCheckbox.checked
+localStorage.setItem("soundBottom",soundBottom?"on":"off")
+}
+
+volumeSlider.oninput=()=>{
+volume=volumeSlider.value
+localStorage.setItem("volume",volume)
+}
+
 /* AUDIO */
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
 
-function beep(duration=0.15,freq=800){
+function beep(section,duration=0.15,freq=800){
 
-if(!soundEnabled) return
+if(section==="top" && !soundTop) return
+if(section==="bottom" && !soundBottom) return
 
 const osc=audioCtx.createOscillator()
 const gain=audioCtx.createGain()
@@ -221,39 +259,21 @@ gain.connect(audioCtx.destination)
 osc.frequency.value=freq
 osc.start()
 
-gain.gain.setValueAtTime(0.2,audioCtx.currentTime)
+gain.gain.setValueAtTime(volume,audioCtx.currentTime)
 gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+duration)
 
 osc.stop(audioCtx.currentTime+duration)
 
 }
 
-function tripleBeep(){
-beep()
-setTimeout(()=>beep(),250)
-setTimeout(()=>beep(),500)
+function tripleBeep(section){
+beep(section)
+setTimeout(()=>beep(section),250)
+setTimeout(()=>beep(section),500)
 }
 
-function singleBeep(){
-beep(0.7,600)
-}
-
-/* SOUND */
-
-let soundEnabled = localStorage.getItem("sound") !== "off"
-
-const soundButton=document.getElementById("soundToggle")
-
-function updateSound(){
-soundButton.innerText=soundEnabled?"🔊 Dźwięk ON":"🔇 Dźwięk OFF"
-}
-
-updateSound()
-
-soundButton.onclick=()=>{
-soundEnabled=!soundEnabled
-localStorage.setItem("sound",soundEnabled?"on":"off")
-updateSound()
+function singleBeep(section){
+beep(section,0.7,600)
 }
 
 /* LAYOUT */
@@ -287,7 +307,7 @@ return h+":"+m+":"+s
 
 /* TIMER */
 
-function createTimer(id){
+function createTimer(id,section){
 
 let box=document.createElement("div")
 box.className="timer grey"
@@ -311,10 +331,18 @@ let comment=document.createElement("input")
 comment.className="comment"
 comment.placeholder="Komentarz..."
 
-start.onclick=()=>socket.emit("start",id)
-stop.onclick=()=>socket.emit("stop",id)
+start.onclick=()=>{
+if(activeSection!==section) return
+socket.emit("start",id)
+}
+
+stop.onclick=()=>{
+if(activeSection!==section) return
+socket.emit("stop",id)
+}
 
 reset.onclick=()=>{
+if(activeSection!==section) return
 comment.value=""
 socket.emit("reset",id)
 }
@@ -326,7 +354,7 @@ box.appendChild(stop)
 box.appendChild(reset)
 box.appendChild(comment)
 
-return {box,time,beepYellow:false,beepGreen:false}
+return {box,time,section,beepYellow:false,beepGreen:false}
 
 }
 
@@ -338,7 +366,7 @@ for(let i=1;i<=8;i++){
 
 let id="KG_CH"+i
 
-let timer=createTimer(id)
+let timer=createTimer(id,"top")
 
 document.getElementById("timersTop").appendChild(timer.box)
 
@@ -352,7 +380,7 @@ for(let i=1;i<=8;i++){
 
 let id="KGD_CH"+i
 
-let timer=createTimer(id)
+let timer=createTimer(id,"bottom")
 
 document.getElementById("timersBottom").appendChild(timer.box)
 
@@ -363,14 +391,14 @@ displays[id]=timer
 /* UKRYWANIE SEKCJI */
 
 if(viewMode==="top"){
-document.getElementById("timersBottom").style.display="none"
-document.getElementById("bottomTitle").style.display="none"
+sectionBottom.style.display="none"
 }
 
 if(viewMode==="bottom"){
-document.getElementById("timersTop").style.display="none"
-document.getElementById("topTitle").style.display="none"
+sectionTop.style.display="none"
 }
+
+/* UPDATE */
 
 socket.on("update",(data)=>{
 
@@ -387,23 +415,15 @@ let box=timer.box
 
 box.classList.remove("grey","red","yellow","green")
 
-if(sec===0){
-box.classList.add("grey")
-}
-else if(sec<1500){
-box.classList.add("red")
-}
-else if(sec<1800){
-box.classList.add("yellow")
-}
-else{
-box.classList.add("green")
-}
+if(sec===0) box.classList.add("grey")
+else if(sec<1500) box.classList.add("red")
+else if(sec<1800) box.classList.add("yellow")
+else box.classList.add("green")
 
 if(sec>=1500 && sec<1502){
 
 if(!timer.beepYellow){
-tripleBeep()
+tripleBeep(timer.section)
 timer.beepYellow=true
 }
 
@@ -412,7 +432,7 @@ timer.beepYellow=true
 if(sec>=1800 && sec<1802){
 
 if(!timer.beepGreen){
-singleBeep()
+singleBeep(timer.section)
 timer.beepGreen=true
 }
 
