@@ -16,8 +16,6 @@ text-align:center;
 margin:0;
 }
 
-/* TOP BAR */
-
 .topbar{
 display:flex;
 justify-content:space-between;
@@ -25,8 +23,6 @@ max-width:1200px;
 margin:20px auto;
 padding:0 20px;
 }
-
-/* SEKCJE */
 
 .section{
 max-width:1200px;
@@ -49,18 +45,16 @@ margin-bottom:10px;
 cursor:pointer;
 }
 
-/* PANEL DŹWIĘKU */
+/* PANEL GŁOŚNOŚCI */
 
-.soundPanel{
-max-width:600px;
+.volumePanel{
+max-width:400px;
 margin:10px auto;
 background:#1a1a1a;
 border:2px solid #444;
 border-radius:8px;
 padding:10px;
 }
-
-/* GRID */
 
 .container{
 display:grid;
@@ -72,8 +66,6 @@ padding:10px;
 .layout-1x8-horizontal{grid-template-columns:repeat(8,1fr);}
 .layout-2x4-horizontal{grid-template-columns:repeat(4,1fr);}
 .layout-2x4-vertical{grid-template-columns:repeat(2,1fr);}
-
-/* TIMER */
 
 .timer{
 background:linear-gradient(#1a1a1a,#0c0c0c);
@@ -120,11 +112,7 @@ cursor:pointer;
 <body>
 
 <div class="topbar">
-
-<button onclick="window.location.href='/'">
-⬅ Powrót
-</button>
-
+<button onclick="window.location.href='/'">⬅ Powrót</button>
 </div>
 
 <h1>Kraina Gigantów</h1>
@@ -145,17 +133,11 @@ cursor:pointer;
 
 </div>
 
-<div class="soundPanel" id="soundPanel">
+<div class="volumePanel">
 
-<b>Panel dźwięków</b><br><br>
+<b>Głośność powiadomień</b><br><br>
 
-<label>
-<input type="checkbox" id="soundTop"> Dźwięk GÓRA
-</label>
-
-<label>
-<input type="checkbox" id="soundBottom"> Dźwięk DÓŁ
-</label>
+<input type="range" id="volumeSlider" min="0" max="1" step="0.05">
 
 </div>
 
@@ -173,31 +155,8 @@ cursor:pointer;
 
 const socket = io()
 
-/* URL PARAM */
-
 const params = new URLSearchParams(window.location.search)
 const viewMode = params.get("view")
-
-/* AUTOMATYCZNE DŹWIĘKI */
-
-let soundTop = true
-let soundBottom = true
-
-if(viewMode === "top"){
-soundBottom = false
-}
-
-if(viewMode === "bottom"){
-soundTop = false
-}
-
-/* UKRYCIE PANELU DŹWIĘKU */
-
-if(viewMode === "top" || viewMode === "bottom"){
-document.getElementById("soundPanel").style.display = "none"
-}
-
-/* PRZYCISKI OKIEN */
 
 function openTopOnly(){
 window.open("/giants.html?view=top","_blank")
@@ -226,22 +185,17 @@ sectionBottom.classList.add("active")
 sectionTop.classList.remove("active")
 }
 
-/* PANEL DŹWIĘKÓW */
+/* GŁOŚNOŚĆ */
 
-const soundTopCheckbox = document.getElementById("soundTop")
-const soundBottomCheckbox = document.getElementById("soundBottom")
+let volume = parseFloat(localStorage.getItem("volume")) || 0.2
 
-if(soundTopCheckbox){
-soundTopCheckbox.checked = soundTop
-soundBottomCheckbox.checked = soundBottom
+const volumeSlider=document.getElementById("volumeSlider")
 
-soundTopCheckbox.onchange=()=>{
-soundTop=soundTopCheckbox.checked
-}
+volumeSlider.value=volume
 
-soundBottomCheckbox.onchange=()=>{
-soundBottom=soundBottomCheckbox.checked
-}
+volumeSlider.oninput=()=>{
+volume=volumeSlider.value
+localStorage.setItem("volume",volume)
 }
 
 /* AUDIO */
@@ -250,19 +204,18 @@ const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
 
 function beep(section,duration=0.15,freq=800){
 
-if(section==="top" && !soundTop) return
-if(section==="bottom" && !soundBottom) return
+if(section !== activeSection) return
 
-const osc=audioCtx.createOscillator()
-const gain=audioCtx.createGain()
+const osc = audioCtx.createOscillator()
+const gain = audioCtx.createGain()
 
 osc.connect(gain)
 gain.connect(audioCtx.destination)
 
-osc.frequency.value=freq
+osc.frequency.value = freq
 osc.start()
 
-gain.gain.setValueAtTime(0.2,audioCtx.currentTime)
+gain.gain.setValueAtTime(volume,audioCtx.currentTime)
 gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+duration)
 
 osc.stop(audioCtx.currentTime+duration)
