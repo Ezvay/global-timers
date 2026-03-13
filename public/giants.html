@@ -61,13 +61,34 @@ border-radius:8px;
 cursor:pointer;
 }
 
+/* SEKCJE */
+
+.section{
+max-width:1200px;
+margin:20px auto;
+padding:15px;
+border-radius:12px;
+border:2px solid transparent;
+transition:0.3s;
+}
+
+.section.active{
+border-color:#a855f7;
+background:rgba(168,85,247,0.08);
+box-shadow:0 0 20px rgba(168,85,247,0.3);
+}
+
+.sectionTitle{
+font-size:20px;
+margin-bottom:10px;
+cursor:pointer;
+}
+
 /* GRID */
 
 .container{
 display:grid;
 gap:12px;
-max-width:1200px;
-margin:auto;
 padding:10px;
 }
 
@@ -143,11 +164,6 @@ border-radius:6px;
 cursor:pointer;
 }
 
-.sectionTitle{
-font-size:20px;
-margin-top:30px;
-}
-
 </style>
 </head>
 
@@ -163,14 +179,6 @@ margin-top:30px;
 🔊 Dźwięk ON
 </button>
 
-<div>
-Aktywna sekcja:
-<select id="activeSection">
-<option value="top">GÓRA</option>
-<option value="bottom">DÓŁ</option>
-</select>
-</div>
-
 </div>
 
 <h1>Kraina Gigantów</h1>
@@ -184,15 +192,44 @@ Aktywna sekcja:
 
 </div>
 
+<div id="sectionTop" class="section active">
+
 <div class="sectionTitle">GÓRA</div>
+
 <div class="container layout-2x4-horizontal" id="timersTop"></div>
 
+</div>
+
+<div id="sectionBottom" class="section">
+
 <div class="sectionTitle">DÓŁ</div>
+
 <div class="container layout-2x4-horizontal" id="timersBottom"></div>
+
+</div>
 
 <script>
 
 const socket = io()
+
+let activeSection="top"
+
+const sectionTop=document.getElementById("sectionTop")
+const sectionBottom=document.getElementById("sectionBottom")
+
+sectionTop.onclick=()=>{
+activeSection="top"
+sectionTop.classList.add("active")
+sectionBottom.classList.remove("active")
+}
+
+sectionBottom.onclick=()=>{
+activeSection="bottom"
+sectionBottom.classList.add("active")
+sectionTop.classList.remove("active")
+}
+
+/* AUDIO */
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
 
@@ -299,17 +336,25 @@ let comment=document.createElement("input")
 comment.className="comment"
 comment.placeholder="Komentarz..."
 
-start.onclick=()=>socket.emit("start",id)
-stop.onclick=()=>socket.emit("stop",id)
+start.onclick=()=>{
+
+if(activeSection!==section) return
+
+socket.emit("start",id)
+
+}
+
+stop.onclick=()=>{
+
+if(activeSection!==section) return
+
+socket.emit("stop",id)
+
+}
 
 reset.onclick=()=>{
 
-let active=document.getElementById("activeSection").value
-
-if(active!==section){
-alert("Ta sekcja jest zablokowana")
-return
-}
+if(activeSection!==section) return
 
 comment.value=""
 socket.emit("reset",id)
@@ -331,15 +376,13 @@ let displays={}
 
 /* GÓRA */
 
-const topContainer=document.getElementById("timersTop")
-
 for(let i=1;i<=8;i++){
 
 let id="KG_CH"+i
 
 let timer=createTimer(id,"top")
 
-topContainer.appendChild(timer.box)
+document.getElementById("timersTop").appendChild(timer.box)
 
 displays[id]=timer
 
@@ -347,15 +390,13 @@ displays[id]=timer
 
 /* DÓŁ */
 
-const bottomContainer=document.getElementById("timersBottom")
-
 for(let i=1;i<=8;i++){
 
 let id="KGD_CH"+i
 
 let timer=createTimer(id,"bottom")
 
-bottomContainer.appendChild(timer.box)
+document.getElementById("timersBottom").appendChild(timer.box)
 
 displays[id]=timer
 
