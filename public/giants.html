@@ -145,7 +145,7 @@ cursor:pointer;
 
 </div>
 
-<div class="soundPanel">
+<div class="soundPanel" id="soundPanel">
 
 <b>Panel dźwięków</b><br><br>
 
@@ -155,13 +155,6 @@ cursor:pointer;
 
 <label>
 <input type="checkbox" id="soundBottom"> Dźwięk DÓŁ
-</label>
-
-<br><br>
-
-<label>
-Głośność
-<input type="range" id="volume" min="0" max="1" step="0.1">
 </label>
 
 </div>
@@ -184,6 +177,27 @@ const socket = io()
 
 const params = new URLSearchParams(window.location.search)
 const viewMode = params.get("view")
+
+/* AUTOMATYCZNE DŹWIĘKI */
+
+let soundTop = true
+let soundBottom = true
+
+if(viewMode === "top"){
+soundBottom = false
+}
+
+if(viewMode === "bottom"){
+soundTop = false
+}
+
+/* UKRYCIE PANELU DŹWIĘKU */
+
+if(viewMode === "top" || viewMode === "bottom"){
+document.getElementById("soundPanel").style.display = "none"
+}
+
+/* PRZYCISKI OKIEN */
 
 function openTopOnly(){
 window.open("/giants.html?view=top","_blank")
@@ -214,31 +228,20 @@ sectionTop.classList.remove("active")
 
 /* PANEL DŹWIĘKÓW */
 
-let soundTop = localStorage.getItem("soundTop") !== "off"
-let soundBottom = localStorage.getItem("soundBottom") !== "off"
-let volume = parseFloat(localStorage.getItem("volume")) || 0.2
-
 const soundTopCheckbox = document.getElementById("soundTop")
 const soundBottomCheckbox = document.getElementById("soundBottom")
-const volumeSlider = document.getElementById("volume")
 
-soundTopCheckbox.checked=soundTop
-soundBottomCheckbox.checked=soundBottom
-volumeSlider.value=volume
+if(soundTopCheckbox){
+soundTopCheckbox.checked = soundTop
+soundBottomCheckbox.checked = soundBottom
 
 soundTopCheckbox.onchange=()=>{
 soundTop=soundTopCheckbox.checked
-localStorage.setItem("soundTop",soundTop?"on":"off")
 }
 
 soundBottomCheckbox.onchange=()=>{
 soundBottom=soundBottomCheckbox.checked
-localStorage.setItem("soundBottom",soundBottom?"on":"off")
 }
-
-volumeSlider.oninput=()=>{
-volume=volumeSlider.value
-localStorage.setItem("volume",volume)
 }
 
 /* AUDIO */
@@ -259,7 +262,7 @@ gain.connect(audioCtx.destination)
 osc.frequency.value=freq
 osc.start()
 
-gain.gain.setValueAtTime(volume,audioCtx.currentTime)
+gain.gain.setValueAtTime(0.2,audioCtx.currentTime)
 gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+duration)
 
 osc.stop(audioCtx.currentTime+duration)
@@ -365,11 +368,9 @@ let displays={}
 for(let i=1;i<=8;i++){
 
 let id="KG_CH"+i
-
 let timer=createTimer(id,"top")
 
 document.getElementById("timersTop").appendChild(timer.box)
-
 displays[id]=timer
 
 }
@@ -379,11 +380,9 @@ displays[id]=timer
 for(let i=1;i<=8;i++){
 
 let id="KGD_CH"+i
-
 let timer=createTimer(id,"bottom")
 
 document.getElementById("timersBottom").appendChild(timer.box)
-
 displays[id]=timer
 
 }
