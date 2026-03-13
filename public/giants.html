@@ -61,34 +61,13 @@ border-radius:8px;
 cursor:pointer;
 }
 
-/* SEKCJE */
-
-.section{
-max-width:1200px;
-margin:20px auto;
-padding:15px;
-border-radius:12px;
-border:2px solid transparent;
-transition:0.3s;
-}
-
-.section.active{
-border-color:#a855f7;
-background:rgba(168,85,247,0.08);
-box-shadow:0 0 20px rgba(168,85,247,0.3);
-}
-
-.sectionTitle{
-font-size:20px;
-margin-bottom:10px;
-cursor:pointer;
-}
-
 /* GRID */
 
 .container{
 display:grid;
 gap:12px;
+max-width:1200px;
+margin:auto;
 padding:10px;
 }
 
@@ -164,6 +143,11 @@ border-radius:6px;
 cursor:pointer;
 }
 
+.sectionTitle{
+font-size:20px;
+margin-top:30px;
+}
+
 </style>
 </head>
 
@@ -192,41 +176,32 @@ cursor:pointer;
 
 </div>
 
-<div id="sectionTop" class="section active">
+<div style="margin-bottom:20px">
 
-<div class="sectionTitle">GÓRA</div>
+<button onclick="openTopOnly()">Pokaż tylko GÓRĘ</button>
+<button onclick="openBottomOnly()">Pokaż tylko DÓŁ</button>
 
+</div>
+
+<div class="sectionTitle" id="topTitle">GÓRA</div>
 <div class="container layout-2x4-horizontal" id="timersTop"></div>
 
-</div>
-
-<div id="sectionBottom" class="section">
-
-<div class="sectionTitle">DÓŁ</div>
-
+<div class="sectionTitle" id="bottomTitle">DÓŁ</div>
 <div class="container layout-2x4-horizontal" id="timersBottom"></div>
-
-</div>
 
 <script>
 
 const socket = io()
 
-let activeSection="top"
+const params = new URLSearchParams(window.location.search)
+const viewMode = params.get("view")
 
-const sectionTop=document.getElementById("sectionTop")
-const sectionBottom=document.getElementById("sectionBottom")
-
-sectionTop.onclick=()=>{
-activeSection="top"
-sectionTop.classList.add("active")
-sectionBottom.classList.remove("active")
+function openTopOnly(){
+window.open("/giants.html?view=top","_blank")
 }
 
-sectionBottom.onclick=()=>{
-activeSection="bottom"
-sectionBottom.classList.add("active")
-sectionTop.classList.remove("active")
+function openBottomOnly(){
+window.open("/giants.html?view=bottom","_blank")
 }
 
 /* AUDIO */
@@ -312,7 +287,7 @@ return h+":"+m+":"+s
 
 /* TIMER */
 
-function createTimer(id,section){
+function createTimer(id){
 
 let box=document.createElement("div")
 box.className="timer grey"
@@ -336,29 +311,12 @@ let comment=document.createElement("input")
 comment.className="comment"
 comment.placeholder="Komentarz..."
 
-start.onclick=()=>{
-
-if(activeSection!==section) return
-
-socket.emit("start",id)
-
-}
-
-stop.onclick=()=>{
-
-if(activeSection!==section) return
-
-socket.emit("stop",id)
-
-}
+start.onclick=()=>socket.emit("start",id)
+stop.onclick=()=>socket.emit("stop",id)
 
 reset.onclick=()=>{
-
-if(activeSection!==section) return
-
 comment.value=""
 socket.emit("reset",id)
-
 }
 
 box.appendChild(title)
@@ -380,7 +338,7 @@ for(let i=1;i<=8;i++){
 
 let id="KG_CH"+i
 
-let timer=createTimer(id,"top")
+let timer=createTimer(id)
 
 document.getElementById("timersTop").appendChild(timer.box)
 
@@ -394,12 +352,24 @@ for(let i=1;i<=8;i++){
 
 let id="KGD_CH"+i
 
-let timer=createTimer(id,"bottom")
+let timer=createTimer(id)
 
 document.getElementById("timersBottom").appendChild(timer.box)
 
 displays[id]=timer
 
+}
+
+/* UKRYWANIE SEKCJI */
+
+if(viewMode==="top"){
+document.getElementById("timersBottom").style.display="none"
+document.getElementById("bottomTitle").style.display="none"
+}
+
+if(viewMode==="bottom"){
+document.getElementById("timersTop").style.display="none"
+document.getElementById("topTitle").style.display="none"
 }
 
 socket.on("update",(data)=>{
