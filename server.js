@@ -58,6 +58,20 @@ Yodasz:{}
 
 }
 
+/* LISTA TASKÓW */
+
+let tasks = {
+
+Medal:["KU1","KU2","KU3","Biolog","Polymorph","Medal"],
+Bieluszek:["KU2","KU3","KU4","KU5","Biolog","Medal"],
+Pojara:["KU1","Biolog","Medal"],
+Suczka:["KU1","KU2","KU3","Biolog","Dowodzenie"],
+Czantorianka:["KU1","KU2","KU3","Biolog","Dowodzenie","Medal"],
+EwaZajączkowska:["KU4","KU5","Biolog"],
+Yodasz:["KU5","Biolog","Polymorph","Medal"]
+
+}
+
 /* ======================
    RESET GODZINA
 ====================== */
@@ -110,6 +124,8 @@ socket.on("start",(id)=>startTimer(id))
 socket.on("stop",(id)=>stopTimer(id))
 socket.on("reset",(id)=>resetTimer(id))
 
+/* CHECKBOX */
+
 socket.on("toggleTask",(data)=>{
 
 const {char,task,value}=data
@@ -122,6 +138,39 @@ io.emit("charactersUpdate",characters)
 
 })
 
+/* DODAWANIE TASKA */
+
+socket.on("addTask",(data)=>{
+
+const {char,task}=data
+
+if(!tasks[char]) tasks[char]=[]
+
+tasks[char].push(task)
+
+io.emit("tasksUpdate",tasks)
+
+})
+
+/* USUWANIE TASKA */
+
+socket.on("removeTask",(data)=>{
+
+const {char,task}=data
+
+if(!tasks[char]) return
+
+tasks[char] = tasks[char].filter(t=>t!==task)
+
+delete characters[char][task]
+
+io.emit("tasksUpdate",tasks)
+io.emit("charactersUpdate",characters)
+
+})
+
+/* MEDAL */
+
 socket.on("horseMedal",(char)=>{
 
 if(!characters[char]) characters[char]={}
@@ -133,6 +182,8 @@ io.emit("charactersUpdate",characters)
 
 })
 
+/* RESET TIME */
+
 socket.on("setResetTime",(data)=>{
 
 resetHour = data.hour
@@ -141,6 +192,8 @@ resetMinute = data.minute
 io.emit("resetTime",{hour:resetHour,minute:resetMinute})
 
 })
+
+/* MANUAL RESET */
 
 socket.on("manualReset",()=>{
 
@@ -158,7 +211,10 @@ io.emit("charactersUpdate",characters)
 
 })
 
+/* SYNC */
+
 socket.emit("charactersUpdate",characters)
+socket.emit("tasksUpdate",tasks)
 socket.emit("resetTime",{hour:resetHour,minute:resetMinute})
 
 })
