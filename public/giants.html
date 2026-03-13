@@ -45,7 +45,7 @@ justify-content:center;
 align-items:center;
 gap:10px;
 font-size:20px;
-cursor:pointer;
+margin-bottom:10px;
 }
 
 .toggleBtn{
@@ -57,13 +57,32 @@ cursor:pointer;
 border-radius:4px;
 }
 
+.layoutBar{
+margin-bottom:10px;
+}
+
+.layoutBtn{
+background:#222;
+border:1px solid #666;
+color:#ddd;
+padding:2px 6px;
+margin:2px;
+font-size:11px;
+border-radius:4px;
+cursor:pointer;
+}
+
+.layoutBtn:hover{
+background:#444;
+}
+
 .volumePanel{
-max-width:400px;
+max-width:350px;
 margin:10px auto;
 background:#1a1a1a;
 border:2px solid #444;
 border-radius:8px;
-padding:10px;
+padding:8px;
 }
 
 .container{
@@ -127,17 +146,8 @@ cursor:pointer;
 
 <h1>Kraina Gigantów</h1>
 
-<div style="margin-bottom:15px">
-
-<button onclick="setLayout('layout-1x8-vertical')">1×8 pionowo</button>
-<button onclick="setLayout('layout-1x8-horizontal')">1×8 poziomo</button>
-<button onclick="setLayout('layout-2x4-vertical')">2×4 pionowo</button>
-<button onclick="setLayout('layout-2x4-horizontal')">2×4 poziomo</button>
-
-</div>
-
 <div class="volumePanel">
-<b>Głośność powiadomień</b><br><br>
+<b>Głośność powiadomień</b><br>
 <input type="range" id="volumeSlider" min="0" max="1" step="0.05">
 </div>
 
@@ -145,7 +155,14 @@ cursor:pointer;
 
 <div class="sectionHeader">
 <span>GÓRA</span>
-<button class="toggleBtn" onclick="toggleSection('top')">-</button>
+<button class="toggleBtn" onclick="toggleSection('top')">±</button>
+</div>
+
+<div class="layoutBar">
+<button class="layoutBtn" onclick="setLayout('top','layout-1x8-vertical')">1×8 pion</button>
+<button class="layoutBtn" onclick="setLayout('top','layout-1x8-horizontal')">1×8 poziom</button>
+<button class="layoutBtn" onclick="setLayout('top','layout-2x4-vertical')">2×4 pion</button>
+<button class="layoutBtn" onclick="setLayout('top','layout-2x4-horizontal')">2×4 poziom</button>
 </div>
 
 <div class="container layout-2x4-horizontal" id="timersTop"></div>
@@ -156,7 +173,14 @@ cursor:pointer;
 
 <div class="sectionHeader">
 <span>DÓŁ</span>
-<button class="toggleBtn" onclick="toggleSection('bottom')">-</button>
+<button class="toggleBtn" onclick="toggleSection('bottom')">±</button>
+</div>
+
+<div class="layoutBar">
+<button class="layoutBtn" onclick="setLayout('bottom','layout-1x8-vertical')">1×8 pion</button>
+<button class="layoutBtn" onclick="setLayout('bottom','layout-1x8-horizontal')">1×8 poziom</button>
+<button class="layoutBtn" onclick="setLayout('bottom','layout-2x4-vertical')">2×4 pion</button>
+<button class="layoutBtn" onclick="setLayout('bottom','layout-2x4-horizontal')">2×4 poziom</button>
 </div>
 
 <div class="container layout-2x4-horizontal" id="timersBottom"></div>
@@ -169,37 +193,16 @@ const socket = io()
 
 let activeSection="top"
 
-/* ZWIJANIE SEKCJI */
-
 function toggleSection(section){
 
-const container =
-section==="top" ?
-document.getElementById("timersTop") :
-document.getElementById("timersBottom")
+const container = section==="top"
+? document.getElementById("timersTop")
+: document.getElementById("timersBottom")
 
-if(container.style.display==="none"){
-container.style.display="grid"
-localStorage.setItem(section+"Hidden","false")
-}
-else{
-container.style.display="none"
-localStorage.setItem(section+"Hidden","true")
-}
+container.style.display =
+container.style.display==="none" ? "grid":"none"
 
 }
-
-/* PRZYWRACANIE ZWINIĘCIA */
-
-if(localStorage.getItem("topHidden")==="true"){
-document.getElementById("timersTop").style.display="none"
-}
-
-if(localStorage.getItem("bottomHidden")==="true"){
-document.getElementById("timersBottom").style.display="none"
-}
-
-/* AKTYWNA SEKCJA */
 
 const sectionTop=document.getElementById("sectionTop")
 const sectionBottom=document.getElementById("sectionBottom")
@@ -216,10 +219,7 @@ sectionBottom.classList.add("active")
 sectionTop.classList.remove("active")
 }
 
-/* GŁOŚNOŚĆ */
-
 let volume = parseFloat(localStorage.getItem("volume")) || 0.2
-
 const volumeSlider=document.getElementById("volumeSlider")
 
 volumeSlider.value=volume
@@ -228,8 +228,6 @@ volumeSlider.oninput=()=>{
 volume=volumeSlider.value
 localStorage.setItem("volume",volume)
 }
-
-/* AUDIO */
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
 
@@ -263,24 +261,27 @@ function singleBeep(section){
 beep(section,0.7,600)
 }
 
-/* LAYOUT */
+function setLayout(section,layout){
 
-function setLayout(layout){
+const container =
+section==="top"
+? document.getElementById("timersTop")
+: document.getElementById("timersBottom")
 
-document.getElementById("timersTop").className="container "+layout
-document.getElementById("timersBottom").className="container "+layout
+container.className="container "+layout
 
-localStorage.setItem("layout",layout)
+localStorage.setItem("layout_"+section,layout)
 
 }
 
-const savedLayout=localStorage.getItem("layout")
+const savedTop = localStorage.getItem("layout_top")
+const savedBottom = localStorage.getItem("layout_bottom")
 
-if(savedLayout){
-setLayout(savedLayout)
-}
+if(savedTop)
+document.getElementById("timersTop").className="container "+savedTop
 
-/* FORMAT */
+if(savedBottom)
+document.getElementById("timersBottom").className="container "+savedBottom
 
 function format(sec){
 
@@ -291,8 +292,6 @@ let s=String(sec%60).padStart(2,"0")
 return h+":"+m+":"+s
 
 }
-
-/* TIMER */
 
 function createTimer(id,section){
 
@@ -347,8 +346,6 @@ return {box,time,section,beepYellow:false,beepGreen:false}
 
 let displays={}
 
-/* GÓRA */
-
 for(let i=1;i<=8;i++){
 
 let id="KG_CH"+i
@@ -359,8 +356,6 @@ displays[id]=timer
 
 }
 
-/* DÓŁ */
-
 for(let i=1;i<=8;i++){
 
 let id="KGD_CH"+i
@@ -370,8 +365,6 @@ document.getElementById("timersBottom").appendChild(timer.box)
 displays[id]=timer
 
 }
-
-/* UPDATE */
 
 socket.on("update",(data)=>{
 
