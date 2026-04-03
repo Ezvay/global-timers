@@ -52,7 +52,7 @@
   .content {
     position: relative; z-index: 1;
     display: flex; flex-direction: column; align-items: center;
-    padding: 40px 20px 60px; min-height: 100vh;
+    padding: 40px 20px 60px; min-height: 100vh; width: 100%;
   }
   .ornament-line {
     display: flex; align-items: center; gap: 12px;
@@ -66,9 +66,9 @@
     width: 8px; height: 8px; background: var(--gold);
     transform: rotate(45deg); box-shadow: 0 0 8px var(--gold);
   }
-  .logo-wrap { margin: 16px 0 10px; }
+  .logo-wrap { margin: 16px 0 10px; width: 100%; text-align: center; }
   .logo-wrap img {
-    max-width: 480px; width: 85%;
+    max-width: 520px; width: clamp(280px, 36%, 520px);
     filter: drop-shadow(0 0 30px rgba(201,168,76,0.6)) drop-shadow(0 0 60px rgba(201,168,76,0.25));
     animation: logo-pulse 4s ease-in-out infinite;
   }
@@ -82,7 +82,7 @@
     text-transform: uppercase; margin-bottom: 50px;
   }
   .card-grid {
-    display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; max-width: 1000px;
+    display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; max-width: 1500px; width: 100%;
   }
   .card { position: relative; width: 275px; text-decoration: none; color: inherit; display: block; }
   .card-inner {
@@ -171,7 +171,6 @@
   </div>
   <div class="subtitle">Gildia Patologów &nbsp;•&nbsp; Timery Bojowe</div>
   <div class="card-grid">
-
     <a class="card" href="/giants.html">
       <div class="card-inner">
         <div class="corner-tr"></div><div class="corner-bl"></div>
@@ -183,22 +182,6 @@
           <div class="card-divider"></div>
           <div class="card-title">Kraina Gigantów</div>
           <div class="card-desc">16 timerów &nbsp;•&nbsp; Góra & Dół</div>
-          <div class="card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
-        </div>
-      </div>
-    </a>
-
-    <a class="card" href="/monkeys.html">
-      <div class="card-inner">
-        <div class="corner-tr"></div><div class="corner-bl"></div>
-        <div class="card-glow"></div>
-        <div class="card-img-wrap">
-          <img src="https://pl-wiki.metin2.gameforge.com/images/d/df/Lord_Ma%C5%82p.png" alt="Loch Małp">
-        </div>
-        <div class="card-body">
-          <div class="card-divider"></div>
-          <div class="card-title">Loch Małp</div>
-          <div class="card-desc">8 timerów &nbsp;•&nbsp; Respawn</div>
           <div class="card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
         </div>
       </div>
@@ -221,6 +204,22 @@
       </div>
     </a>
 
+    <a class="card" href="/monkeys.html">
+      <div class="card-inner">
+        <div class="corner-tr"></div><div class="corner-bl"></div>
+        <div class="card-glow"></div>
+        <div class="card-img-wrap">
+          <img src="https://pl-wiki.metin2.gameforge.com/images/d/df/Lord_Ma%C5%82p.png" alt="Loch Małp">
+        </div>
+        <div class="card-body">
+          <div class="card-divider"></div>
+          <div class="card-title">Loch Małp</div>
+          <div class="card-desc">8 timerów &nbsp;•&nbsp; Respawn</div>
+          <div class="card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
+        </div>
+      </div>
+    </a>
+
     <a class="card" href="/custom.html">
       <div class="card-inner">
         <div class="corner-tr"></div><div class="corner-bl"></div>
@@ -228,7 +227,7 @@
         <div class="card-img-wrap">
           <img src="/custom-bg.jpg" alt="Własne Timery"
                style="object-fit:cover;background:#0a0808;"
-               onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(160deg,#1a0c0c,#0a0808)';this.parentElement.innerHTML+='<div style=\'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:Cinzel,serif;font-size:11px;letter-spacing:3px;color:#3a2e1a;text-transform:uppercase\'>Brak obrazka</div>'">
+               onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(160deg,#1a0c0c,#0a0808)';this.parentElement.innerHTML+='<div style='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:Cinzel,serif;font-size:11px;letter-spacing:3px;color:#3a2e1a;text-transform:uppercase'>Brak obrazka</div>'">
         </div>
         <div class="card-body">
           <div class="card-divider"></div>
@@ -243,9 +242,47 @@
       <div class="card-inner">
         <div class="corner-tr"></div><div class="corner-bl"></div>
         <div class="card-glow"></div>
-        <div class="card-img-wrap">
-          <img src="https://pl-wiki.metin2.gameforge.com/images/f/fb/Krwawienie.gif" alt="Postacie"
-               style="object-fit:contain;background:#130f08;padding:20px;">
+        <div class="card-img-wrap" style="background:linear-gradient(160deg,#1a0e0e,#0d0808,#0a0606);display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 200 195" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0">
+            <defs>
+              <radialGradient id="glow1" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#8b1a1a" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#8b1a1a" stop-opacity="0"/>
+              </radialGradient>
+              <radialGradient id="goldg" cx="50%" cy="30%" r="60%">
+                <stop offset="0%" stop-color="#f0d080"/>
+                <stop offset="60%" stop-color="#c9a84c"/>
+                <stop offset="100%" stop-color="#7a5f1e"/>
+              </radialGradient>
+            </defs>
+            <!-- background glow -->
+            <ellipse cx="100" cy="100" rx="90" ry="85" fill="url(#glow1)"/>
+            <!-- shield shape -->
+            <path d="M100 28 L148 50 L148 100 Q148 138 100 162 Q52 138 52 100 L52 50 Z"
+                  fill="none" stroke="url(#goldg)" stroke-width="1.5" opacity="0.5"/>
+            <!-- crossed swords -->
+            <g stroke="url(#goldg)" stroke-width="2.2" stroke-linecap="round" opacity="0.85">
+              <!-- sword 1 -->
+              <line x1="68" y1="60" x2="132" y2="135"/>
+              <line x1="68" y1="60" x2="62" y2="54"/>
+              <line x1="60" y1="70" x2="76" y2="56"/>
+              <line x1="60" y1="58" x2="74" y2="72"/>
+              <!-- sword 2 -->
+              <line x1="132" y1="60" x2="68" y2="135"/>
+              <line x1="132" y1="60" x2="138" y2="54"/>
+              <line x1="140" y1="70" x2="124" y2="56"/>
+              <line x1="140" y1="58" x2="126" y2="72"/>
+            </g>
+            <!-- center gem -->
+            <circle cx="100" cy="97" r="7" fill="url(#goldg)" opacity="0.9"/>
+            <circle cx="100" cy="97" r="4" fill="#fff8e0" opacity="0.5"/>
+            <!-- bottom ornament -->
+            <g fill="url(#goldg)" opacity="0.55">
+              <rect x="72" y="148" width="56" height="1.2" rx="0.6"/>
+              <rect x="84" y="153" width="32" height="1" rx="0.5"/>
+              <polygon points="100,158 103,153 97,153" />
+            </g>
+          </svg>
         </div>
         <div class="card-body">
           <div class="card-divider"></div>
