@@ -99,12 +99,14 @@
   }
   @keyframes pulse-ring{0%{transform:translate(-50%,-50%) scale(1);opacity:0.8;}100%{transform:translate(-50%,-50%) scale(3);opacity:0;}}
   .ping-ch-badge{
-    position:absolute;top:-9px;left:50%;transform:translateX(-50%);
-    background:rgba(0,0,0,0.85);
-    border:1px solid rgba(201,168,76,0.5);border-radius:2px;
-    font-family:'Cinzel',serif;font-size:8px;font-weight:600;
-    color:var(--gold-light);padding:0 3px;pointer-events:none;
-    white-space:nowrap;line-height:1.4;
+    position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+    background:rgba(0,0,0,0.92);
+    border:1.5px solid var(--gold);border-radius:3px;
+    font-family:'Cinzel',serif;font-size:11px;font-weight:600;
+    color:#fff;padding:1px 5px;pointer-events:none;
+    white-space:nowrap;line-height:1.5;
+    text-shadow:0 0 6px rgba(201,168,76,0.8);
+    box-shadow:0 0 6px rgba(0,0,0,0.8);
   }
 
   /* SIDEBAR */
@@ -248,17 +250,15 @@ pingSizeSlider.oninput = () => {
 };
 
 function applyPingSize() {
+  const sz = pingSize + 'px';
   document.querySelectorAll('.ping-dot').forEach(el => {
-    el.style.width  = pingSize + 'px';
-    el.style.height = pingSize + 'px';
+    el.style.width = sz; el.style.height = sz;
   });
   document.querySelectorAll('.ping-dot img').forEach(el => {
-    el.style.width  = pingSize + 'px';
-    el.style.height = pingSize + 'px';
+    el.style.width = sz; el.style.height = sz;
   });
   document.querySelectorAll('.ping-pulse').forEach(el => {
-    el.style.width  = pingSize + 'px';
-    el.style.height = pingSize + 'px';
+    el.style.width = sz; el.style.height = sz;
   });
 }
 
@@ -346,10 +346,12 @@ function placeMarker(p) {
   m.className = 'ping-marker'; m.id = 'marker_' + p.id;
   m.style.left = (p.x * 100) + '%';
   m.style.top  = (p.y * 100) + '%';
+  const sz = pingSize + 'px';
   m.innerHTML = `
-    <div class="ping-dot" onclick="removePing('${p.id}')" title="Kliknij aby usunąć (zbity)">
-      <div class="ping-pulse"></div>
-      <img src="/metin_icon.png" alt="metin">
+    <div class="ping-dot" onclick="removePing('${p.id}')" title="Kliknij aby usunąć (zbity)"
+         style="width:${sz};height:${sz}">
+      <div class="ping-pulse" style="width:${sz};height:${sz}"></div>
+      <img src="/metin_icon.png" alt="metin" style="width:${sz};height:${sz}">
       <div class="ping-ch-badge">${p.ch}</div>
     </div>`;
   pingLayer.appendChild(m);
