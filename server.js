@@ -30,6 +30,12 @@ try{
   customTimers = data.customTimers || {}
   grotaPings   = data.grotaPings   || {}
   grotaHistory = data.grotaHistory || []
+  // Migracja: jeśli postać ma horseTimer ale brak hasMedal — ustaw hasMedal
+  for (const char in characters) {
+    if (characters[char].horseTimer && !characters[char].hasMedal) {
+      characters[char].hasMedal = true
+    }
+  }
   console.log("Dane wczytane z data.json")
 }catch(e){
   console.log("Brak data.json — start od zera")
@@ -100,7 +106,7 @@ function checkReset(){
   if(hour===resetHour && minute===resetMinute && lastResetDay!==day){
     for(let char in characters){
       let old = characters[char]
-      characters[char] = { horseTimer: old.horseTimer || null, spiritStoneTimer: old.spiritStoneTimer || null, hasStone: old.hasStone || false }
+      characters[char] = { horseTimer: old.horseTimer || null, hasMedal: old.hasMedal || false, spiritStoneTimer: old.spiritStoneTimer || null, hasStone: old.hasStone || false }
     }
     lastResetDay = day
     saveData()
@@ -152,6 +158,21 @@ io.on("connection",(socket)=>{
     saveData()
     io.emit("charactersUpdate",characters)
   })
+  socket.on("addMedal",(char)=>{
+    if(!characters[char]) characters[char]={}
+    characters[char].hasMedal = true
+    saveData()
+    io.emit("charactersUpdate", characters)
+  })
+
+  socket.on("removeMedal",(char)=>{
+    if(!characters[char]) return
+    delete characters[char].hasMedal
+    delete characters[char].horseTimer
+    saveData()
+    io.emit("charactersUpdate", characters)
+  })
+
   socket.on("addStone",(char)=>{
     if(!characters[char]) characters[char]={}
     characters[char].hasStone = true
@@ -184,7 +205,7 @@ io.on("connection",(socket)=>{
   socket.on("manualReset",()=>{
     for(let char in characters){
       let old = characters[char]
-      characters[char] = { horseTimer: old.horseTimer || null, spiritStoneTimer: old.spiritStoneTimer || null, hasStone: old.hasStone || false }
+      characters[char] = { horseTimer: old.horseTimer || null, hasMedal: old.hasMedal || false, spiritStoneTimer: old.spiritStoneTimer || null, hasStone: old.hasStone || false }
     }
     saveData()
     io.emit("charactersUpdate",characters)

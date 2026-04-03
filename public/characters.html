@@ -575,9 +575,10 @@ function createTaskRow(char, name) {
 }
 
 /* MEDAL ROW */
-function addMedalRow(bodyEl, char) {
+function buildMedalRow(char) {
   const row = document.createElement('div');
   row.className = 'medal-row';
+  row.id = 'medalrow_' + char;
   row.innerHTML = `
     <div class="medal-left">
       <img class="task-icon" src="${icons.Medal}">
@@ -586,10 +587,25 @@ function addMedalRow(bodyEl, char) {
         <div class="medal-timer" id="mt_${char}">—</div>
       </div>
     </div>
-    <button class="give-btn" onclick="giveMedal('${char}')">Oddaj</button>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button class="give-btn" onclick="giveMedal('${char}')">Oddaj</button>
+      <button class="remove-btn" onclick="removeMedal('${char}')" title="Usuń">✕</button>
+    </div>
   `;
-  bodyEl.appendChild(row);
   medalTimers[char] = row.querySelector('#mt_' + char) || row.querySelector('.medal-timer');
+  return row;
+}
+
+function addMedalRow(bodyEl, char) {
+  bodyEl.appendChild(buildMedalRow(char));
+}
+
+function removeMedal(char) {
+  const row = document.getElementById('medalrow_' + char);
+  if (row) row.remove();
+  if (medalIntervals[char]) { clearInterval(medalIntervals[char]); delete medalIntervals[char]; }
+  delete medalTimers[char];
+  socket.emit('removeMedal', char);
 }
 
 /* SPIRIT STONE ROW */
@@ -637,7 +653,7 @@ function addTaskPanel(bodyEl, char) {
       <option value="Polymorph">Polymorph</option>
       <option value="Biolog">Biolog</option>
       <option value="Dowodzenie">Dowodzenie</option>
-      <option value="Medal">Medal</option>
+      <option value="__medal__">🏅 Medal Konny</option>
       <option value="__stone__">💎 Kamień Duchowy</option>
     </select>
     <button class="add-btn" onclick="addTask('${char}')">+ Dodaj</button>
@@ -649,9 +665,17 @@ function addTaskPanel(bodyEl, char) {
 function addTask(char) {
   const sel = document.getElementById('tsel_' + char);
   const task = sel.value;
+  // Special handling for medal
+  if (task === '__medal__') {
+    if (document.getElementById('medalrow_' + char)) return;
+    const panel = document.getElementById('addpanel_' + char);
+    panel.parentElement.insertBefore(buildMedalRow(char), panel);
+    socket.emit('addMedal', char);
+    return;
+  }
   // Special handling for spirit stone
   if (task === '__stone__') {
-    if (document.getElementById('stonerow_' + char)) return; // already exists
+    if (document.getElementById('stonerow_' + char)) return;
     const panel = document.getElementById('addpanel_' + char);
     panel.parentElement.insertBefore(buildStoneRow(char), panel);
     socket.emit('addStone', char);
@@ -675,7 +699,6 @@ for (const char in chars) {
   const body = document.createElement('div');
   body.className = 'char-body'; body.id = 'body_' + char;
 
-  if (hasMedal.includes(char)) addMedalRow(body, char);
   addTaskPanel(body, char);
 
   card.append(header, body);
@@ -721,7 +744,7 @@ socket.on('charactersUpdate', data => {
   for (const char in data) {
     const tasks = data[char];
     for (const task in tasks) {
-      if (task === 'horseTimer' || task === 'spiritStoneTimer' || task === 'hasStone') continue;
+      if (task === 'horseTimer' || task === 'spiritStoneTimer' || task === 'hasStone' || task === 'hasMedal') continue;
       const cb = checkboxes[char + '_' + task];
       if (cb) {
         cb.checked = !!tasks[task];
@@ -731,6 +754,16 @@ socket.on('charactersUpdate', data => {
     }
     if (tasks.horseTimer && medalTimers[char]) {
       startMedalTimer(char, medalTimers[char], tasks.horseTimer);
+    }
+    // Show/hide medal row based on server state
+    const medalRow = document.getElementById('medalrow_' + char);
+    if (tasks.hasMedal && !medalRow) {
+      const panel = document.getElementById('addpanel_' + char);
+      if (panel) panel.parentElement.insertBefore(buildMedalRow(char), panel);
+    } else if (tasks.hasMedal === false && medalRow) {
+      medalRow.remove();
+      if (medalIntervals[char]) { clearInterval(medalIntervals[char]); delete medalIntervals[char]; }
+      delete medalTimers[char];
     }
     // Show/hide stone row based on server state
     const stoneRow = document.getElementById('stonerow_' + char);
