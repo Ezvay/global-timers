@@ -9,200 +9,182 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
-    --gold: #c9a84c; --gold-light: #f0d080; --gold-dark: #7a5f1e;
-    --bg: #090806; --border: #3a2e1a; --text: #d4c4a0; --text-dim: #7a6a50;
+    --gold:#c9a84c; --gold-light:#f0d080; --gold-dark:#7a5f1e;
+    --bg:#090806; --border:#3a2e1a; --text:#d4c4a0; --text-dim:#7a6a50;
   }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Crimson Text',serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
-  .bg-layer { position:fixed; inset:0; z-index:0; background:radial-gradient(ellipse 80% 40% at 50% 0%, rgba(40,20,80,0.15) 0%, transparent 60%), #090806; }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+  .bg-layer{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(40,20,80,0.15) 0%,transparent 60%),#090806;}
 
   /* TOP BAR */
-  .topbar {
-    position:relative; z-index:10;
-    display:flex; align-items:center; justify-content:space-between;
-    max-width:1500px; margin:0 auto; padding:14px 20px;
+  .topbar{
+    position:relative;z-index:10;
+    display:flex;align-items:center;justify-content:space-between;
+    max-width:1500px;margin:0 auto;padding:12px 20px;
     border-bottom:1px solid var(--border);
     background:linear-gradient(to bottom,rgba(17,14,9,0.96),rgba(9,8,6,0.8));
   }
-  .topbar-left { display:flex; align-items:center; gap:12px; }
-  .page-title { font-family:'Cinzel',serif; font-size:18px; font-weight:600; color:var(--gold-light); letter-spacing:2px; text-shadow:0 0 20px rgba(201,168,76,0.4); }
-  .nav-btn {
-    font-family:'Cinzel',serif; font-size:10px; letter-spacing:2px; text-transform:uppercase;
-    color:var(--gold-dark); background:rgba(201,168,76,0.06);
-    border:1px solid rgba(201,168,76,0.25); border-radius:2px;
-    padding:7px 14px; cursor:pointer; text-decoration:none; display:inline-block; transition:all 0.2s;
+  .topbar-left{display:flex;align-items:center;gap:12px;}
+  .page-title{font-family:'Cinzel',serif;font-size:18px;font-weight:600;color:var(--gold-light);letter-spacing:2px;text-shadow:0 0 20px rgba(201,168,76,0.4);}
+  .nav-btn{
+    font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--gold-dark);background:rgba(201,168,76,0.06);
+    border:1px solid rgba(201,168,76,0.25);border-radius:2px;
+    padding:7px 14px;cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.2s;
   }
-  .nav-btn:hover { color:var(--gold); border-color:rgba(201,168,76,0.6); background:rgba(201,168,76,0.12); }
+  .nav-btn:hover{color:var(--gold);border-color:rgba(201,168,76,0.6);background:rgba(201,168,76,0.12);}
+
+  /* HEATMAP TOGGLE */
+  .heat-btn{
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+    padding:7px 14px;border-radius:2px;cursor:pointer;transition:all 0.2s;
+    border:1px solid rgba(255,160,40,0.3);color:#a06020;background:rgba(255,160,40,0.06);
+  }
+  .heat-btn.on{color:#ffb040;border-color:rgba(255,160,40,0.7);background:rgba(255,160,40,0.15);box-shadow:0 0 12px rgba(255,140,20,0.2);}
 
   /* LAYOUT */
-  .layout {
-    position:relative; z-index:1;
-    display:flex; gap:0;
-    max-width:1500px; margin:0 auto;
-    min-height:calc(100vh - 60px);
+  .layout{
+    position:relative;z-index:1;
+    display:flex;gap:0;
+    max-width:1500px;margin:0 auto;
+    min-height:calc(100vh - 57px);
   }
 
   /* MAP AREA */
-  .map-wrap {
-    flex:1; position:relative;
-    padding:20px; min-width:0;
-    display:flex; align-items:flex-start; justify-content:center;
-  }
-  .map-container {
-    position:relative; display:inline-block;
-    cursor:crosshair;
-    border:1px solid rgba(201,168,76,0.2);
-    border-radius:3px;
+  .map-wrap{flex:1;position:relative;padding:20px;min-width:0;display:flex;align-items:flex-start;justify-content:center;}
+  .map-container{
+    position:relative;display:inline-block;cursor:crosshair;
+    border:1px solid rgba(201,168,76,0.2);border-radius:3px;
     box-shadow:0 0 40px rgba(0,0,0,0.8);
-  }
-  .map-container img {
-    display:block;
     max-width:100%;
-    max-height:calc(100vh - 120px);
-    width:auto; height:auto;
-    user-select:none; pointer-events:none;
+  }
+  .map-container img{display:block;max-width:100%;max-height:calc(100vh - 100px);width:auto;height:auto;user-select:none;pointer-events:none;}
+  .map-hint{
+    position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;text-transform:uppercase;
+    color:rgba(201,168,76,0.35);white-space:nowrap;pointer-events:none;
   }
 
-  /* INSTRUKCJA */
-  .map-hint {
-    position:absolute; bottom:28px; left:50%; transform:translateX(-50%);
-    font-family:'Cinzel',serif; font-size:9px; letter-spacing:3px; text-transform:uppercase;
-    color:rgba(201,168,76,0.4); white-space:nowrap; pointer-events:none;
+  /* CANVAS HEATMAP — sits exactly over image */
+  #heatCanvas{
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    pointer-events:none;border-radius:3px;
+    opacity:0;transition:opacity 0.4s;
   }
+  #heatCanvas.visible{opacity:1;}
 
-  /* PING MARKER */
-  .ping-marker {
-    position:absolute; transform:translate(-50%,-50%);
-    pointer-events:all; z-index:5;
-    display:flex; flex-direction:column; align-items:center; gap:2px;
+  /* PING MARKERS */
+  .ping-marker{position:absolute;transform:translate(-50%,-50%);pointer-events:all;z-index:5;display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .ping-dot{
+    width:52px;height:52px;position:relative;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    transition:transform 0.15s,filter 0.15s;
+    animation:ping-appear 0.35s cubic-bezier(0.23,1,0.32,1);
+    filter:drop-shadow(0 0 8px rgba(255,80,40,0.8)) drop-shadow(0 0 18px rgba(255,60,20,0.4));
   }
-  .ping-dot {
-    width:28px; height:28px; border-radius:50%;
-    background:radial-gradient(circle at 35% 35%, #ff6060, #cc1111);
-    border:2px solid #ff8080;
-    box-shadow:0 0 10px rgba(255,60,60,0.7), 0 0 25px rgba(255,60,60,0.3);
-    display:flex; align-items:center; justify-content:center;
-    font-family:'Cinzel',serif; font-size:10px; font-weight:600; color:#fff;
-    cursor:pointer; transition:transform 0.15s, box-shadow 0.15s;
-    animation:ping-appear 0.3s cubic-bezier(0.23,1,0.32,1);
+  .ping-dot img{
+    width:52px;height:52px;object-fit:contain;pointer-events:none;
   }
-  .ping-dot:hover {
-    transform:scale(1.2);
-    box-shadow:0 0 15px rgba(255,60,60,0.9), 0 0 35px rgba(255,60,60,0.5);
+  .ping-dot:hover{
+    transform:scale(1.18);
+    filter:drop-shadow(0 0 14px rgba(255,120,40,1)) drop-shadow(0 0 30px rgba(255,80,20,0.7));
   }
-  @keyframes ping-appear {
-    0% { transform:scale(0); opacity:0; }
-    70% { transform:scale(1.2); }
-    100% { transform:scale(1); opacity:1; }
+  @keyframes ping-appear{0%{transform:scale(0) rotate(-15deg);opacity:0;}70%{transform:scale(1.15) rotate(3deg);}100%{transform:scale(1) rotate(0deg);opacity:1;}}
+  .ping-pulse{
+    position:absolute;top:50%;left:50%;
+    width:52px;height:52px;border-radius:50%;
+    background:rgba(255,60,20,0.2);transform:translate(-50%,-50%);
+    animation:pulse-ring 2.2s ease-out infinite;pointer-events:none;
   }
-  .ping-pulse {
-    position:absolute; top:50%; left:50%;
-    width:28px; height:28px;
-    border-radius:50%;
-    background:rgba(255,60,60,0.3);
-    transform:translate(-50%,-50%);
-    animation:pulse-ring 2s ease-out infinite;
-    pointer-events:none;
+  @keyframes pulse-ring{0%{transform:translate(-50%,-50%) scale(1);opacity:0.7;}100%{transform:translate(-50%,-50%) scale(2.4);opacity:0;}}
+  .ping-ch-badge{
+    position:absolute;bottom:-2px;right:-4px;
+    background:linear-gradient(135deg,#1a0f00,#2a1800);
+    border:1px solid rgba(201,168,76,0.6);border-radius:3px;
+    font-family:'Cinzel',serif;font-size:10px;font-weight:600;
+    color:var(--gold-light);padding:1px 5px;pointer-events:none;
+    box-shadow:0 0 6px rgba(201,168,76,0.3);
   }
-  @keyframes pulse-ring {
-    0%   { transform:translate(-50%,-50%) scale(1); opacity:0.6; }
-    100% { transform:translate(-50%,-50%) scale(2.8); opacity:0; }
-  }
-  .ping-label {
-    background:rgba(0,0,0,0.85); border:1px solid rgba(201,168,76,0.3);
-    border-radius:2px; padding:2px 7px;
-    font-family:'Cinzel',serif; font-size:9px; letter-spacing:1px; color:var(--gold);
-    white-space:nowrap; pointer-events:none;
-  }
-  .ping-timer {
-    background:rgba(0,0,0,0.85); border:1px solid rgba(255,60,60,0.3);
-    border-radius:2px; padding:2px 7px;
-    font-family:'Cinzel',serif; font-size:10px; letter-spacing:1px; color:#ff9090;
-    white-space:nowrap; pointer-events:none;
+  .ping-timer{
+    background:rgba(0,0,0,0.88);border:1px solid rgba(255,100,40,0.4);border-radius:2px;padding:2px 8px;
+    font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:#ff9060;white-space:nowrap;pointer-events:none;
   }
 
   /* SIDEBAR */
-  .sidebar {
-    width:280px; flex-shrink:0;
-    border-left:1px solid var(--border);
-    background:rgba(12,10,7,0.7);
-    display:flex; flex-direction:column;
-    max-height:calc(100vh - 60px);
-    overflow-y:auto;
+  .sidebar{
+    width:270px;flex-shrink:0;border-left:1px solid var(--border);
+    background:rgba(12,10,7,0.7);display:flex;flex-direction:column;
+    max-height:calc(100vh - 57px);overflow-y:auto;
   }
-  .sidebar-header {
-    padding:14px 16px; border-bottom:1px solid var(--border);
-    background:rgba(0,0,0,0.3);
-    font-family:'Cinzel',serif; font-size:11px; letter-spacing:3px;
-    color:var(--gold); text-transform:uppercase; position:sticky; top:0; z-index:2;
-  }
-  .sidebar-empty {
-    padding:30px 16px; text-align:center;
-    font-size:13px; color:var(--text-dim); font-style:italic;
-  }
+  .sidebar-section{padding:12px 14px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.25);}
+  .sidebar-title{font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:2px;}
+  .sidebar-sub{font-size:12px;color:var(--text-dim);font-style:italic;}
+  .sidebar-empty{padding:24px 16px;text-align:center;font-size:13px;color:var(--text-dim);font-style:italic;}
 
   /* PING LIST ITEM */
-  .ping-item {
-    display:flex; align-items:center; gap:10px;
-    padding:10px 14px; border-bottom:1px solid rgba(58,46,26,0.4);
-    transition:background 0.2s;
+  .ping-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(58,46,26,0.4);transition:background 0.2s;}
+  .ping-item:hover{background:rgba(201,168,76,0.04);}
+  .ping-dot-small{
+    width:32px;height:32px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    filter:drop-shadow(0 0 5px rgba(255,80,30,0.7));
   }
-  .ping-item:hover { background:rgba(201,168,76,0.04); }
-  .ping-dot-small {
-    width:22px; height:22px; flex-shrink:0; border-radius:50%;
-    background:radial-gradient(circle at 35% 35%,#ff6060,#cc1111);
-    border:1.5px solid #ff8080;
-    display:flex; align-items:center; justify-content:center;
-    font-family:'Cinzel',serif; font-size:9px; font-weight:600; color:#fff;
+  .ping-dot-small img{width:32px;height:32px;object-fit:contain;}
+  .ping-info{flex:1;min-width:0;}
+  .ping-ch{font-family:'Cinzel',serif;font-size:11px;color:var(--gold-light);letter-spacing:1px;}
+  .ping-time{font-family:'Cinzel',serif;font-size:13px;color:#ff9090;margin-top:2px;letter-spacing:1px;}
+  .ping-remove{
+    font-size:9px;color:#804040;background:none;
+    font-family:'Cinzel',serif;letter-spacing:1px;padding:4px 8px;
+    border:1px solid rgba(180,50,50,0.2);border-radius:2px;cursor:pointer;transition:all 0.2s;
   }
-  .ping-info { flex:1; min-width:0; }
-  .ping-ch { font-family:'Cinzel',serif; font-size:11px; color:var(--gold-light); letter-spacing:1px; }
-  .ping-time { font-family:'Cinzel',serif; font-size:13px; color:#ff9090; margin-top:2px; letter-spacing:1px; }
-  .ping-remove {
-    font-size:10px; color:#804040; background:none; border:none; cursor:pointer;
-    font-family:'Cinzel',serif; letter-spacing:1px; padding:4px 8px;
-    border:1px solid rgba(180,50,50,0.2); border-radius:2px; transition:all 0.2s;
-  }
-  .ping-remove:hover { color:#ff6060; border-color:rgba(200,60,60,0.6); background:rgba(140,30,30,0.15); }
+  .ping-remove:hover{color:#ff6060;border-color:rgba(200,60,60,0.6);background:rgba(140,30,30,0.15);}
 
-  /* POPUP (channel selector) */
-  .popup-overlay {
-    position:fixed; inset:0; z-index:100;
-    display:flex; align-items:center; justify-content:center;
-    background:rgba(0,0,0,0.5);
+  /* HOTSPOT INFO (sidebar) */
+  .hotspot-section{padding:10px 14px;border-bottom:1px solid rgba(58,46,26,0.4);}
+  .hotspot-title{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:#ffb040;text-transform:uppercase;margin-bottom:6px;}
+  .hotspot-item{
+    display:flex;align-items:center;gap:8px;padding:5px 0;
+    font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;
   }
-  .popup-overlay.hidden { display:none; }
-  .popup-box {
+  .hotspot-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .hotspot-count{color:var(--text-dim);font-size:11px;}
+
+  /* POPUP */
+  .popup-overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);}
+  .popup-overlay.hidden{display:none;}
+  .popup-box{
     background:linear-gradient(160deg,#1e1810,#100d08);
-    border:1px solid var(--gold-dark); border-radius:4px;
-    padding:28px 32px; min-width:280px; text-align:center;
-    box-shadow:0 0 60px rgba(0,0,0,0.9), 0 0 30px rgba(201,168,76,0.07);
+    border:1px solid var(--gold-dark);border-radius:4px;
+    padding:28px 32px;min-width:280px;text-align:center;
+    box-shadow:0 0 60px rgba(0,0,0,0.9),0 0 30px rgba(201,168,76,0.07);
     position:relative;
   }
-  .popup-box::before,.popup-box::after { content:''; position:absolute; width:14px; height:14px; border-color:rgba(201,168,76,0.5); border-style:solid; }
-  .popup-box::before { top:7px; left:7px; border-width:1px 0 0 1px; }
-  .popup-box::after  { bottom:7px; right:7px; border-width:0 1px 1px 0; }
-  .popup-title { font-family:'Cinzel',serif; font-size:12px; letter-spacing:3px; color:var(--gold); text-transform:uppercase; margin-bottom:6px; }
-  .popup-sub { font-size:13px; color:var(--text-dim); font-style:italic; margin-bottom:20px; }
-  .ch-buttons { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:16px; }
-  .ch-btn {
-    font-family:'Cinzel',serif; font-size:11px; letter-spacing:1px;
-    width:44px; height:44px; border-radius:3px; cursor:pointer; transition:all 0.2s;
-    border:1px solid rgba(201,168,76,0.3); color:var(--gold-dark); background:rgba(201,168,76,0.07);
+  .popup-box::before,.popup-box::after{content:'';position:absolute;width:14px;height:14px;border-color:rgba(201,168,76,0.5);border-style:solid;}
+  .popup-box::before{top:7px;left:7px;border-width:1px 0 0 1px;}
+  .popup-box::after{bottom:7px;right:7px;border-width:0 1px 1px 0;}
+  .popup-title{font-family:'Cinzel',serif;font-size:12px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;}
+  .popup-sub{font-size:13px;color:var(--text-dim);font-style:italic;margin-bottom:20px;}
+  .ch-buttons{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px;}
+  .ch-btn{
+    font-family:'Cinzel',serif;font-size:11px;letter-spacing:1px;
+    width:44px;height:44px;border-radius:3px;cursor:pointer;transition:all 0.2s;
+    border:1px solid rgba(201,168,76,0.3);color:var(--gold-dark);background:rgba(201,168,76,0.07);
   }
-  .ch-btn:hover { color:var(--gold-light); border-color:var(--gold); background:rgba(201,168,76,0.2); transform:scale(1.08); box-shadow:0 0 12px rgba(201,168,76,0.2); }
-  .popup-cancel {
-    font-family:'Cinzel',serif; font-size:9px; letter-spacing:2px; text-transform:uppercase;
-    color:var(--text-dim); background:none; border:1px solid rgba(255,255,255,0.08);
-    border-radius:2px; padding:7px 20px; cursor:pointer; transition:all 0.2s; width:100%;
+  .ch-btn:hover{color:var(--gold-light);border-color:var(--gold);background:rgba(201,168,76,0.2);transform:scale(1.08);box-shadow:0 0 12px rgba(201,168,76,0.2);}
+  .popup-cancel{
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--text-dim);background:none;border:1px solid rgba(255,255,255,0.08);
+    border-radius:2px;padding:7px 20px;cursor:pointer;transition:all 0.2s;width:100%;
   }
-  .popup-cancel:hover { color:var(--text); border-color:rgba(255,255,255,0.2); }
+  .popup-cancel:hover{color:var(--text);border-color:rgba(255,255,255,0.2);}
 </style>
 </head>
 <body>
 <div class="bg-layer"></div>
 
-<!-- POPUP WYBORU KANAŁU -->
+<!-- POPUP -->
 <div class="popup-overlay hidden" id="popup">
   <div class="popup-box">
     <div class="popup-title">Pinguj Metina</div>
@@ -217,23 +199,30 @@
     <a class="nav-btn" href="/">⬅ Powrót</a>
     <div class="page-title">Grota Wygnańców</div>
   </div>
+  <button class="heat-btn" id="heatBtn" onclick="toggleHeat()">🔥 Heatmapa OFF</button>
 </div>
 
 <div class="layout">
 
-  <!-- MAPA -->
   <div class="map-wrap">
     <div class="map-container" id="mapContainer">
-      <img src="/grota_mapa.png" id="mapImg" alt="Mapa Groty Wygnańców" draggable="false">
+      <img src="/grota_mapa.png" id="mapImg" alt="Mapa Groty" draggable="false">
+      <canvas id="heatCanvas"></canvas>
       <div id="pingLayer"></div>
       <div class="map-hint">Kliknij na mapę aby pingować metina</div>
     </div>
   </div>
 
-  <!-- SIDEBAR -->
   <div class="sidebar">
-    <div class="sidebar-header">Aktywne pingi</div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Aktywne pingi</div>
+    </div>
     <div id="pingList"><div class="sidebar-empty">Brak aktywnych pingów</div></div>
+
+    <div class="hotspot-section" id="hotspotSection" style="display:none">
+      <div class="hotspot-title">🔥 Gorące miejsca</div>
+      <div id="hotspotList"></div>
+    </div>
   </div>
 
 </div>
@@ -242,21 +231,27 @@
 const socket = io();
 
 /* STATE */
-let pings = {};          // {id: {id,x,y,ch,startedAt}}
-let pendingClick = null; // {x,y} — gdzie kliknął user, czeka na wybór kanału
-let timerRafs = {};      // animationFrame per ping for timers
+let pings    = {};
+let history  = [];   // [{x,y,ts}]
+let heatOn   = localStorage.getItem('heat') === '1';
+let pendingClick = null;
+let timerRafs = {};
 
-/* MAP */
+/* MAP ELEMENTS */
 const mapContainer = document.getElementById('mapContainer');
 const mapImg       = document.getElementById('mapImg');
 const pingLayer    = document.getElementById('pingLayer');
+const heatCanvas   = document.getElementById('heatCanvas');
+const heatCtx      = heatCanvas.getContext('2d');
+const heatBtn      = document.getElementById('heatBtn');
+
+/* Apply initial heat state */
+updateHeatBtn();
 
 /* Click on map */
 mapContainer.addEventListener('click', e => {
-  if (e.target.closest('.ping-dot')) return; // ignore clicks on existing markers
+  if (e.target.closest('.ping-dot')) return;
   const rect = mapImg.getBoundingClientRect();
-  const containerRect = mapContainer.getBoundingClientRect();
-  // coords relative to image, as fraction (0-1)
   const x = (e.clientX - rect.left) / rect.width;
   const y = (e.clientY - rect.top)  / rect.height;
   if (x < 0 || x > 1 || y < 0 || y > 1) return;
@@ -265,25 +260,21 @@ mapContainer.addEventListener('click', e => {
 });
 
 /* POPUP */
-const popup = document.getElementById('popup');
-const chButtons = document.getElementById('chButtons');
-const MAX_CH = 12;
+const popup    = document.getElementById('popup');
+const chBtns   = document.getElementById('chButtons');
+const MAX_CH   = 12;
 
 function openPopup() {
-  chButtons.innerHTML = '';
+  chBtns.innerHTML = '';
   for (let i = 1; i <= MAX_CH; i++) {
     const btn = document.createElement('button');
-    btn.className = 'ch-btn';
-    btn.innerText = i;
+    btn.className = 'ch-btn'; btn.innerText = i;
     btn.onclick = () => confirmPing(i);
-    chButtons.appendChild(btn);
+    chBtns.appendChild(btn);
   }
   popup.classList.remove('hidden');
 }
-function closePopup() {
-  popup.classList.add('hidden');
-  pendingClick = null;
-}
+function closePopup() { popup.classList.add('hidden'); pendingClick = null; }
 popup.addEventListener('click', e => { if (e.target === popup) closePopup(); });
 
 function confirmPing(ch) {
@@ -292,81 +283,63 @@ function confirmPing(ch) {
   closePopup();
 }
 
-/* FORMAT timer */
+/* FORMAT */
 function fmt(ms) {
-  const totalSec = Math.floor(ms / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  if (h > 0) return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
-  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
 }
 
-/* RENDER ALL PINGS */
+/* RENDER PINGS */
 function renderPings() {
-  // stop all ticking
   for (const id in timerRafs) cancelAnimationFrame(timerRafs[id]);
   timerRafs = {};
-
   pingLayer.innerHTML = '';
   const list = document.getElementById('pingList');
 
   const ids = Object.keys(pings);
   if (ids.length === 0) {
     list.innerHTML = '<div class="sidebar-empty">Brak aktywnych pingów</div>';
-    return;
-  }
-
-  list.innerHTML = '';
-
-  for (const id of ids) {
-    const p = pings[id];
-    placeMarker(p);
-    addSidebarItem(p);
-    startTicking(p);
+  } else {
+    list.innerHTML = '';
+    for (const id of ids) { placeMarker(pings[id]); addSidebarItem(pings[id]); startTicking(pings[id]); }
   }
 }
 
-/* PLACE MARKER ON MAP */
 function placeMarker(p) {
-  const marker = document.createElement('div');
-  marker.className = 'ping-marker';
-  marker.id = 'marker_' + p.id;
-  marker.style.left = (p.x * 100) + '%';
-  marker.style.top  = (p.y * 100) + '%';
-
-  marker.innerHTML = `
-    <div class="ping-dot" onclick="removePing('${p.id}')" title="Kliknij aby usunąć">
+  const m = document.createElement('div');
+  m.className = 'ping-marker'; m.id = 'marker_' + p.id;
+  m.style.left = (p.x * 100) + '%';
+  m.style.top  = (p.y * 100) + '%';
+  m.innerHTML = `
+    <div class="ping-dot" onclick="removePing('${p.id}')" title="Kliknij aby usunąć (zbity)">
       <div class="ping-pulse"></div>
-      ${p.ch}
+      <img src="/metin_icon.png" alt="metin">
+      <div class="ping-ch-badge">CH ${p.ch}</div>
     </div>
-    <div class="ping-label">CH ${p.ch}</div>
-    <div class="ping-timer" id="mt_${p.id}">00:00</div>
-  `;
-  pingLayer.appendChild(marker);
+    <div class="ping-timer" id="mt_${p.id}">00:00</div>`;
+  pingLayer.appendChild(m);
 }
 
-/* SIDEBAR ITEM */
 function addSidebarItem(p) {
   const item = document.createElement('div');
-  item.className = 'ping-item';
-  item.id = 'sitem_' + p.id;
+  item.className = 'ping-item'; item.id = 'sitem_' + p.id;
   item.innerHTML = `
-    <div class="ping-dot-small">${p.ch}</div>
+    <div class="ping-dot-small"><img src="/metin_icon.png" alt="metin"></div>
     <div class="ping-info">
-      <div class="ping-ch">Kanał ${p.ch}</div>
+      <div class="ping-ch">CH ${p.ch}</div>
       <div class="ping-time" id="st_${p.id}">00:00</div>
     </div>
-    <button class="ping-remove" onclick="removePing('${p.id}')">✕ Zbity</button>
-  `;
+    <button class="ping-remove" onclick="removePing('${p.id}')">✕ Zbity</button>`;
   document.getElementById('pingList').appendChild(item);
 }
 
-/* TICK TIMER FOR ONE PING */
 function startTicking(p) {
   function tick() {
-    const elapsed = Date.now() - p.startedAt;
-    const str = fmt(elapsed);
+    const str = fmt(Date.now() - p.startedAt);
     const mt = document.getElementById('mt_' + p.id);
     const st = document.getElementById('st_' + p.id);
     if (mt) mt.innerText = str;
@@ -376,10 +349,128 @@ function startTicking(p) {
   timerRafs[p.id] = requestAnimationFrame(tick);
 }
 
-/* REMOVE PING */
-function removePing(id) {
-  socket.emit('grotaRemovePing', id);
+function removePing(id) { socket.emit('grotaRemovePing', id); }
+
+/* =====================
+   HEATMAPA
+===================== */
+
+/* Cluster history points with radius 4% of map */
+const CLUSTER_R = 0.04;
+
+function clusterPoints(pts) {
+  const clusters = [];
+  for (const pt of pts) {
+    let found = false;
+    for (const cl of clusters) {
+      const dx = cl.x - pt.x, dy = cl.y - pt.y;
+      if (Math.sqrt(dx*dx + dy*dy) < CLUSTER_R) {
+        cl.count++;
+        // moving centroid
+        cl.x = (cl.x * (cl.count-1) + pt.x) / cl.count;
+        cl.y = (cl.y * (cl.count-1) + pt.y) / cl.count;
+        found = true; break;
+      }
+    }
+    if (!found) clusters.push({ x: pt.x, y: pt.y, count: 1 });
+  }
+  return clusters.sort((a,b) => b.count - a.count);
 }
+
+function drawHeatmap() {
+  const w = heatCanvas.width;
+  const h = heatCanvas.height;
+  heatCtx.clearRect(0, 0, w, h);
+  if (!heatOn || history.length === 0) return;
+
+  const clusters = clusterPoints(history);
+  if (clusters.length === 0) return;
+
+  const maxCount = clusters[0].count;
+
+  for (const cl of clusters) {
+    const cx = cl.x * w;
+    const cy = cl.y * h;
+    const intensity = cl.count / maxCount;  // 0..1
+    const radius = (0.04 + intensity * 0.04) * w;  // 4–8% of map width
+
+    // Radial gradient: hot center → transparent edge
+    const grad = heatCtx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+
+    // Color: dim orange at low intensity, bright yellow-orange at high
+    const alpha = 0.25 + intensity * 0.55;  // 0.25 → 0.8
+    if (intensity > 0.7) {
+      grad.addColorStop(0,   `rgba(255,220,40,${alpha})`);
+      grad.addColorStop(0.4, `rgba(255,140,20,${alpha * 0.7})`);
+      grad.addColorStop(1,   'rgba(255,80,0,0)');
+    } else if (intensity > 0.35) {
+      grad.addColorStop(0,   `rgba(255,140,30,${alpha})`);
+      grad.addColorStop(0.5, `rgba(200,80,10,${alpha * 0.6})`);
+      grad.addColorStop(1,   'rgba(180,40,0,0)');
+    } else {
+      grad.addColorStop(0,   `rgba(180,80,20,${alpha})`);
+      grad.addColorStop(0.5, `rgba(120,40,10,${alpha * 0.5})`);
+      grad.addColorStop(1,   'rgba(80,20,0,0)');
+    }
+
+    heatCtx.beginPath();
+    heatCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+    heatCtx.fillStyle = grad;
+    heatCtx.fill();
+  }
+
+  // Update sidebar hotspot list
+  updateHotspots(clusters.slice(0, 5), maxCount);
+}
+
+function updateHotspots(top, maxCount) {
+  const sec  = document.getElementById('hotspotSection');
+  const list = document.getElementById('hotspotList');
+  if (!heatOn || top.length === 0) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  list.innerHTML = top.map((cl, i) => {
+    const intensity = cl.count / maxCount;
+    const color = intensity > 0.7 ? '#ffda28' : intensity > 0.35 ? '#ff8c1e' : '#b45014';
+    return `<div class="hotspot-item">
+      <div class="hotspot-dot" style="background:${color};box-shadow:0 0 6px ${color}66"></div>
+      <span style="color:${color}">Miejsce ${i+1}</span>
+      <span class="hotspot-count">&nbsp;— ${cl.count}× pingowano</span>
+    </div>`;
+  }).join('');
+}
+
+function syncCanvas() {
+  const rect = mapImg.getBoundingClientRect();
+  heatCanvas.width  = rect.width;
+  heatCanvas.height = rect.height;
+  drawHeatmap();
+}
+
+function toggleHeat() {
+  heatOn = !heatOn;
+  localStorage.setItem('heat', heatOn ? '1' : '0');
+  updateHeatBtn();
+  syncCanvas();
+  if (heatOn) heatCanvas.classList.add('visible');
+  else { heatCanvas.classList.remove('visible'); document.getElementById('hotspotSection').style.display='none'; }
+}
+
+function updateHeatBtn() {
+  if (heatOn) {
+    heatBtn.textContent = '🔥 Heatmapa ON';
+    heatBtn.classList.add('on');
+    heatCanvas.classList.add('visible');
+  } else {
+    heatBtn.textContent = '🔥 Heatmapa OFF';
+    heatBtn.classList.remove('on');
+    heatCanvas.classList.remove('visible');
+  }
+}
+
+/* Resize observer — keep canvas in sync with image size */
+const resizeObs = new ResizeObserver(() => { if (heatOn) syncCanvas(); });
+resizeObs.observe(mapImg);
+mapImg.addEventListener('load', () => { if (heatOn) syncCanvas(); });
 
 /* SOCKET */
 socket.on('grotaPingsUpdate', data => {
@@ -387,7 +478,10 @@ socket.on('grotaPingsUpdate', data => {
   renderPings();
 });
 
-/* RESIZE — reposition markers stays % based so auto */
+socket.on('grotaHistoryUpdate', data => {
+  history = data;
+  if (heatOn) syncCanvas();
+});
 </script>
 </body>
 </html>

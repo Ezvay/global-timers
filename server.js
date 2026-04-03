@@ -17,6 +17,7 @@ let resetMinute  = 59
 let customPlaces = []   // [{id, name, yellowSec, greenSec, channels}]
 let customTimers = {}   // {"placeId_chN": seconds}
 let grotaPings   = {}   // {"pingId": {id, x, y, ch, startedAt}}
+let grotaHistory = []   // [{x, y, ts}] — historia wszystkich pingów (do heatmapy)
 
 try{
   const data = JSON.parse(fs.readFileSync("data.json"))
@@ -28,6 +29,7 @@ try{
   customPlaces = data.customPlaces || []
   customTimers = data.customTimers || {}
   grotaPings   = data.grotaPings   || {}
+  grotaHistory = data.grotaHistory || []
   console.log("Dane wczytane z data.json")
 }catch(e){
   console.log("Brak data.json — start od zera")
@@ -37,7 +39,7 @@ function saveData(){
   fs.writeFileSync("data.json", JSON.stringify({
     timers, characters, tasks,
     resetHour, resetMinute,
-    customPlaces, customTimers, grotaPings
+    customPlaces, customTimers, grotaPings, grotaHistory
   }, null, 2))
 }
 
@@ -222,8 +224,11 @@ io.on("connection",(socket)=>{
   socket.on("grotaAddPing", (data) => {
     const id = "g_" + Date.now() + "_" + Math.random().toString(36).slice(2,6)
     grotaPings[id] = { id, x: data.x, y: data.y, ch: data.ch, startedAt: Date.now() }
+    grotaHistory.push({ x: data.x, y: data.y, ts: Date.now() })
+    if(grotaHistory.length > 2000) grotaHistory = grotaHistory.slice(-2000)
     saveData()
     io.emit("grotaPingsUpdate", grotaPings)
+    io.emit("grotaHistoryUpdate", grotaHistory)
   })
 
   socket.on("grotaRemovePing", (id) => {
@@ -240,6 +245,7 @@ io.on("connection",(socket)=>{
   socket.emit("placesUpdate",       customPlaces)
   socket.emit("customTimersUpdate", customTimers)
   socket.emit("grotaPingsUpdate",    grotaPings)
+  socket.emit("grotaHistoryUpdate", grotaHistory)
 })
 
 http.listen(3000,()=>{ console.log("Server działa na porcie 3000") })
