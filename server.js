@@ -9,7 +9,7 @@ const { MongoClient } = require("mongodb")
 ====================== */
 
 const PASSWORD  = "platforma"
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://kawulokdarek8_db_user:db_platforma@cluster0.kdommpz.mongodb.net/?appName=Cluster0"
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://kawulokdarek8_db_user:platforma@cluster0.kdommpz.mongodb.net/global_timers?retryWrites=true&w=majority&appName=Cluster0"
 const DB_NAME   = "global_timers"
 const COL_NAME  = "state"
 const DOC_ID    = "main"
