@@ -1051,33 +1051,39 @@ socket.on('tasksUpdate', data => {
 });
 
 /* CHECKBOXES + MEDAL TIMER STATE FROM SERVER */
+const SKIP_KEYS = new Set(['horseTimer','spiritStoneTimer','hasStone','hasMedal','bioCurrent',
+  'bioDoneToday','bioDoneTotal','bioDoneChecked','stones','horseLevel']);
+
 socket.on('charactersUpdate', data => {
   for (const char in data) {
     const tasks = data[char];
     for (const task in tasks) {
-      if (['horseTimer','spiritStoneTimer','hasStone','hasMedal','bioCurrent','bioDoneToday','bioDoneTotal','bioDoneChecked','stones','horseLevel'].includes(task)) continue;
+      if (SKIP_KEYS.has(task)) continue;
+      // Only update checkboxes for task rows that actually exist in DOM
+      const row = document.getElementById('task_' + char + '_' + task);
+      if (!row) continue;
       const cb = checkboxes[char + '_' + task];
       if (cb) {
         cb.checked = !!tasks[task];
-        const row = document.getElementById('task_' + char + '_' + task);
-        if (row) row.classList.toggle('done', !!tasks[task]);
+        row.classList.toggle('done', !!tasks[task]);
       }
-    }
-    if (tasks.horseTimer && medalTimers[char]) {
-      startMedalTimer(char, medalTimers[char], tasks.horseTimer);
     }
     // Show/hide medal row based on server state
     const medalRow = document.getElementById('medalrow_' + char);
     if (tasks.hasMedal && !medalRow) {
       const panel = document.getElementById('addpanel_' + char);
       if (panel) panel.parentElement.insertBefore(buildMedalRow(char, tasks.horseLevel||0), panel);
-    } else if (tasks.hasMedal === false && medalRow) {
+    } else if (!tasks.hasMedal && medalRow) {
       medalRow.remove();
       if (medalIntervals[char]) { clearInterval(medalIntervals[char]); delete medalIntervals[char]; }
       delete medalTimers[char];
     } else if (tasks.hasMedal && medalRow) {
       const lvEl = document.getElementById('horselevel_' + char);
       if (lvEl && tasks.horseLevel !== undefined) lvEl.innerText = 'Lv ' + tasks.horseLevel;
+    }
+    // Start medal timer AFTER row is guaranteed in DOM
+    if (tasks.horseTimer && medalTimers[char]) {
+      startMedalTimer(char, medalTimers[char], tasks.horseTimer);
     }
     // Multi-stone sync
     const serverStones = tasks.stones || {};

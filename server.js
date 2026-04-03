@@ -113,7 +113,25 @@ function checkReset(){
   if(hour===resetHour && minute===resetMinute && lastResetDay!==day){
     for(let char in characters){
       let old = characters[char]
-      characters[char] = { horseTimer: old.horseTimer || null, hasMedal: old.hasMedal || false, horseLevel: old.horseLevel || 0, stones: old.stones || {}, bioCurrent: old.bioCurrent || null, bioDoneToday: 0, bioDoneChecked: false, bioDoneTotal: old.bioDoneTotal || 0 }
+      const PROTECTED = new Set(['horseTimer','hasMedal','horseLevel','stones',
+        'spiritStoneTimer','hasStone','bioCurrent','bioDoneToday','bioDoneTotal',
+        'bioDoneChecked'])
+      // Reset: keep protected fields + keep task checkboxes but set them to false
+      const fresh = {
+        horseTimer:      old.horseTimer || null,
+        hasMedal:        old.hasMedal || false,
+        horseLevel:      old.horseLevel || 0,
+        stones:          old.stones || {},
+        bioCurrent:      old.bioCurrent || null,
+        bioDoneToday:    0,
+        bioDoneChecked:  false,
+        bioDoneTotal:    old.bioDoneTotal || 0
+      }
+      // Reset task checkboxes to false (not delete them)
+      for(let key in old){
+        if(!PROTECTED.has(key)) fresh[key] = false
+      }
+      characters[char] = fresh
     }
     lastResetDay = day
     saveData()
@@ -162,6 +180,8 @@ io.on("connection",(socket)=>{
   socket.on("horseMedal",(char)=>{
     if(!characters[char]) characters[char]={}
     characters[char].horseTimer = Date.now() + (23*60*60*1000)
+    // Increment horse level on each medal given
+    characters[char].horseLevel = (characters[char].horseLevel || 0) + 1
     saveData()
     io.emit("charactersUpdate",characters)
   })
@@ -248,7 +268,21 @@ io.on("connection",(socket)=>{
   socket.on("manualReset",()=>{
     for(let char in characters){
       let old = characters[char]
-      characters[char] = { horseTimer: old.horseTimer || null, hasMedal: old.hasMedal || false, horseLevel: old.horseLevel || 0, stones: old.stones || {}, bioCurrent: old.bioCurrent || null, bioDoneToday: 0, bioDoneChecked: false, bioDoneTotal: old.bioDoneTotal || 0 }
+      const PROTECTED = new Set(['horseTimer','hasMedal','horseLevel','stones',
+        'spiritStoneTimer','hasStone','bioCurrent','bioDoneToday','bioDoneTotal',
+        'bioDoneChecked'])
+      const fresh = {
+        horseTimer:      old.horseTimer || null,
+        hasMedal:        old.hasMedal || false,
+        horseLevel:      old.horseLevel || 0,
+        stones:          old.stones || {},
+        bioCurrent:      old.bioCurrent || null,
+        bioDoneToday:    0,
+        bioDoneChecked:  false,
+        bioDoneTotal:    old.bioDoneTotal || 0
+      }
+      for(let key in old){ if(!PROTECTED.has(key)) fresh[key] = false }
+      characters[char] = fresh
     }
     saveData()
     io.emit("charactersUpdate",characters)
