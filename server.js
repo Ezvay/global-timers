@@ -16,6 +16,7 @@ let resetHour    = 23
 let resetMinute  = 59
 let customPlaces = []   // [{id, name, yellowSec, greenSec, channels}]
 let customTimers = {}   // {"placeId_chN": seconds}
+let grotaPings   = {}   // {"pingId": {id, x, y, ch, startedAt}}
 
 try{
   const data = JSON.parse(fs.readFileSync("data.json"))
@@ -26,6 +27,7 @@ try{
   resetMinute  = data.resetMinute  || 59
   customPlaces = data.customPlaces || []
   customTimers = data.customTimers || {}
+  grotaPings   = data.grotaPings   || {}
   console.log("Dane wczytane z data.json")
 }catch(e){
   console.log("Brak data.json — start od zera")
@@ -35,7 +37,7 @@ function saveData(){
   fs.writeFileSync("data.json", JSON.stringify({
     timers, characters, tasks,
     resetHour, resetMinute,
-    customPlaces, customTimers
+    customPlaces, customTimers, grotaPings
   }, null, 2))
 }
 
@@ -216,6 +218,20 @@ io.on("connection",(socket)=>{
   socket.on("stopCustom",   key => stopCustomTimer(key))
   socket.on("resetCustom",  key => resetCustomTimer(key))
 
+  // Grota Wygnancow - pingi
+  socket.on("grotaAddPing", (data) => {
+    const id = "g_" + Date.now() + "_" + Math.random().toString(36).slice(2,6)
+    grotaPings[id] = { id, x: data.x, y: data.y, ch: data.ch, startedAt: Date.now() }
+    saveData()
+    io.emit("grotaPingsUpdate", grotaPings)
+  })
+
+  socket.on("grotaRemovePing", (id) => {
+    delete grotaPings[id]
+    saveData()
+    io.emit("grotaPingsUpdate", grotaPings)
+  })
+
   // Wyślij stan do nowego klienta
   socket.emit("update",             timers)
   socket.emit("charactersUpdate",   characters)
@@ -223,6 +239,7 @@ io.on("connection",(socket)=>{
   socket.emit("resetTime",          {hour:resetHour, minute:resetMinute})
   socket.emit("placesUpdate",       customPlaces)
   socket.emit("customTimersUpdate", customTimers)
+  socket.emit("grotaPingsUpdate",    grotaPings)
 })
 
 http.listen(3000,()=>{ console.log("Server działa na porcie 3000") })
