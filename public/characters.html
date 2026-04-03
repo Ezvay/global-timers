@@ -182,6 +182,72 @@
   }
   .add-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.18); }
 
+  /* KAMIEŃ DUCHOWY */
+  .stone-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 8px; margin-bottom: 4px; border-radius: 2px;
+    background: rgba(60,20,80,0.25); border: 1px solid rgba(140,80,200,0.3);
+    transition: background 0.2s;
+  }
+  .stone-left { display: flex; align-items: center; gap: 8px; }
+  .stone-icon { width: 20px; height: 20px; font-size: 18px; line-height: 1; }
+  .stone-name { font-size: 14px; color: #c0a0e0; }
+  .stone-timer { font-family: 'Cinzel', serif; font-size: 12px; color: var(--text-dim); margin-top: 2px; letter-spacing: 1px; }
+  .stone-timer.done { color: #a060e0; font-weight: 600; }
+  .stone-btn {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    color: #9060c0; background: rgba(120,60,180,0.1);
+    border: 1px solid rgba(140,80,200,0.35); border-radius: 2px;
+    padding: 4px 10px; cursor: pointer; transition: all 0.2s;
+  }
+  .stone-btn:hover { color: #c080ff; border-color: rgba(180,100,255,0.7); background: rgba(120,60,180,0.22); }
+
+  /* MODAL KAMIENIA */
+  .stone-modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  }
+  .stone-modal-overlay.hidden { display: none; }
+  .stone-modal-box {
+    background: linear-gradient(160deg,#1a1020,#0d0810);
+    border: 1px solid rgba(140,80,200,0.5); border-radius: 4px;
+    padding: 30px 36px; width: 320px; text-align: center;
+    box-shadow: 0 0 60px rgba(0,0,0,0.9), 0 0 30px rgba(120,60,180,0.15);
+    position: relative;
+  }
+  .stone-modal-box::before, .stone-modal-box::after {
+    content:''; position:absolute; width:14px; height:14px;
+    border-color: rgba(140,80,200,0.5); border-style:solid;
+  }
+  .stone-modal-box::before { top:7px; left:7px; border-width:1px 0 0 1px; }
+  .stone-modal-box::after  { bottom:7px; right:7px; border-width:0 1px 1px 0; }
+  .stone-modal-title { font-family:'Cinzel',serif; font-size:13px; letter-spacing:3px; color:#c080ff; text-transform:uppercase; margin-bottom:6px; }
+  .stone-modal-char  { font-size:14px; color:var(--text-dim); font-style:italic; margin-bottom:20px; }
+  .stone-modal-label { font-family:'Cinzel',serif; font-size:9px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; margin-bottom:8px; }
+  .stone-modal-input {
+    width:100%; background:rgba(0,0,0,0.6);
+    border:1px solid rgba(140,80,200,0.3); border-radius:2px;
+    color:#c0a0e0; font-family:'Cinzel',serif; font-size:18px;
+    letter-spacing:2px; text-align:center;
+    padding:10px 14px; outline:none; margin-bottom:16px;
+    transition:border-color 0.2s;
+  }
+  .stone-modal-input:focus { border-color:rgba(180,100,255,0.7); }
+  .stone-modal-hint { font-size:12px; color:var(--text-dim); font-style:italic; margin-bottom:18px; }
+  .stone-modal-confirm {
+    width:100%; font-family:'Cinzel',serif; font-size:11px; letter-spacing:3px; text-transform:uppercase;
+    padding:11px; background:rgba(120,60,180,0.15); border:1px solid rgba(140,80,200,0.5);
+    border-radius:2px; color:#c080ff; cursor:pointer; transition:all 0.25s; margin-bottom:8px;
+  }
+  .stone-modal-confirm:hover { background:rgba(120,60,180,0.3); border-color:rgba(180,100,255,0.8); box-shadow:0 0 16px rgba(120,60,180,0.3); }
+  .stone-modal-cancel {
+    width:100%; font-family:'Cinzel',serif; font-size:9px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--text-dim); background:none; border:1px solid rgba(255,255,255,0.08);
+    border-radius:2px; padding:7px; cursor:pointer; transition:all 0.2s;
+  }
+  .stone-modal-cancel:hover { color:var(--text); border-color:rgba(255,255,255,0.2); }
+
   /* MODAL HASŁA */
   .auth-overlay {
     position: fixed; inset: 0; z-index: 1000;
@@ -274,6 +340,19 @@
     </div>
     <div class="auth-error" id="authError"></div>
     <button class="auth-btn" onclick="submitPassword()">Wejdź</button>
+  </div>
+</div>
+
+<!-- MODAL KAMIEŃ DUCHOWY -->
+<div class="stone-modal-overlay hidden" id="stoneModal">
+  <div class="stone-modal-box">
+    <div class="stone-modal-title"><img src="/kamien_duchowy.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:8px;">Kamień Duchowy</div>
+    <div class="stone-modal-char" id="stoneModalChar"></div>
+    <div class="stone-modal-label">Za ile godzin można oddać następny?</div>
+    <input class="stone-modal-input" id="stoneModalInput" type="number" min="1" max="72" placeholder="np. 24">
+    <div class="stone-modal-hint">Wpisz liczbę godzin</div>
+    <button class="stone-modal-confirm" onclick="confirmStone()">Ustaw timer</button>
+    <button class="stone-modal-cancel" onclick="closeStoneModal()">Anuluj</button>
   </div>
 </div>
 
@@ -387,6 +466,51 @@ const checkboxes = {};
 const medalTimers   = {};
 const medalIntervals = {};
 const hasMedal = ['Medal','Bieluszek','Pojara','Czantorianka','Yodasz'];
+const stoneTimers   = {};
+const stoneIntervals = {};
+let stonePendingChar = null;
+
+/* SPIRIT STONE MODAL */
+function openStoneModal(char) {
+  stonePendingChar = char;
+  document.getElementById('stoneModalChar').innerText = char;
+  document.getElementById('stoneModalInput').value = '';
+  document.getElementById('stoneModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('stoneModalInput').focus(), 50);
+}
+function closeStoneModal() {
+  document.getElementById('stoneModal').classList.add('hidden');
+  stonePendingChar = null;
+}
+function confirmStone() {
+  const hours = parseFloat(document.getElementById('stoneModalInput').value);
+  if (!hours || hours <= 0) return;
+  socket.emit('spiritStone', { char: stonePendingChar, hours });
+  closeStoneModal();
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeStoneModal();
+  if (e.key === 'Enter' && stonePendingChar) confirmStone();
+});
+
+/* SPIRIT STONE COUNTDOWN */
+function startStoneTimer(char, el, end) {
+  if (stoneIntervals[char]) clearInterval(stoneIntervals[char]);
+  function tick() {
+    const diff = end - Date.now();
+    if (diff <= 0) {
+      el.innerText = 'GOTOWE'; el.className = 'stone-timer done';
+      clearInterval(stoneIntervals[char]); return;
+    }
+    const h = Math.floor(diff/3600000);
+    const m = Math.floor((diff%3600000)/60000);
+    const s = Math.floor((diff%60000)/1000);
+    el.innerText = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    el.className = 'stone-timer';
+  }
+  tick();
+  stoneIntervals[char] = setInterval(tick, 1000);
+}
 
 /* CLOCK */
 function updateClock() {
@@ -468,6 +592,24 @@ function addMedalRow(bodyEl, char) {
   medalTimers[char] = row.querySelector('#mt_' + char) || row.querySelector('.medal-timer');
 }
 
+/* SPIRIT STONE ROW */
+function addStoneRow(bodyEl, char) {
+  const row = document.createElement('div');
+  row.className = 'stone-row';
+  row.innerHTML = `
+    <div class="stone-left">
+      <img class="task-icon" src="/kamien_duchowy.png" style="width:22px;height:22px;object-fit:contain;">
+      <div>
+        <div class="stone-name">Kamień Duchowy</div>
+        <div class="stone-timer" id="st_stone_${char}">—</div>
+      </div>
+    </div>
+    <button class="stone-btn" onclick="openStoneModal('${char}')">Ustaw</button>
+  `;
+  bodyEl.appendChild(row);
+  stoneTimers[char] = row.querySelector('#st_stone_' + char);
+}
+
 /* ADD TASK PANEL */
 function addTaskPanel(bodyEl, char) {
   const panel = document.createElement('div');
@@ -513,6 +655,7 @@ for (const char in chars) {
   body.className = 'char-body'; body.id = 'body_' + char;
 
   if (hasMedal.includes(char)) addMedalRow(body, char);
+  addStoneRow(body, char);
   addTaskPanel(body, char);
 
   card.append(header, body);
@@ -558,7 +701,7 @@ socket.on('charactersUpdate', data => {
   for (const char in data) {
     const tasks = data[char];
     for (const task in tasks) {
-      if (task === 'horseTimer') continue;
+      if (task === 'horseTimer' || task === 'spiritStoneTimer') continue;
       const cb = checkboxes[char + '_' + task];
       if (cb) {
         cb.checked = !!tasks[task];
@@ -568,6 +711,9 @@ socket.on('charactersUpdate', data => {
     }
     if (tasks.horseTimer && medalTimers[char]) {
       startMedalTimer(char, medalTimers[char], tasks.horseTimer);
+    }
+    if (tasks.spiritStoneTimer && stoneTimers[char]) {
+      startStoneTimer(char, stoneTimers[char], tasks.spiritStoneTimer);
     }
   }
 });
