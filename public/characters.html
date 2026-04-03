@@ -487,7 +487,7 @@ const authInput   = document.getElementById('authInput');
 const authError   = document.getElementById('authError');
 
 // Sprawdź czy hasło zapisane w sessionStorage
-if (sessionStorage.getItem('auth') === '1') {
+if (localStorage.getItem('auth') === '1') {
   unlock();
 }
 
@@ -499,7 +499,7 @@ function submitPassword() {
   const pass = authInput.value;
   socket.emit('checkPassword', pass, ok => {
     if (ok) {
-      sessionStorage.setItem('auth', '1');
+      localStorage.setItem('auth', '1');
       unlock();
     } else {
       authInput.classList.add('error');
@@ -816,7 +816,11 @@ function buildBioRow(char, data) {
       ${bioChecked ? 'disabled style="opacity:0.4;cursor:default;"' : ''}>
       ${bioChecked ? '✔ Oddano dziś' : '+ Oddaj'}
     </button>
-    <div class="bio-total" id="biototal_${char}">Łącznie oddane: ${bioDoneTotal} szt.</div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+      <span class="bio-total" style="flex:1" id="biototal_${char}">Łącznie oddane: ${bioDoneTotal} szt.</span>
+      <span class="bio-total" style="cursor:pointer;border-bottom:1px dashed rgba(80,200,80,0.4);padding:0 2px;color:#60a060;"
+            title="Kliknij aby ustawić ręcznie" onclick="editBioTotal('${char}')">✎</span>
+    </div>
   `;
 
   setTimeout(() => updateBioItem(char, bioCurrent), 0);
@@ -835,6 +839,21 @@ function updateBioItem(char, itemId) {
   `;
 }
 
+function editBioTotal(char) {
+  openInitModal(
+    '🌿 Biolog',
+    char + ' — ustaw łączną liczbę oddanych',
+    [{ id:'total', label:'Ile sztuk oddano łącznie?', type:'number',
+       value: (document.getElementById('biototal_'+char)||{}).innerText?.match(/\d+/)?.[0] || '0' }],
+    vals => {
+      const total = parseInt(vals.total) || 0;
+      const totalEl = document.getElementById('biototal_' + char);
+      if (totalEl) totalEl.innerText = 'Łącznie oddane: ' + total + ' szt.';
+      socket.emit('updateBio', { char, doneTotal: total });
+    }
+  );
+}
+
 function saveBioItem(char) {
   const sel = document.getElementById('biosel_' + char);
   if (!sel) return;
@@ -851,7 +870,7 @@ function oddajBio(char) {
 function removeBio(char) {
   const row = document.getElementById('biorow_' + char);
   if (row) row.remove();
-  socket.emit('updateBio', { char, current: null, doneToday: 0, bioDoneChecked: false });
+  socket.emit('updateBio', { char, current: null, doneToday: 0, doneTotal: 0, bioDoneChecked: false, remove: true });
 }
 
 function buildStoneRow(char, stoneId, stoneName, timerEnd, skillLevel) {
@@ -1224,10 +1243,12 @@ socket.on('charactersUpdate', data => {
     }
     // Biolog panel sync
     const bioRow = document.getElementById('biorow_' + char);
-    const hasBioData = tasks.bioCurrent || tasks.bioDoneToday > 0 || tasks.bioDoneTotal > 0;
+    const hasBioData = tasks.bioCurrent != null || (tasks.bioDoneTotal || 0) > 0;
     if (hasBioData && !bioRow) {
       const panel = document.getElementById('addpanel_' + char);
       if (panel) panel.parentElement.insertBefore(buildBioRow(char, tasks), panel);
+    } else if (!hasBioData && bioRow) {
+      bioRow.remove();
     } else if (hasBioData && bioRow) {
       // update selectively without full rebuild
       const sel    = document.getElementById('biosel_'    + char);

@@ -9,7 +9,7 @@ const { MongoClient } = require("mongodb")
 ====================== */
 
 const PASSWORD  = "platforma"
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://kawulokdarek8_db_user:Patologiczne2026@cluster0.kdommpz.mongodb.net/global_timers?retryWrites=true&w=majority&appName=Cluster0"
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://kawulokdarek8_db_user:platforma@cluster0.kdommpz.mongodb.net/global_timers?retryWrites=true&w=majority&appName=Cluster0"
 const DB_NAME   = "global_timers"
 const COL_NAME  = "state"
 const DOC_ID    = "main"
@@ -310,11 +310,17 @@ io.on("connection",(socket)=>{
 
   // Biolog
   socket.on("updateBio",(data)=>{
-    const {char,current,doneToday,doneTotal,action}=data
+    const {char,current,doneToday,doneTotal,action,remove}=data
     if(!characters[char]) characters[char]={}
-    if(current  !== undefined) characters[char].bioCurrent   = current
-    if(doneToday!== undefined) characters[char].bioDoneToday = parseInt(doneToday)||0
-    if(doneTotal!== undefined) characters[char].bioDoneTotal = parseInt(doneTotal)||0
+    if(current   !== undefined) characters[char].bioCurrent     = current
+    if(doneToday !== undefined) characters[char].bioDoneToday   = parseInt(doneToday)||0
+    if(doneTotal !== undefined) characters[char].bioDoneTotal   = parseInt(doneTotal)||0
+    if(remove) {
+      characters[char].bioCurrent     = null
+      characters[char].bioDoneToday   = 0
+      characters[char].bioDoneTotal   = 0
+      characters[char].bioDoneChecked = false
+    }
     if(action==='oddaj'){
       characters[char].bioDoneTotal   = (characters[char].bioDoneTotal||0)+1
       characters[char].bioDoneChecked = true
