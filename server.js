@@ -10,6 +10,7 @@ app.use(express.static("public"))
 
 /* === DANE === */
 let timers       = {}
+let charOrder    = []   // [charName, ...] — kolejność postaci
 let characters   = {}
 let tasks        = {}
 let resetHour    = 23
@@ -29,6 +30,7 @@ try{
   customPlaces = data.customPlaces || []
   customTimers = data.customTimers || {}
   grotaPings   = data.grotaPings   || {}
+  charOrder    = data.charOrder    || []
   grotaHistory = data.grotaHistory || []
   // Migracja
   for (const char in characters) {
@@ -52,7 +54,7 @@ function saveData(){
   fs.writeFileSync("data.json", JSON.stringify({
     timers, characters, tasks,
     resetHour, resetMinute,
-    customPlaces, customTimers, grotaPings, grotaHistory
+    customPlaces, customTimers, grotaPings, grotaHistory, charOrder
   }, null, 2))
 }
 
@@ -358,15 +360,25 @@ io.on("connection",(socket)=>{
     io.emit("grotaPingsUpdate", grotaPings)
   })
 
+  socket.on("setCharOrder",(order)=>{
+    charOrder = order
+    saveData()
+    io.emit("charOrderUpdate", charOrder)
+  })
+
   // Wyślij stan do nowego klienta
   socket.emit("update",             timers)
-  socket.emit("charactersUpdate",   characters)
   socket.emit("tasksUpdate",        tasks)
+  socket.emit("charactersUpdate",   characters)
   socket.emit("resetTime",          {hour:resetHour, minute:resetMinute})
   socket.emit("placesUpdate",       customPlaces)
   socket.emit("customTimersUpdate", customTimers)
   socket.emit("grotaPingsUpdate",    grotaPings)
   socket.emit("grotaHistoryUpdate", grotaHistory)
+  socket.emit("charOrderUpdate",    charOrder)
+})
+
+
 })
 
 http.listen(3000,()=>{ console.log("Server działa na porcie 3000") })

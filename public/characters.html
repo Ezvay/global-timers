@@ -182,6 +182,30 @@
   }
   .add-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.18); }
 
+  /* DRAG & DROP */
+  .char-grid {
+    user-select: none;
+  }
+  .char-card {
+    cursor: grab;
+    transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+  }
+  .char-card:active { cursor: grabbing; }
+  .char-card.dragging {
+    opacity: 0.35;
+    transform: scale(0.97);
+  }
+  .char-card.drag-over {
+    box-shadow: 0 0 0 2px var(--gold), 0 0 20px rgba(201,168,76,0.3);
+  }
+  .drag-handle {
+    position: absolute; top: 8px; right: 8px;
+    color: rgba(201,168,76,0.25); font-size: 14px; cursor: grab;
+    transition: color 0.2s; line-height: 1;
+    pointer-events: none;
+  }
+  .char-card:hover .drag-handle { color: rgba(201,168,76,0.6); }
+
   /* KU rename */
   .task-name-editable {
     cursor: pointer; border-bottom: 1px dashed rgba(201,168,76,0.3);
@@ -1005,7 +1029,8 @@ for (const char in chars) {
 
   const header = document.createElement('div');
   header.className = 'char-header';
-  header.innerHTML = `<img class="char-icon" src="${chars[char]}"><span class="char-name">${char}</span>`;
+  header.innerHTML = `<img class="char-icon" src="${chars[char]}"><span class="char-name">${char}</span><span class="drag-handle">⠿</span>`;
+  header.style.position = 'relative';
 
   const body = document.createElement('div');
   body.className = 'char-body'; body.id = 'body_' + char;
@@ -1014,6 +1039,72 @@ for (const char in chars) {
 
   card.append(header, body);
   container.appendChild(card);
+  initDrag(card);
+}
+
+/* ═══ DRAG & DROP — order chars ═══ */
+let dragSrc = null;
+
+function initDrag(card) {
+  card.setAttribute('draggable', 'true');
+
+  card.addEventListener('dragstart', e => {
+    dragSrc = card;
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', card.dataset.char);
+  });
+
+  card.addEventListener('dragend', () => {
+    card.classList.remove('dragging');
+    document.querySelectorAll('.char-card').forEach(c => c.classList.remove('drag-over'));
+  });
+
+  card.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (card !== dragSrc) {
+      document.querySelectorAll('.char-card').forEach(c => c.classList.remove('drag-over'));
+      card.classList.add('drag-over');
+    }
+  });
+
+  card.addEventListener('dragleave', () => {
+    card.classList.remove('drag-over');
+  });
+
+  card.addEventListener('drop', e => {
+    e.preventDefault();
+    card.classList.remove('drag-over');
+    if (!dragSrc || dragSrc === card) return;
+
+    const grid = container;
+    const cards = [...grid.querySelectorAll('.char-card')];
+    const srcIdx = cards.indexOf(dragSrc);
+    const dstIdx = cards.indexOf(card);
+
+    if (srcIdx < dstIdx) {
+      grid.insertBefore(dragSrc, card.nextSibling);
+    } else {
+      grid.insertBefore(dragSrc, card);
+    }
+
+    saveCharOrder();
+  });
+}
+
+function saveCharOrder() {
+  const order = [...container.querySelectorAll('.char-card')].map(c => c.dataset.char);
+  socket.emit('setCharOrder', order);
+}
+
+function applyCharOrder(order) {
+  if (!order || order.length === 0) return;
+  const grid = container;
+  order.forEach(charName => {
+    const card = grid.querySelector(`.char-card[data-char="${charName}"]`);
+    if (card) grid.appendChild(card); // move to end in order
+  });
 }
 
 function giveMedal(char) { socket.emit('horseMedal', char); }
@@ -1047,14 +1138,34 @@ socket.on('tasksUpdate', data => {
         body.insertBefore(createTaskRow(char, task), panel);
       }
     });
+
+    // Apply checkbox state immediately after building rows
+    if (lastCharData[char]) {
+      const charState = lastCharData[char];
+      for (const task in charState) {
+        if (SKIP_KEYS && SKIP_KEYS.has(task)) continue;
+        const row = document.getElementById('task_' + char + '_' + task);
+        if (!row) continue;
+        const cb = checkboxes[char + '_' + task];
+        if (cb) {
+          cb.checked = !!charState[task];
+          row.classList.toggle('done', !!charState[task]);
+        }
+      }
+    }
   }
+  // Re-apply saved order after tasks rebuild
+  if (window._savedCharOrder) applyCharOrder(window._savedCharOrder);
 });
 
 /* CHECKBOXES + MEDAL TIMER STATE FROM SERVER */
 const SKIP_KEYS = new Set(['horseTimer','spiritStoneTimer','hasStone','hasMedal','bioCurrent',
   'bioDoneToday','bioDoneTotal','bioDoneChecked','stones','horseLevel']);
 
+let lastCharData = {};
+
 socket.on('charactersUpdate', data => {
+  lastCharData = data;
   for (const char in data) {
     const tasks = data[char];
     for (const task in tasks) {
@@ -1137,6 +1248,11 @@ socket.on('charactersUpdate', data => {
       if (total) total.innerText = `Łącznie oddane: ${tasks.bioDoneTotal||0} szt.`;
     }
   }
+});
+
+socket.on('charOrderUpdate', order => {
+  window._savedCharOrder = order;
+  applyCharOrder(order);
 });
 
 socket.on('resetTime', data => {
