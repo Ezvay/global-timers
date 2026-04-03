@@ -222,6 +222,25 @@
   .bio-item-icon { width: 22px; height: 22px; object-fit: contain; }
   .bio-item-name { font-size: 13px; color: #a0e0a0; flex: 1; }
   .bio-item-qty { font-family: 'Cinzel', serif; font-size: 10px; color: var(--text-dim); }
+  .bio-done-today {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 10px; border-radius: 2px; margin-top: 4px;
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 1px;
+    background: rgba(40,120,40,0.2); border: 1px solid rgba(60,180,60,0.4);
+    color: #70e070;
+  }
+  .bio-done-today.unchecked {
+    background: rgba(60,40,10,0.2); border-color: rgba(140,100,20,0.35);
+    color: var(--text-dim);
+  }
+  .bio-oddaj-btn {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 2px; cursor: pointer; transition: all 0.2s;
+    border: 1px solid rgba(60,180,60,0.4); color: #60c060;
+    background: rgba(40,120,40,0.1); margin-top: 4px; width: 100%;
+  }
+  .bio-oddaj-btn:hover { color: #90ff90; border-color: rgba(80,220,80,0.7); background: rgba(40,140,40,0.2); }
+  .bio-total { font-size: 11px; color: var(--text-dim); font-style: italic; margin-top: 2px; }
 
   /* KAMIEŃ DUCHOWY */
   .stone-row {
@@ -695,17 +714,24 @@ function removeMedal(char) {
 
 /* SPIRIT STONE ROW */
 /* BIOLOG EXPANDED ROW */
-function buildBioRow(char, bioCurrent, bioDone) {
+function buildBioRow(char, data) {
+  const bioCurrent   = data.bioCurrent   || null;
+  const bioDoneToday = data.bioDoneToday || 0;
+  const bioDoneTotal = data.bioDoneTotal || 0;
+  const bioChecked   = data.bioDoneChecked || false;
+
   const row = document.createElement('div');
   row.className = 'bio-panel';
   row.id = 'biorow_' + char;
 
-  const currentItem = BIOLOG_ITEMS.find(i => i.id === bioCurrent) || null;
-
-  // build options
   const opts = BIOLOG_ITEMS.map(i =>
     `<option value="${i.id}" ${bioCurrent===i.id?'selected':''}>${i.name} (x${i.qty})</option>`
   ).join('');
+
+  const checkedClass = bioChecked ? '' : 'unchecked';
+  const checkedText  = bioChecked
+    ? `✔ Oddano dziś: ${bioDoneToday} szt.`
+    : `Oddane dziś: ${bioDoneToday} szt.`;
 
   row.innerHTML = `
     <div class="bio-header">
@@ -713,24 +739,20 @@ function buildBioRow(char, bioCurrent, bioDone) {
       <span class="bio-title">Biolog</span>
       <button class="remove-btn" style="margin-left:auto" onclick="removeBio('${char}')" title="Usuń">✕</button>
     </div>
-    <div class="bio-done-wrap">
-      <span class="bio-done-label">Oddane dziś:</span>
-      <input class="bio-done-input" id="biodone_${char}" type="number" min="0" max="99"
-             value="${bioDone||0}" onchange="saveBio('${char}')">
-      <span class="bio-done-label">szt.</span>
-    </div>
     <div class="bio-current-label">Aktualny przedmiot:</div>
-    <select class="bio-select" id="biosel_${char}" onchange="saveBio('${char}')">
+    <select class="bio-select" id="biosel_${char}" onchange="saveBioItem('${char}')">
       <option value="">— wybierz —</option>
       ${opts}
     </select>
     <div class="bio-item-row" id="bioitem_${char}"></div>
+    <button class="bio-oddaj-btn" id="biobtn_${char}" onclick="oddajBio('${char}')"
+      ${bioChecked ? 'disabled style="opacity:0.4;cursor:default;"' : ''}>
+      ${bioChecked ? '✔ Oddano dziś' : '+ Oddaj'}
+    </button>
+    <div class="bio-total" id="biototal_${char}">Łącznie oddane: ${bioDoneTotal} szt.</div>
   `;
 
-  setTimeout(() => {
-    updateBioItem(char, bioCurrent);
-  }, 0);
-
+  setTimeout(() => updateBioItem(char, bioCurrent), 0);
   return row;
 }
 
@@ -746,19 +768,23 @@ function updateBioItem(char, itemId) {
   `;
 }
 
-function saveBio(char) {
-  const sel  = document.getElementById('biosel_' + char);
-  const done = document.getElementById('biodone_' + char);
-  if (!sel || !done) return;
-  const current = sel.value;
-  updateBioItem(char, current);
-  socket.emit('updateBio', { char, current, done: parseInt(done.value)||0 });
+function saveBioItem(char) {
+  const sel = document.getElementById('biosel_' + char);
+  if (!sel) return;
+  updateBioItem(char, sel.value);
+  socket.emit('updateBio', { char, current: sel.value });
+}
+
+function oddajBio(char) {
+  const btn = document.getElementById('biobtn_' + char);
+  if (btn && btn.disabled) return;
+  socket.emit('updateBio', { char, action: 'oddaj' });
 }
 
 function removeBio(char) {
   const row = document.getElementById('biorow_' + char);
   if (row) row.remove();
-  socket.emit('updateBio', { char, current: null, done: 0 });
+  socket.emit('updateBio', { char, current: null, doneToday: 0, bioDoneChecked: false });
 }
 
 function buildStoneRow(char) {
@@ -829,7 +855,7 @@ function addTask(char) {
   if (task === '__bio__') {
     if (document.getElementById('biorow_' + char)) return;
     const panel = document.getElementById('addpanel_' + char);
-    panel.parentElement.insertBefore(buildBioRow(char, null, 0), panel);
+    panel.parentElement.insertBefore(buildBioRow(char, {}), panel);
     socket.emit('updateBio', { char, current: null, done: 0 });
     return;
   }
@@ -904,7 +930,7 @@ socket.on('charactersUpdate', data => {
   for (const char in data) {
     const tasks = data[char];
     for (const task in tasks) {
-      if (['horseTimer','spiritStoneTimer','hasStone','hasMedal','bioCurrent','bioDone'].includes(task)) continue;
+      if (['horseTimer','spiritStoneTimer','hasStone','hasMedal','bioCurrent','bioDoneToday','bioDoneTotal','bioDoneChecked'].includes(task)) continue;
       const cb = checkboxes[char + '_' + task];
       if (cb) {
         cb.checked = !!tasks[task];
@@ -940,21 +966,28 @@ socket.on('charactersUpdate', data => {
     }
     // Biolog panel sync
     const bioRow = document.getElementById('biorow_' + char);
-    if ((tasks.bioCurrent !== undefined || tasks.bioDone !== undefined) && !bioRow) {
-      if (tasks.bioCurrent !== null || tasks.bioDone > 0) {
-        const panel = document.getElementById('addpanel_' + char);
-        if (panel) panel.parentElement.insertBefore(buildBioRow(char, tasks.bioCurrent, tasks.bioDone||0), panel);
-      }
-    } else if (bioRow) {
-      const sel  = document.getElementById('biosel_' + char);
-      const done = document.getElementById('biodone_' + char);
-      if (sel && tasks.bioCurrent !== undefined && sel.value !== tasks.bioCurrent) {
+    const hasBioData = tasks.bioCurrent || tasks.bioDoneToday > 0 || tasks.bioDoneTotal > 0;
+    if (hasBioData && !bioRow) {
+      const panel = document.getElementById('addpanel_' + char);
+      if (panel) panel.parentElement.insertBefore(buildBioRow(char, tasks), panel);
+    } else if (hasBioData && bioRow) {
+      // update selectively without full rebuild
+      const sel    = document.getElementById('biosel_'    + char);
+
+      const total  = document.getElementById('biototal_'  + char);
+      if (sel && tasks.bioCurrent !== undefined && sel.value !== (tasks.bioCurrent||'')) {
         sel.value = tasks.bioCurrent || '';
         updateBioItem(char, tasks.bioCurrent);
       }
-      if (done && tasks.bioDone !== undefined && parseInt(done.value) !== tasks.bioDone) {
-        done.value = tasks.bioDone || 0;
+      const btn = document.getElementById('biobtn_' + char);
+      if (btn) {
+        const checked = tasks.bioDoneChecked;
+        btn.disabled = !!checked;
+        btn.style.opacity = checked ? '0.4' : '1';
+        btn.style.cursor  = checked ? 'default' : 'pointer';
+        btn.innerText = checked ? '✔ Oddano dziś' : '+ Oddaj';
       }
+      if (total) total.innerText = `Łącznie oddane: ${tasks.bioDoneTotal||0} szt.`;
     }
   }
 });

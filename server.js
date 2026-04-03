@@ -106,7 +106,7 @@ function checkReset(){
   if(hour===resetHour && minute===resetMinute && lastResetDay!==day){
     for(let char in characters){
       let old = characters[char]
-      characters[char] = { horseTimer: old.horseTimer || null, hasMedal: old.hasMedal || false, spiritStoneTimer: old.spiritStoneTimer || null, hasStone: old.hasStone || false, bioCurrent: old.bioCurrent || null, bioDone: old.bioDone || 0 }
+      characters[char] = { horseTimer: old.horseTimer || null, hasMedal: old.hasMedal || false, spiritStoneTimer: old.spiritStoneTimer || null, hasStone: old.hasStone || false, bioCurrent: old.bioCurrent || null, bioDoneToday: 0, bioDoneChecked: false, bioDoneTotal: old.bioDoneTotal || 0 }
     }
     lastResetDay = day
     saveData()
@@ -175,10 +175,15 @@ io.on("connection",(socket)=>{
 
   // Biolog — aktualizacja danych (aktualny przedmiot + oddane)
   socket.on("updateBio",(data)=>{
-    const {char, current, done} = data
+    const {char, current, doneToday, doneTotal, action} = data
     if(!characters[char]) characters[char]={}
-    characters[char].bioCurrent = current   // nazwa aktualnego przedmiotu
-    characters[char].bioDone    = parseInt(done) || 0
+    if(current !== undefined) characters[char].bioCurrent  = current
+    if(doneToday !== undefined) characters[char].bioDoneToday = parseInt(doneToday) || 0
+    if(doneTotal  !== undefined) characters[char].bioDoneTotal = parseInt(doneTotal)  || 0
+    if(action === 'oddaj'){
+      characters[char].bioDoneTotal   = (characters[char].bioDoneTotal || 0) + 1
+      characters[char].bioDoneChecked = true
+    }
     saveData()
     io.emit("charactersUpdate", characters)
   })
@@ -215,7 +220,7 @@ io.on("connection",(socket)=>{
   socket.on("manualReset",()=>{
     for(let char in characters){
       let old = characters[char]
-      characters[char] = { horseTimer: old.horseTimer || null, hasMedal: old.hasMedal || false, spiritStoneTimer: old.spiritStoneTimer || null, hasStone: old.hasStone || false, bioCurrent: old.bioCurrent || null, bioDone: old.bioDone || 0 }
+      characters[char] = { horseTimer: old.horseTimer || null, hasMedal: old.hasMedal || false, spiritStoneTimer: old.spiritStoneTimer || null, hasStone: old.hasStone || false, bioCurrent: old.bioCurrent || null, bioDoneToday: 0, bioDoneChecked: false, bioDoneTotal: old.bioDoneTotal || 0 }
     }
     saveData()
     io.emit("charactersUpdate",characters)
