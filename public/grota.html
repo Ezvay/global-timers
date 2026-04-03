@@ -344,40 +344,8 @@
 const socket = io();
 
 /* PING SIZE */
-let pingSize = parseInt(localStorage.getItem('pingSize')) || 14;
-const pingSizeSlider = document.getElementById('pingSize');
-const pingSizeVal    = document.getElementById('pingSizeVal');
-pingSizeSlider.value = pingSize;
-pingSizeVal.innerText = pingSize;
-
-pingSizeSlider.oninput = () => {
-  pingSize = parseInt(pingSizeSlider.value);
-  pingSizeVal.innerText = pingSize;
-  localStorage.setItem('pingSize', pingSize);
-  applyPingSize();
-};
-
-/* MAP SIZE */
-let mapSizePct = parseInt(localStorage.getItem('mapSize')) || 100;
-const mapSizeSlider = document.getElementById('mapSize');
-const mapSizeVal    = document.getElementById('mapSizeVal');
-mapSizeSlider.value = mapSizePct;
-mapSizeVal.innerText = mapSizePct + '%';
-applyMapSize();
-
-mapSizeSlider.oninput = () => {
-  mapSizePct = parseInt(mapSizeSlider.value);
-  mapSizeVal.innerText = mapSizePct + '%';
-  localStorage.setItem('mapSize', mapSizePct);
-  applyMapSize();
-};
-
-function applyMapSize() {
-  const w = Math.round(1080 * mapSizePct / 100);
-  mapImg.style.width = w + 'px';
-  // Przelicz canvas heatmapy
-  if (heatOn) syncCanvas();
-}
+let pingSize   = parseInt(localStorage.getItem('pingSize')) || 14;
+let mapSizePct = parseInt(localStorage.getItem('mapSize'))  || 100;
 
 function applyPingSize() {
   const sz = pingSize + 'px';
@@ -411,6 +379,38 @@ const generalLayer  = document.getElementById('generalLayer');
 const heatCanvas    = document.getElementById('heatCanvas');
 const heatCtx       = heatCanvas.getContext('2d');
 const heatBtn       = document.getElementById('heatBtn');
+
+/* SLIDERS INIT — po deklaracji elementów DOM */
+(function() {
+  const pingSizeSlider = document.getElementById('pingSize');
+  const pingSizeVal    = document.getElementById('pingSizeVal');
+  const mapSizeSlider  = document.getElementById('mapSize');
+  const mapSizeValEl   = document.getElementById('mapSizeVal');
+
+  pingSizeSlider.value = pingSize;
+  pingSizeVal.innerText = pingSize;
+  pingSizeSlider.oninput = () => {
+    pingSize = parseInt(pingSizeSlider.value);
+    pingSizeVal.innerText = pingSize;
+    localStorage.setItem('pingSize', pingSize);
+    applyPingSize();
+  };
+
+  mapSizeSlider.value = mapSizePct;
+  mapSizeValEl.innerText = mapSizePct + '%';
+  applyMapSize();
+  mapSizeSlider.oninput = () => {
+    mapSizePct = parseInt(mapSizeSlider.value);
+    mapSizeValEl.innerText = mapSizePct + '%';
+    localStorage.setItem('mapSize', mapSizePct);
+    applyMapSize();
+  };
+})();
+
+function applyMapSize() {
+  mapImg.style.width = Math.round(1080 * mapSizePct / 100) + 'px';
+  if (heatOn) syncCanvas();
+}
 
 function setMode(mode) {
   pingMode = mode;
