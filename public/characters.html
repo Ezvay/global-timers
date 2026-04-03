@@ -182,6 +182,47 @@
   }
   .add-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.18); }
 
+  /* KU rename */
+  .task-name-editable {
+    cursor: pointer; border-bottom: 1px dashed rgba(201,168,76,0.3);
+    padding: 0 2px; transition: border-color 0.2s;
+  }
+  .task-name-editable:hover { border-color: rgba(201,168,76,0.7); color: var(--gold-light); }
+  .task-name-input {
+    background: rgba(0,0,0,0.6); border: 1px solid rgba(201,168,76,0.5);
+    color: var(--gold-light); font-family: 'Crimson Text', serif; font-size: 14px;
+    padding: 1px 5px; border-radius: 2px; outline: none; width: 100px;
+  }
+
+  /* BIOLOG panel */
+  .bio-panel {
+    padding: 6px 8px; margin-bottom: 4px; border-radius: 2px;
+    background: rgba(10,30,10,0.35); border: 1px solid rgba(40,120,40,0.35);
+  }
+  .bio-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .bio-icon { width: 20px; height: 20px; object-fit: contain; }
+  .bio-title { font-size: 14px; color: #80c080; }
+  .bio-done-wrap { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+  .bio-done-label { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; }
+  .bio-done-input {
+    width: 50px; text-align: center;
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(40,120,40,0.4);
+    color: #80c080; font-family: 'Cinzel', serif; font-size: 13px;
+    padding: 3px 6px; border-radius: 2px; outline: none;
+  }
+  .bio-done-input:focus { border-color: rgba(80,200,80,0.7); }
+  .bio-current-label { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
+  .bio-select {
+    width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(40,120,40,0.35);
+    color: #80c080; font-family: 'Crimson Text', serif; font-size: 13px;
+    padding: 4px 6px; border-radius: 2px; outline: none;
+  }
+  .bio-select:focus { border-color: rgba(80,200,80,0.7); }
+  .bio-item-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 4px 0; border-top: 1px solid rgba(40,120,40,0.2); }
+  .bio-item-icon { width: 22px; height: 22px; object-fit: contain; }
+  .bio-item-name { font-size: 13px; color: #a0e0a0; flex: 1; }
+  .bio-item-qty { font-family: 'Cinzel', serif; font-size: 10px; color: var(--text-dim); }
+
   /* KAMIEŃ DUCHOWY */
   .stone-row {
     display: flex; align-items: center; justify-content: space-between;
@@ -466,6 +507,21 @@ const checkboxes = {};
 const medalTimers   = {};
 const medalIntervals = {};
 const hasMedal = ['Medal','Bieluszek','Pojara','Czantorianka','Yodasz'];
+
+/* BIOLOG — lista przedmiotów */
+const BIOLOG_ITEMS = [
+  { id:'zab_orka',      name:'Ząb Orka',               qty:10, img:'https://pl-wiki.metin2.gameforge.com/images/4/4e/Z%C4%85b_Orka.png' },
+  { id:'ksiega_klatw',  name:'Księga Klątw',            qty:15, img:'https://pl-wiki.metin2.gameforge.com/images/c/c0/Ksi%C4%99ga_Kl%C4%85tw.png' },
+  { id:'pamiatka',      name:'Pamiątka po Demonie',     qty:15, img:'https://pl-wiki.metin2.gameforge.com/images/4/4d/Pami%C4%85tka_Po_Demonie.png' },
+  { id:'matowy_lod',    name:'Matowy Lód',              qty:20, img:'https://pl-wiki.metin2.gameforge.com/images/4/4b/Matowy_L%C3%B3d.png' },
+  { id:'konar_zelkova', name:'Konar Zelkova',           qty:25, img:'https://pl-wiki.metin2.gameforge.com/images/7/7e/Konar_Zelkova.jpg' },
+  { id:'certyfikat',    name:'Certyfikat Tugyisa',      qty:30, img:'https://pl-wiki.metin2.gameforge.com/images/9/9f/Certyfikat_Tugyisa.png' },
+  { id:'czerw_konar',   name:'Czerwony Konar Duchodrzewa', qty:35, img:'https://pl-wiki.metin2.gameforge.com/images/e/e3/Czerwony_Konar_Duchodrzewa.png' },
+  { id:'notatka',       name:'Notatka Przywódcy',       qty:50, img:'https://pl-wiki.metin2.gameforge.com/images/7/7b/Notatka_Lidera.png' },
+  { id:'klejnot_m',     name:'Klejnot Mądrości',        qty:10, img:'https://pl-wiki.metin2.gameforge.com/images/d/d9/Klejnot_M%C4%85dro%C5%9Bci.png' },
+  { id:'klejnot_w',     name:'Klejnot Wierności',       qty:20, img:'https://pl-wiki.metin2.gameforge.com/images/3/39/Klejnot_Wierno%C5%9Bci.png' },
+];
+
 const stoneTimers   = {};
 const stoneIntervals = {};
 let stonePendingChar = null;
@@ -549,7 +605,36 @@ function createTaskRow(char, name) {
 
   const left = document.createElement('div');
   left.className = 'task-left';
-  left.innerHTML = `<img class="task-icon" src="${getIcon(name)}"><span class="task-name">${name}</span>`;
+  // KU tasks get editable label
+  const isKU = /^KU\d*$/.test(name);
+  if (isKU) {
+    const img = document.createElement('img');
+    img.className = 'task-icon'; img.src = getIcon(name);
+    const span = document.createElement('span');
+    span.className = 'task-name task-name-editable';
+    span.title = 'Kliknij aby zmienić nazwę';
+    const savedName = localStorage.getItem('ku_name_' + char + '_' + name) || name;
+    span.innerText = savedName;
+    span.onclick = (e) => {
+      e.stopPropagation();
+      const input = document.createElement('input');
+      input.className = 'task-name-input';
+      input.value = span.innerText;
+      span.replaceWith(input);
+      input.focus(); input.select();
+      function finish() {
+        const val = input.value.trim() || name;
+        span.innerText = val;
+        localStorage.setItem('ku_name_' + char + '_' + name, val);
+        input.replaceWith(span);
+      }
+      input.onblur = finish;
+      input.onkeydown = (ev) => { if(ev.key==='Enter') finish(); if(ev.key==='Escape'){ input.value=span.innerText; finish(); } };
+    };
+    left.append(img, span);
+  } else {
+    left.innerHTML = `<img class="task-icon" src="${getIcon(name)}"><span class="task-name">${name}</span>`;
+  }
 
   const cb = document.createElement('input');
   cb.type = 'checkbox'; cb.className = 'task-cb';
@@ -609,6 +694,73 @@ function removeMedal(char) {
 }
 
 /* SPIRIT STONE ROW */
+/* BIOLOG EXPANDED ROW */
+function buildBioRow(char, bioCurrent, bioDone) {
+  const row = document.createElement('div');
+  row.className = 'bio-panel';
+  row.id = 'biorow_' + char;
+
+  const currentItem = BIOLOG_ITEMS.find(i => i.id === bioCurrent) || null;
+
+  // build options
+  const opts = BIOLOG_ITEMS.map(i =>
+    `<option value="${i.id}" ${bioCurrent===i.id?'selected':''}>${i.name} (x${i.qty})</option>`
+  ).join('');
+
+  row.innerHTML = `
+    <div class="bio-header">
+      <img class="bio-icon" src="${icons.Bio}">
+      <span class="bio-title">Biolog</span>
+      <button class="remove-btn" style="margin-left:auto" onclick="removeBio('${char}')" title="Usuń">✕</button>
+    </div>
+    <div class="bio-done-wrap">
+      <span class="bio-done-label">Oddane dziś:</span>
+      <input class="bio-done-input" id="biodone_${char}" type="number" min="0" max="99"
+             value="${bioDone||0}" onchange="saveBio('${char}')">
+      <span class="bio-done-label">szt.</span>
+    </div>
+    <div class="bio-current-label">Aktualny przedmiot:</div>
+    <select class="bio-select" id="biosel_${char}" onchange="saveBio('${char}')">
+      <option value="">— wybierz —</option>
+      ${opts}
+    </select>
+    <div class="bio-item-row" id="bioitem_${char}"></div>
+  `;
+
+  setTimeout(() => {
+    updateBioItem(char, bioCurrent);
+  }, 0);
+
+  return row;
+}
+
+function updateBioItem(char, itemId) {
+  const wrap = document.getElementById('bioitem_' + char);
+  if (!wrap) return;
+  const item = BIOLOG_ITEMS.find(i => i.id === itemId);
+  if (!item) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `
+    <img class="bio-item-icon" src="${item.img}" onerror="this.style.display='none'">
+    <span class="bio-item-name">${item.name}</span>
+    <span class="bio-item-qty">x${item.qty} sztuk</span>
+  `;
+}
+
+function saveBio(char) {
+  const sel  = document.getElementById('biosel_' + char);
+  const done = document.getElementById('biodone_' + char);
+  if (!sel || !done) return;
+  const current = sel.value;
+  updateBioItem(char, current);
+  socket.emit('updateBio', { char, current, done: parseInt(done.value)||0 });
+}
+
+function removeBio(char) {
+  const row = document.getElementById('biorow_' + char);
+  if (row) row.remove();
+  socket.emit('updateBio', { char, current: null, done: 0 });
+}
+
 function buildStoneRow(char) {
   const row = document.createElement('div');
   row.className = 'stone-row';
@@ -651,7 +803,7 @@ function addTaskPanel(bodyEl, char) {
       <option value="KU4">KU4</option>
       <option value="KU5">KU5</option>
       <option value="Polymorph">Polymorph</option>
-      <option value="Biolog">Biolog</option>
+      <option value="__bio__">🌿 Biolog (rozszerzony)</option>
       <option value="Dowodzenie">Dowodzenie</option>
       <option value="__medal__">🏅 Medal Konny</option>
       <option value="__stone__">💎 Kamień Duchowy</option>
@@ -671,6 +823,14 @@ function addTask(char) {
     const panel = document.getElementById('addpanel_' + char);
     panel.parentElement.insertBefore(buildMedalRow(char), panel);
     socket.emit('addMedal', char);
+    return;
+  }
+  // Special handling for biolog
+  if (task === '__bio__') {
+    if (document.getElementById('biorow_' + char)) return;
+    const panel = document.getElementById('addpanel_' + char);
+    panel.parentElement.insertBefore(buildBioRow(char, null, 0), panel);
+    socket.emit('updateBio', { char, current: null, done: 0 });
     return;
   }
   // Special handling for spirit stone
@@ -744,7 +904,7 @@ socket.on('charactersUpdate', data => {
   for (const char in data) {
     const tasks = data[char];
     for (const task in tasks) {
-      if (task === 'horseTimer' || task === 'spiritStoneTimer' || task === 'hasStone' || task === 'hasMedal') continue;
+      if (['horseTimer','spiritStoneTimer','hasStone','hasMedal','bioCurrent','bioDone'].includes(task)) continue;
       const cb = checkboxes[char + '_' + task];
       if (cb) {
         cb.checked = !!tasks[task];
@@ -777,6 +937,24 @@ socket.on('charactersUpdate', data => {
     }
     if (tasks.spiritStoneTimer && stoneTimers[char]) {
       startStoneTimer(char, stoneTimers[char], tasks.spiritStoneTimer);
+    }
+    // Biolog panel sync
+    const bioRow = document.getElementById('biorow_' + char);
+    if ((tasks.bioCurrent !== undefined || tasks.bioDone !== undefined) && !bioRow) {
+      if (tasks.bioCurrent !== null || tasks.bioDone > 0) {
+        const panel = document.getElementById('addpanel_' + char);
+        if (panel) panel.parentElement.insertBefore(buildBioRow(char, tasks.bioCurrent, tasks.bioDone||0), panel);
+      }
+    } else if (bioRow) {
+      const sel  = document.getElementById('biosel_' + char);
+      const done = document.getElementById('biodone_' + char);
+      if (sel && tasks.bioCurrent !== undefined && sel.value !== tasks.bioCurrent) {
+        sel.value = tasks.bioCurrent || '';
+        updateBioItem(char, tasks.bioCurrent);
+      }
+      if (done && tasks.bioDone !== undefined && parseInt(done.value) !== tasks.bioDone) {
+        done.value = tasks.bioDone || 0;
+      }
     }
   }
 });
