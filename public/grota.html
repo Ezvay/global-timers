@@ -74,41 +74,37 @@
   #heatCanvas.visible{opacity:1;}
 
   /* PING MARKERS */
-  .ping-marker{position:absolute;transform:translate(-50%,-50%);pointer-events:all;z-index:5;display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .ping-marker{position:absolute;transform:translate(-50%,-50%);pointer-events:all;z-index:5;display:flex;flex-direction:column;align-items:center;}
   .ping-dot{
-    width:52px;height:52px;position:relative;
+    width:14px;height:14px;position:relative;
     display:flex;align-items:center;justify-content:center;
     cursor:pointer;
     transition:transform 0.15s,filter 0.15s;
-    animation:ping-appear 0.35s cubic-bezier(0.23,1,0.32,1);
-    filter:drop-shadow(0 0 8px rgba(255,80,40,0.8)) drop-shadow(0 0 18px rgba(255,60,20,0.4));
+    animation:ping-appear 0.3s cubic-bezier(0.23,1,0.32,1);
+    filter:drop-shadow(0 0 4px rgba(255,80,40,0.9));
   }
   .ping-dot img{
-    width:52px;height:52px;object-fit:contain;pointer-events:none;
+    width:14px;height:14px;object-fit:contain;pointer-events:none;
   }
   .ping-dot:hover{
-    transform:scale(1.18);
-    filter:drop-shadow(0 0 14px rgba(255,120,40,1)) drop-shadow(0 0 30px rgba(255,80,20,0.7));
+    transform:scale(1.3);
+    filter:drop-shadow(0 0 7px rgba(255,120,40,1));
   }
-  @keyframes ping-appear{0%{transform:scale(0) rotate(-15deg);opacity:0;}70%{transform:scale(1.15) rotate(3deg);}100%{transform:scale(1) rotate(0deg);opacity:1;}}
+  @keyframes ping-appear{0%{transform:scale(0);opacity:0;}70%{transform:scale(1.2);}100%{transform:scale(1);opacity:1;}}
   .ping-pulse{
     position:absolute;top:50%;left:50%;
-    width:52px;height:52px;border-radius:50%;
-    background:rgba(255,60,20,0.2);transform:translate(-50%,-50%);
-    animation:pulse-ring 2.2s ease-out infinite;pointer-events:none;
+    width:14px;height:14px;border-radius:50%;
+    background:rgba(255,60,20,0.25);transform:translate(-50%,-50%);
+    animation:pulse-ring 2s ease-out infinite;pointer-events:none;
   }
-  @keyframes pulse-ring{0%{transform:translate(-50%,-50%) scale(1);opacity:0.7;}100%{transform:translate(-50%,-50%) scale(2.4);opacity:0;}}
+  @keyframes pulse-ring{0%{transform:translate(-50%,-50%) scale(1);opacity:0.8;}100%{transform:translate(-50%,-50%) scale(3);opacity:0;}}
   .ping-ch-badge{
-    position:absolute;bottom:-2px;right:-4px;
-    background:linear-gradient(135deg,#1a0f00,#2a1800);
-    border:1px solid rgba(201,168,76,0.6);border-radius:3px;
-    font-family:'Cinzel',serif;font-size:10px;font-weight:600;
-    color:var(--gold-light);padding:1px 5px;pointer-events:none;
-    box-shadow:0 0 6px rgba(201,168,76,0.3);
-  }
-  .ping-timer{
-    background:rgba(0,0,0,0.88);border:1px solid rgba(255,100,40,0.4);border-radius:2px;padding:2px 8px;
-    font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:#ff9060;white-space:nowrap;pointer-events:none;
+    position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+    background:rgba(0,0,0,0.85);
+    border:1px solid rgba(201,168,76,0.5);border-radius:2px;
+    font-family:'Cinzel',serif;font-size:8px;font-weight:600;
+    color:var(--gold-light);padding:0 3px;pointer-events:none;
+    white-space:nowrap;line-height:1.4;
   }
 
   /* SIDEBAR */
@@ -318,9 +314,8 @@ function placeMarker(p) {
     <div class="ping-dot" onclick="removePing('${p.id}')" title="Kliknij aby usunąć (zbity)">
       <div class="ping-pulse"></div>
       <img src="/metin_icon.png" alt="metin">
-      <div class="ping-ch-badge">CH ${p.ch}</div>
-    </div>
-    <div class="ping-timer" id="mt_${p.id}">00:00</div>`;
+      <div class="ping-ch-badge">${p.ch}</div>
+    </div>`;
   pingLayer.appendChild(m);
 }
 
@@ -340,9 +335,7 @@ function addSidebarItem(p) {
 function startTicking(p) {
   function tick() {
     const str = fmt(Date.now() - p.startedAt);
-    const mt = document.getElementById('mt_' + p.id);
     const st = document.getElementById('st_' + p.id);
-    if (mt) mt.innerText = str;
     if (st) st.innerText = str;
     timerRafs[p.id] = requestAnimationFrame(tick);
   }
