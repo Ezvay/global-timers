@@ -100,7 +100,7 @@ function checkReset(){
   if(hour===resetHour && minute===resetMinute && lastResetDay!==day){
     for(let char in characters){
       let old = characters[char]
-      characters[char] = { horseTimer: old.horseTimer || null, spiritStoneTimer: old.spiritStoneTimer || null }
+      characters[char] = { horseTimer: old.horseTimer || null, spiritStoneTimer: old.spiritStoneTimer || null, hasStone: old.hasStone || false }
     }
     lastResetDay = day
     saveData()
@@ -152,6 +152,21 @@ io.on("connection",(socket)=>{
     saveData()
     io.emit("charactersUpdate",characters)
   })
+  socket.on("addStone",(char)=>{
+    if(!characters[char]) characters[char]={}
+    characters[char].hasStone = true
+    saveData()
+    io.emit("charactersUpdate", characters)
+  })
+
+  socket.on("removeStone",(char)=>{
+    if(!characters[char]) return
+    delete characters[char].hasStone
+    delete characters[char].spiritStoneTimer
+    saveData()
+    io.emit("charactersUpdate", characters)
+  })
+
   socket.on("spiritStone",(data)=>{
     const {char, hours} = data
     if(!characters[char]) characters[char]={}
@@ -169,7 +184,7 @@ io.on("connection",(socket)=>{
   socket.on("manualReset",()=>{
     for(let char in characters){
       let old = characters[char]
-      characters[char] = { horseTimer: old.horseTimer || null, spiritStoneTimer: old.spiritStoneTimer || null }
+      characters[char] = { horseTimer: old.horseTimer || null, spiritStoneTimer: old.spiritStoneTimer || null, hasStone: old.hasStone || false }
     }
     saveData()
     io.emit("charactersUpdate",characters)

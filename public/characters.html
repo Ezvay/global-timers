@@ -593,9 +593,10 @@ function addMedalRow(bodyEl, char) {
 }
 
 /* SPIRIT STONE ROW */
-function addStoneRow(bodyEl, char) {
+function buildStoneRow(char) {
   const row = document.createElement('div');
   row.className = 'stone-row';
+  row.id = 'stonerow_' + char;
   row.innerHTML = `
     <div class="stone-left">
       <img class="task-icon" src="/kamien_duchowy.png" style="width:22px;height:22px;object-fit:contain;">
@@ -604,10 +605,21 @@ function addStoneRow(bodyEl, char) {
         <div class="stone-timer" id="st_stone_${char}">—</div>
       </div>
     </div>
-    <button class="stone-btn" onclick="openStoneModal('${char}')">Ustaw</button>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button class="stone-btn" onclick="openStoneModal('${char}')">Ustaw</button>
+      <button class="remove-btn" onclick="removeStone('${char}')" title="Usuń">✕</button>
+    </div>
   `;
-  bodyEl.appendChild(row);
   stoneTimers[char] = row.querySelector('#st_stone_' + char);
+  return row;
+}
+
+function removeStone(char) {
+  const row = document.getElementById('stonerow_' + char);
+  if (row) row.remove();
+  if (stoneIntervals[char]) { clearInterval(stoneIntervals[char]); delete stoneIntervals[char]; }
+  delete stoneTimers[char];
+  socket.emit('removeStone', char);
 }
 
 /* ADD TASK PANEL */
@@ -626,6 +638,7 @@ function addTaskPanel(bodyEl, char) {
       <option value="Biolog">Biolog</option>
       <option value="Dowodzenie">Dowodzenie</option>
       <option value="Medal">Medal</option>
+      <option value="__stone__">💎 Kamień Duchowy</option>
     </select>
     <button class="add-btn" onclick="addTask('${char}')">+ Dodaj</button>
   `;
@@ -636,7 +649,15 @@ function addTaskPanel(bodyEl, char) {
 function addTask(char) {
   const sel = document.getElementById('tsel_' + char);
   const task = sel.value;
-  if (document.getElementById('task_' + char + '_' + task)) return; // already exists
+  // Special handling for spirit stone
+  if (task === '__stone__') {
+    if (document.getElementById('stonerow_' + char)) return; // already exists
+    const panel = document.getElementById('addpanel_' + char);
+    panel.parentElement.insertBefore(buildStoneRow(char), panel);
+    socket.emit('addStone', char);
+    return;
+  }
+  if (document.getElementById('task_' + char + '_' + task)) return;
   const panel = document.getElementById('addpanel_' + char);
   panel.parentElement.insertBefore(createTaskRow(char, task), panel);
   socket.emit('addTask', { char, task });
@@ -655,7 +676,6 @@ for (const char in chars) {
   body.className = 'char-body'; body.id = 'body_' + char;
 
   if (hasMedal.includes(char)) addMedalRow(body, char);
-  addStoneRow(body, char);
   addTaskPanel(body, char);
 
   card.append(header, body);
@@ -701,7 +721,7 @@ socket.on('charactersUpdate', data => {
   for (const char in data) {
     const tasks = data[char];
     for (const task in tasks) {
-      if (task === 'horseTimer' || task === 'spiritStoneTimer') continue;
+      if (task === 'horseTimer' || task === 'spiritStoneTimer' || task === 'hasStone') continue;
       const cb = checkboxes[char + '_' + task];
       if (cb) {
         cb.checked = !!tasks[task];
@@ -711,6 +731,16 @@ socket.on('charactersUpdate', data => {
     }
     if (tasks.horseTimer && medalTimers[char]) {
       startMedalTimer(char, medalTimers[char], tasks.horseTimer);
+    }
+    // Show/hide stone row based on server state
+    const stoneRow = document.getElementById('stonerow_' + char);
+    if (tasks.hasStone && !stoneRow) {
+      const panel = document.getElementById('addpanel_' + char);
+      if (panel) panel.parentElement.insertBefore(buildStoneRow(char), panel);
+    } else if (!tasks.hasStone && stoneRow) {
+      stoneRow.remove();
+      if (stoneIntervals[char]) { clearInterval(stoneIntervals[char]); delete stoneIntervals[char]; }
+      delete stoneTimers[char];
     }
     if (tasks.spiritStoneTimer && stoneTimers[char]) {
       startStoneTimer(char, stoneTimers[char], tasks.spiritStoneTimer);
