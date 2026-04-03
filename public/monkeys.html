@@ -2,361 +2,240 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Loch Małp</title>
-
 <script src="/socket.io/socket.io.js"></script>
-
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
-
-body{
-font-family:Arial;
-background:#111;
-color:white;
-text-align:center;
-margin:0;
-}
-
-/* TOP BAR */
-
-.topbar{
-display:flex;
-justify-content:space-between;
-max-width:1200px;
-margin:20px auto;
-padding:0 20px;
-}
-
-/* LAYOUT BUTTONS */
-
-.layoutButtons{
-display:flex;
-gap:10px;
-justify-content:center;
-margin-bottom:20px;
-flex-wrap:wrap;
-}
-
-.layoutButtons button{
-background:linear-gradient(#1f3d6b,#0f1f3b);
-border:2px solid #4a8acb;
-color:#bcdcff;
-padding:6px 14px;
-border-radius:6px;
-cursor:pointer;
-}
-
-/* NAV BUTTONS */
-
-.backButton{
-background:linear-gradient(#6b4d1f,#3b2a0f);
-border:2px solid #caa64a;
-color:#ffd36a;
-padding:8px 18px;
-border-radius:8px;
-cursor:pointer;
-}
-
-.soundButton{
-background:linear-gradient(#1e3d1e,#0f1f0f);
-border:2px solid #5fa85f;
-color:#9aff9a;
-padding:8px 18px;
-border-radius:8px;
-cursor:pointer;
-}
-
-/* CONTAINER */
-
-.container{
-display:grid;
-gap:12px;
-max-width:1200px;
-margin:auto;
-padding:10px;
-}
-
-/* LAYOUTS */
-
-.layout-1x8-vertical{
-grid-template-columns:1fr;
-}
-
-.layout-1x8-horizontal{
-grid-template-columns:repeat(8,1fr);
-}
-
-.layout-2x4-horizontal{
-grid-template-columns:repeat(4,1fr);
-}
-
-.layout-2x4-vertical{
-grid-template-columns:repeat(2,1fr);
-}
-
-/* TIMER */
-
-.timer{
-background:linear-gradient(#1a1a1a,#0c0c0c);
-padding:10px;
-border-radius:8px;
-border:2px solid #6a5125;
-}
-
-.time{
-font-size:16px;
-margin:6px 0;
-font-weight:bold;
-}
-
-.grey{
-border-color:#555;
-background:#2a2a2a;
-}
-
-.red{
-border-color:#7a1f1f;
-background:linear-gradient(#2b0d0d,#1a0606);
-}
-
-.yellow{
-border-color:#b8972e;
-background:linear-gradient(#3a320e,#1c1707);
-}
-
-.green{
-border-color:#3fa34d;
-background:linear-gradient(#0d2a13,#07180b);
-}
-
-button{
-background:linear-gradient(#6b4d1f,#3b2a0f);
-border:1px solid #caa64a;
-color:#ffd36a;
-font-size:11px;
-padding:4px 8px;
-margin:2px;
-border-radius:6px;
-cursor:pointer;
-}
-
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #f0d080;
+    --gold-dark: #7a5f1e;
+    --bg: #090806;
+    --border: #3a2e1a;
+    --text: #d4c4a0;
+    --text-dim: #7a6a50;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Crimson Text', serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .bg-layer {
+    position: fixed; inset: 0; z-index: 0;
+    background: radial-gradient(ellipse 100% 40% at 50% 0%, rgba(20,50,100,0.12) 0%, transparent 60%), #090806;
+  }
+  .topbar {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1300px; margin: 0 auto; padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(to bottom, rgba(17,14,9,0.95), rgba(9,8,6,0.8));
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .nav-btn {
+    font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 2px;
+    color: var(--gold-dark); background: rgba(201,168,76,0.06);
+    border: 1px solid rgba(201,168,76,0.25); border-radius: 2px;
+    padding: 7px 14px; cursor: pointer; text-decoration: none; display: inline-block;
+    transition: all 0.2s; text-transform: uppercase;
+  }
+  .nav-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.12); }
+  .page-title {
+    font-family: 'Cinzel', serif; font-size: 18px; font-weight: 600;
+    color: var(--gold-light); letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(201,168,76,0.4);
+  }
+  .sound-btn {
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 1px;
+    color: var(--text-dim); background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 2px;
+    padding: 7px 14px; cursor: pointer; transition: all 0.2s;
+  }
+  .sound-btn.on  { color: #80e090; border-color: rgba(80,180,90,0.4); background: rgba(60,140,70,0.1); }
+  .sound-btn.off { color: #e06060; border-color: rgba(180,60,60,0.4); background: rgba(140,40,40,0.1); }
+  /* LAYOUT BAR */
+  .layout-section {
+    position: relative; z-index: 1;
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+    max-width: 1300px; margin: 16px auto 0; padding: 0 20px;
+  }
+  .layout-btn {
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px;
+    color: var(--text-dim); background: rgba(201,168,76,0.05);
+    border: 1px solid rgba(201,168,76,0.2); border-radius: 2px;
+    padding: 6px 14px; cursor: pointer; text-transform: uppercase; transition: all 0.2s;
+  }
+  .layout-btn:hover, .layout-btn.active { color: var(--gold); border-color: rgba(201,168,76,0.55); background: rgba(201,168,76,0.12); }
+  /* GRID */
+  .timer-grid {
+    position: relative; z-index: 1;
+    display: grid; gap: 10px; max-width: 1300px; margin: 16px auto; padding: 0 20px 30px;
+  }
+  .layout-1x8-vertical   { grid-template-columns: 1fr; }
+  .layout-1x8-horizontal { grid-template-columns: repeat(8,1fr); }
+  .layout-2x4-horizontal { grid-template-columns: repeat(4,1fr); }
+  .layout-2x4-vertical   { grid-template-columns: repeat(2,1fr); }
+  /* TIMER */
+  .timer-card {
+    background: linear-gradient(160deg, #1a1510, #0e0b07);
+    border: 1px solid #3a2e18; border-radius: 3px;
+    padding: 14px 10px; position: relative; overflow: hidden;
+    transition: border-color 0.4s, background 0.4s, box-shadow 0.4s;
+  }
+  .timer-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(to right, transparent, rgba(201,168,76,0.2), transparent);
+  }
+  .timer-card.state-grey   { border-color: #3a3530; background: linear-gradient(160deg, #1e1c18, #0f0e0b); }
+  .timer-card.state-red    { border-color: #6a2020; background: linear-gradient(160deg, #200a0a, #130505); box-shadow: 0 0 15px rgba(139,26,26,0.2); }
+  .timer-card.state-yellow { border-color: #7a6020; background: linear-gradient(160deg, #1e1a08, #0f0d04); box-shadow: 0 0 15px rgba(180,140,30,0.15); }
+  .timer-card.state-green  { border-color: #2a6a35; background: linear-gradient(160deg, #081a0c, #040f06); box-shadow: 0 0 20px rgba(42,160,70,0.25); animation: pulse-green 2s ease-in-out infinite; }
+  @keyframes pulse-green {
+    0%,100% { box-shadow: 0 0 20px rgba(42,160,70,0.25); }
+    50% { box-shadow: 0 0 40px rgba(42,160,70,0.5); }
+  }
+  .timer-name {
+    font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px;
+    color: var(--text-dim); text-align: center; margin-bottom: 8px; text-transform: uppercase;
+  }
+  .timer-display {
+    font-family: 'Cinzel', serif; font-size: 22px; font-weight: 600;
+    text-align: center; letter-spacing: 2px; margin: 6px 0;
+    color: var(--text); transition: color 0.4s, text-shadow 0.4s;
+  }
+  .state-red .timer-display    { color: #ff6060; text-shadow: 0 0 14px rgba(255,80,80,0.45); }
+  .state-yellow .timer-display { color: #f0c060; text-shadow: 0 0 14px rgba(240,180,60,0.45); }
+  .state-green .timer-display  { color: #60e080; text-shadow: 0 0 14px rgba(80,220,100,0.55); }
+  .timer-btns { display: flex; gap: 5px; justify-content: center; margin-top: 8px; }
+  .btn {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 2px; cursor: pointer; transition: all 0.2s;
+    border: 1px solid rgba(201,168,76,0.3); color: var(--gold-dark);
+    background: rgba(201,168,76,0.06);
+  }
+  .btn:hover { color: var(--gold); border-color: var(--gold); background: rgba(201,168,76,0.14); }
+  .btn-start:hover { color: #80ff80; border-color: #40a050; background: rgba(60,140,70,0.15); }
+  .btn-stop:hover  { color: #ff8080; border-color: #a04040; background: rgba(140,40,40,0.15); }
 </style>
 </head>
-
 <body>
+<div class="bg-layer"></div>
 
 <div class="topbar">
-
-<button class="backButton" onclick="window.location.href='/'">
-⬅ Powrót
-</button>
-
-<button id="soundToggle" class="soundButton">
-🔊 Dźwięk ON
-</button>
-
+  <div class="topbar-left">
+    <a class="nav-btn" href="/">⬅ Powrót</a>
+    <div class="page-title">Loch Małp</div>
+  </div>
+  <button id="soundToggle" class="sound-btn on">🔊 Dźwięk ON</button>
 </div>
 
-<h1>Loch Małp</h1>
-
-<div class="layoutButtons">
-
-<button onclick="setLayout('layout-1x8-vertical')">1×8 pionowo</button>
-<button onclick="setLayout('layout-1x8-horizontal')">1×8 poziomo</button>
-<button onclick="setLayout('layout-2x4-vertical')">2×4 pionowo</button>
-<button onclick="setLayout('layout-2x4-horizontal')">2×4 poziomo</button>
-
+<div class="layout-section">
+  <button class="layout-btn" onclick="setLayout('layout-2x4-horizontal')">2×4 poziomo</button>
+  <button class="layout-btn" onclick="setLayout('layout-2x4-vertical')">2×4 pionowo</button>
+  <button class="layout-btn" onclick="setLayout('layout-1x8-horizontal')">1×8 poziomo</button>
+  <button class="layout-btn" onclick="setLayout('layout-1x8-vertical')">1×8 pionowo</button>
 </div>
 
-<div class="container layout-2x4-horizontal" id="timers"></div>
+<div class="timer-grid layout-2x4-horizontal" id="timers"></div>
 
 <script>
+const socket = io();
 
-const socket = io()
+// AUDIO
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function beep(duration=0.15, freq=800) {
+  if (!soundEnabled) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.frequency.value = freq; osc.start();
+  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.stop(audioCtx.currentTime + duration);
+}
+function tripleBeep() { beep(); setTimeout(()=>beep(),250); setTimeout(()=>beep(),500); }
+function singleBeep() { beep(0.7, 600); }
 
-/* AUDIO */
+// SOUND TOGGLE
+let soundEnabled = localStorage.getItem('sound') !== 'off';
+const soundBtn = document.getElementById('soundToggle');
+function updateSoundBtn() {
+  soundEnabled
+    ? (soundBtn.textContent='🔊 Dźwięk ON', soundBtn.className='sound-btn on')
+    : (soundBtn.textContent='🔇 Dźwięk OFF', soundBtn.className='sound-btn off');
+}
+updateSoundBtn();
+soundBtn.onclick = () => { soundEnabled = !soundEnabled; localStorage.setItem('sound', soundEnabled?'on':'off'); updateSoundBtn(); };
 
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+// LAYOUT
+const grid = document.getElementById('timers');
+const layoutBtns = document.querySelectorAll('.layout-btn');
+function setLayout(layout) {
+  grid.className = 'timer-grid ' + layout;
+  localStorage.setItem('layout', layout);
+  layoutBtns.forEach(b => b.classList.toggle('active', b.textContent.includes(layout.replace('layout-','').replace(/-/g,'×'))));
+}
+const saved = localStorage.getItem('layout');
+if (saved) setLayout(saved);
 
-function beep(duration=0.15,freq=800){
-
-if(!soundEnabled) return
-
-const osc=audioCtx.createOscillator()
-const gain=audioCtx.createGain()
-
-osc.connect(gain)
-gain.connect(audioCtx.destination)
-
-osc.frequency.value=freq
-osc.start()
-
-gain.gain.setValueAtTime(0.2,audioCtx.currentTime)
-gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+duration)
-
-osc.stop(audioCtx.currentTime+duration)
-
+// FORMAT
+function format(sec) {
+  return String(Math.floor(sec/3600)).padStart(2,'0')+':'+
+         String(Math.floor((sec%3600)/60)).padStart(2,'0')+':'+
+         String(sec%60).padStart(2,'0');
 }
 
-function tripleBeep(){
-beep()
-setTimeout(()=>beep(),250)
-setTimeout(()=>beep(),500)
+// CREATE TIMER
+function createTimer(id) {
+  const card = document.createElement('div');
+  card.className = 'timer-card state-grey';
+
+  const name = document.createElement('div');
+  name.className = 'timer-name';
+  name.innerText = id.replace('LM_','');
+
+  const disp = document.createElement('div');
+  disp.className = 'timer-display';
+  disp.innerText = '00:00:00';
+
+  const btns = document.createElement('div');
+  btns.className = 'timer-btns';
+
+  const btnStart = document.createElement('button');
+  btnStart.className = 'btn btn-start'; btnStart.innerText = 'Start';
+  const btnStop = document.createElement('button');
+  btnStop.className = 'btn btn-stop'; btnStop.innerText = 'Stop';
+  const btnReset = document.createElement('button');
+  btnReset.className = 'btn'; btnReset.innerText = 'Reset';
+
+  btnStart.onclick = () => socket.emit('start', id);
+  btnStop.onclick  = () => socket.emit('stop', id);
+  btnReset.onclick = () => socket.emit('reset', id);
+
+  btns.append(btnStart, btnStop, btnReset);
+  card.append(name, disp, btns);
+  return { card, disp, beepYellow: false, beepGreen: false };
 }
 
-function singleBeep(){
-beep(0.7,600)
+const displays = {};
+for (let i=1; i<=8; i++) {
+  const id = 'LM_CH'+i;
+  const t = createTimer(id);
+  grid.appendChild(t.card);
+  displays[id] = t;
 }
 
-/* SOUND */
-
-let soundEnabled = localStorage.getItem("sound") !== "off"
-
-const soundButton=document.getElementById("soundToggle")
-
-function updateSound(){
-soundButton.innerText=soundEnabled?"🔊 Dźwięk ON":"🔇 Dźwięk OFF"
-}
-
-updateSound()
-
-soundButton.onclick=()=>{
-soundEnabled=!soundEnabled
-localStorage.setItem("sound",soundEnabled?"on":"off")
-updateSound()
-}
-
-/* LAYOUT SWITCH */
-
-const container=document.getElementById("timers")
-
-function setLayout(layout){
-
-container.className="container "+layout
-localStorage.setItem("layout",layout)
-
-}
-
-const savedLayout=localStorage.getItem("layout")
-
-if(savedLayout){
-container.className="container "+savedLayout
-}
-
-/* FORMAT */
-
-function format(sec){
-
-let h=String(Math.floor(sec/3600)).padStart(2,"0")
-let m=String(Math.floor((sec%3600)/60)).padStart(2,"0")
-let s=String(sec%60).padStart(2,"0")
-
-return h+":"+m+":"+s
-
-}
-
-/* TIMER */
-
-function createTimer(id){
-
-let box=document.createElement("div")
-box.className="timer grey"
-
-let title=document.createElement("div")
-title.innerText=id.replace("LM_","")
-
-let time=document.createElement("div")
-time.className="time"
-
-let start=document.createElement("button")
-start.innerText="Start"
-
-let stop=document.createElement("button")
-stop.innerText="Stop"
-
-let reset=document.createElement("button")
-reset.innerText="Reset"
-
-start.onclick=()=>socket.emit("start",id)
-stop.onclick=()=>socket.emit("stop",id)
-reset.onclick=()=>socket.emit("reset",id)
-
-box.appendChild(title)
-box.appendChild(time)
-box.appendChild(start)
-box.appendChild(stop)
-box.appendChild(reset)
-
-return {box,time,beepYellow:false,beepGreen:false}
-
-}
-
-let displays={}
-
-for(let i=1;i<=8;i++){
-
-let id="LM_CH"+i
-
-let timer=createTimer(id)
-
-container.appendChild(timer.box)
-
-displays[id]=timer
-
-}
-
-socket.on("update",(data)=>{
-
-for(let id in data){
-
-if(displays[id]){
-
-let sec=data[id]
-let timer=displays[id]
-
-timer.time.innerText=format(sec)
-
-let box=timer.box
-
-box.classList.remove("grey","red","yellow","green")
-
-if(sec===0){
-box.classList.add("grey")
-}
-else if(sec<3420){
-box.classList.add("red")
-}
-else if(sec<3600){
-box.classList.add("yellow")
-}
-else{
-box.classList.add("green")
-}
-
-if(sec>=3420 && sec<3422){
-
-if(!timer.beepYellow){
-tripleBeep()
-timer.beepYellow=true
-}
-
-}
-
-if(sec>=3600 && sec<3602){
-
-if(!timer.beepGreen){
-singleBeep()
-timer.beepGreen=true
-}
-
-}
-
-}
-
-}
-
-})
-
+socket.on('update', data => {
+  for (const id in data) {
+    if (!displays[id]) continue;
+    const sec = data[id];
+    const t = displays[id];
+    t.disp.innerText = format(sec);
+    t.card.className = 'timer-card ' + (sec===0?'state-grey':sec<3420?'state-red':sec<3600?'state-yellow':'state-green');
+    if (sec>=3420 && sec<3422 && !t.beepYellow) { tripleBeep(); t.beepYellow = true; }
+    if (sec>=3600 && sec<3602 && !t.beepGreen)  { singleBeep(); t.beepGreen = true; }
+    if (sec === 0) { t.beepYellow = false; t.beepGreen = false; }
+  }
+});
 </script>
-
 </body>
 </html>

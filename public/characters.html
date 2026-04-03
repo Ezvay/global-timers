@@ -2,503 +2,461 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Postacie</title>
-
 <script src="/socket.io/socket.io.js"></script>
-
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
-
-body{
-font-family:Arial;
-background:#111;
-color:white;
-text-align:center;
-margin:0;
-}
-
-.topnav{
-display:flex;
-justify-content:space-between;
-align-items:center;
-max-width:1100px;
-margin:20px auto 0 auto;
-padding:0 20px;
-}
-
-.navLeft{
-display:flex;
-gap:10px;
-}
-
-.navButton{
-background:linear-gradient(#6b4d1f,#3b2a0f);
-border:2px solid #caa64a;
-color:#ffd36a;
-padding:8px 16px;
-border-radius:8px;
-cursor:pointer;
-font-weight:bold;
-}
-
-.topbar{
-display:flex;
-flex-direction:column;
-align-items:center;
-gap:10px;
-margin-top:10px;
-}
-
-.container{
-max-width:1100px;
-margin:auto;
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-gap:20px;
-padding:20px;
-}
-
-.character{
-background:linear-gradient(#1a1a1a,#0c0c0c);
-border:2px solid #6a5125;
-border-radius:10px;
-padding:12px;
-}
-
-.header{
-display:flex;
-align-items:center;
-gap:10px;
-margin-bottom:10px;
-}
-
-.header img{
-width:34px;
-}
-
-.task{
-display:flex;
-justify-content:space-between;
-background:#1f1f1f;
-padding:6px;
-margin:4px 0;
-border-radius:6px;
-}
-
-.taskLeft{
-display:flex;
-align-items:center;
-gap:8px;
-}
-
-.taskLeft img{
-width:20px;
-}
-
-.timer{
-font-size:12px;
-color:#aaa;
-margin-top:4px;
-}
-
-.addTask{
-margin-top:6px;
-font-size:12px;
-background:#222;
-padding:4px;
-border-radius:6px;
-}
-
-button{
-background:#3b2a0f;
-border:1px solid #caa64a;
-color:#ffd36a;
-padding:4px 8px;
-cursor:pointer;
-border-radius:6px;
-}
-
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #f0d080;
+    --gold-dark: #7a5f1e;
+    --bg: #090806;
+    --surface: #110e09;
+    --border: #3a2e1a;
+    --text: #d4c4a0;
+    --text-dim: #7a6a50;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Crimson Text', serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .bg-layer {
+    position: fixed; inset: 0; z-index: 0;
+    background: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(80,20,20,0.12) 0%, transparent 55%), #090806;
+  }
+  /* TOP NAV */
+  .topnav {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1200px; margin: 0 auto; padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(to bottom, rgba(17,14,9,0.96), rgba(9,8,6,0.8));
+  }
+  .nav-left { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .nav-btn {
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px;
+    color: var(--gold-dark); background: rgba(201,168,76,0.06);
+    border: 1px solid rgba(201,168,76,0.25); border-radius: 2px;
+    padding: 7px 14px; cursor: pointer; text-decoration: none; display: inline-block;
+    transition: all 0.2s; text-transform: uppercase;
+  }
+  .nav-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.12); }
+  /* STATUS BAR */
+  .statusbar {
+    position: relative; z-index: 1;
+    max-width: 1200px; margin: 0 auto;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    padding: 10px 20px;
+    background: rgba(17,14,9,0.5);
+    border-bottom: 1px solid rgba(58,46,26,0.5);
+    font-size: 14px;
+  }
+  .status-item { display: flex; align-items: center; gap: 8px; }
+  .status-label { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+  .status-value { font-family: 'Cinzel', serif; font-size: 14px; color: var(--gold); letter-spacing: 1px; }
+  .divider-v { width: 1px; height: 20px; background: var(--border); }
+  /* RESET CONTROLS */
+  .reset-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .num-input {
+    width: 48px; text-align: center;
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(201,168,76,0.25);
+    color: var(--gold); font-family: 'Cinzel', serif; font-size: 13px;
+    padding: 4px 6px; border-radius: 2px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .num-input:focus { border-color: rgba(201,168,76,0.6); }
+  .action-btn {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--gold-dark); background: rgba(201,168,76,0.06);
+    border: 1px solid rgba(201,168,76,0.25); border-radius: 2px;
+    padding: 6px 12px; cursor: pointer; transition: all 0.2s;
+  }
+  .action-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.14); }
+  .action-btn.danger { color: #cc5555; border-color: rgba(180,60,60,0.3); background: rgba(140,40,40,0.06); }
+  .action-btn.danger:hover { color: #ff8080; border-color: rgba(200,60,60,0.7); background: rgba(140,40,40,0.18); }
+  /* MAIN */
+  .main {
+    position: relative; z-index: 1;
+    max-width: 1200px; margin: 20px auto; padding: 0 20px 40px;
+  }
+  .page-title {
+    font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 5px;
+    color: var(--text-dim); text-transform: uppercase; text-align: center;
+    margin-bottom: 20px;
+  }
+  .ornament-line {
+    display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 24px;
+  }
+  .ornament-line::before, .ornament-line::after {
+    content: ''; flex: 1; height: 1px; max-width: 150px;
+    background: linear-gradient(to right, transparent, var(--gold-dark), transparent);
+  }
+  .ornament-diamond { width: 6px; height: 6px; background: var(--gold); transform: rotate(45deg); opacity: 0.6; }
+  /* GRID */
+  .char-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+  }
+  /* CHARACTER CARD */
+  .char-card {
+    background: linear-gradient(160deg, #1c1510, #0e0b07);
+    border: 1px solid var(--border); border-radius: 3px; overflow: hidden;
+    position: relative; transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .char-card:hover { border-color: rgba(201,168,76,0.35); box-shadow: 0 4px 30px rgba(0,0,0,0.5); }
+  .char-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(to right, transparent, rgba(201,168,76,0.3), transparent);
+  }
+  .char-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.35);
+    border-bottom: 1px solid var(--border);
+  }
+  .char-icon { width: 32px; height: 32px; object-fit: contain; filter: saturate(0.8); }
+  .char-name {
+    font-family: 'Cinzel', serif; font-size: 13px; font-weight: 600;
+    color: var(--gold-light); letter-spacing: 1px;
+  }
+  .char-body { padding: 10px 12px 12px; }
+  /* TASKS */
+  .task-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 8px; margin-bottom: 4px; border-radius: 2px;
+    background: rgba(0,0,0,0.3); border: 1px solid rgba(58,46,26,0.5);
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .task-row.done {
+    background: rgba(42,160,70,0.08);
+    border-color: rgba(42,160,70,0.3);
+  }
+  .task-left { display: flex; align-items: center; gap: 8px; }
+  .task-icon { width: 18px; height: 18px; object-fit: contain; opacity: 0.85; }
+  .task-name { font-size: 14px; color: var(--text); }
+  .task-row.done .task-name { color: #70d080; }
+  .task-right { display: flex; align-items: center; gap: 6px; }
+  /* CHECKBOX */
+  .task-cb { appearance: none; width: 16px; height: 16px; border: 1px solid rgba(201,168,76,0.35); background: rgba(0,0,0,0.4); border-radius: 2px; cursor: pointer; position: relative; transition: all 0.2s; flex-shrink: 0; }
+  .task-cb:checked { background: rgba(42,160,70,0.3); border-color: rgba(60,200,80,0.7); }
+  .task-cb:checked::after { content: '✓'; position: absolute; top: -1px; left: 2px; font-size: 12px; color: #80ff90; }
+  /* REMOVE BTN */
+  .remove-btn {
+    font-size: 10px; color: rgba(180,60,60,0.6); background: none;
+    border: none; cursor: pointer; padding: 2px 4px; transition: color 0.2s; line-height: 1;
+  }
+  .remove-btn:hover { color: #ff6060; }
+  /* MEDAL ROW */
+  .medal-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 8px; margin-bottom: 4px; border-radius: 2px;
+    background: rgba(201,168,76,0.05); border: 1px solid rgba(201,168,76,0.2);
+  }
+  .medal-left { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--gold-dark); }
+  .medal-timer { font-family: 'Cinzel', serif; font-size: 12px; color: var(--text-dim); margin-top: 2px; letter-spacing: 1px; }
+  .medal-done { color: #60e080; }
+  .give-btn {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--gold-dark); background: rgba(201,168,76,0.08);
+    border: 1px solid rgba(201,168,76,0.3); border-radius: 2px;
+    padding: 4px 10px; cursor: pointer; transition: all 0.2s;
+  }
+  .give-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.18); }
+  /* ADD TASK */
+  .add-task-panel {
+    display: flex; align-items: center; gap: 6px; margin-top: 8px;
+    padding: 6px 8px; border-radius: 2px;
+    background: rgba(0,0,0,0.2); border: 1px dashed rgba(201,168,76,0.15);
+  }
+  .task-select {
+    flex: 1; background: rgba(0,0,0,0.5); border: 1px solid rgba(201,168,76,0.2);
+    color: var(--text-dim); font-family: 'Crimson Text', serif; font-size: 13px;
+    padding: 4px 6px; border-radius: 2px; outline: none;
+  }
+  .add-btn {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--gold-dark); background: rgba(201,168,76,0.08);
+    border: 1px solid rgba(201,168,76,0.3); border-radius: 2px;
+    padding: 5px 10px; cursor: pointer; transition: all 0.2s;
+  }
+  .add-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.18); }
 </style>
 </head>
-
 <body>
+<div class="bg-layer"></div>
 
 <div class="topnav">
-
-<div class="navLeft">
-
-<button class="navButton" onclick="window.location.href='/'">
-⬅ Powrót
-</button>
-
-<button class="navButton" onclick="window.location.href='/giants.html'">
-Kraina Gigantów
-</button>
-
-<button class="navButton" onclick="window.location.href='/monkeys.html'">
-Loch Małp
-</button>
-
+  <div class="nav-left">
+    <a class="nav-btn" href="/">⬅ Powrót</a>
+    <a class="nav-btn" href="/giants.html">Kraina Gigantów</a>
+    <a class="nav-btn" href="/monkeys.html">Loch Małp</a>
+  </div>
 </div>
 
+<div class="statusbar">
+  <div class="status-item">
+    <span class="status-label">Czas PL</span>
+    <span class="status-value" id="clock">--:--:--</span>
+  </div>
+  <div class="divider-v"></div>
+  <div class="status-item">
+    <span class="status-label">Reset</span>
+    <span class="status-value" id="resetDisplay">--:--</span>
+  </div>
+  <div class="divider-v"></div>
+  <div class="reset-controls">
+    <span class="status-label">Ustaw reset</span>
+    <input class="num-input" id="resetHour" type="number" min="0" max="23" value="23">
+    <span style="color:var(--gold-dark);font-family:'Cinzel',serif">:</span>
+    <input class="num-input" id="resetMinute" type="number" min="0" max="59" value="59">
+    <button class="action-btn" onclick="setReset()">Ustaw</button>
+    <button class="action-btn danger" onclick="manualReset()">⟳ Manual Reset</button>
+  </div>
 </div>
 
-<div class="topbar">
-
-<div>
-Czas PL: <span id="clock"></span>
+<div class="main">
+  <div class="ornament-line"><div class="ornament-diamond"></div></div>
+  <div class="page-title">Postacie Gildii</div>
+  <div class="char-grid" id="characters"></div>
 </div>
-
-<div>
-Reset: <span id="resetDisplay"></span>
-</div>
-
-<div>
-
-Ustaw reset:
-
-<input id="resetHour" type="number" min="0" max="23" value="23">
-:
-<input id="resetMinute" type="number" min="0" max="59" value="59">
-
-<button onclick="setReset()">Ustaw</button>
-
-<button onclick="manualReset()">Manual reset</button>
-
-</div>
-
-</div>
-
-<h1>Postacie</h1>
-
-<div class="container" id="characters"></div>
 
 <script>
+const socket = io();
 
-const socket = io()
-
-const characters = {
-
-Medal:"/icons/warrior.png",
-Bieluszek:"/icons/ninja.png",
-Pojara:"/icons/shaman.png",
-Suczka:"/icons/shaman.png",
-Czantorianka:"/icons/shaman.png",
-EwaZajączkowska:"/icons/warriorw.png",
-Yodasz:"/icons/sura.png"
-
-}
-
+const chars = {
+  Medal:             '/icons/warrior.png',
+  Bieluszek:         '/icons/ninja.png',
+  Pojara:            '/icons/shaman.png',
+  Suczka:            '/icons/shaman.png',
+  Czantorianka:      '/icons/shaman.png',
+  EwaZajączkowska:   '/icons/warriorw.png',
+  Yodasz:            '/icons/sura.png'
+};
 const icons = {
-
-KU:"/icons/skillbook.png",
-Poly:"/icons/polymorph.png",
-Bio:"/icons/orctooth.png",
-Medal:"/icons/horsemedal.png",
-Dow:"/icons/skillbook.png"
-
+  KU:         '/icons/skillbook.png',
+  Poly:       '/icons/polymorph.png',
+  Bio:        '/icons/orctooth.png',
+  Medal:      '/icons/horsemedal.png',
+  Dow:        '/icons/skillbook.png'
+};
+function getIcon(task) {
+  if (task.startsWith('KU')) return icons.KU;
+  if (task === 'Polymorph') return icons.Poly;
+  if (task === 'Biolog') return icons.Bio;
+  if (task === 'Medal') return icons.Medal;
+  if (task === 'Dowodzenie') return icons.Dow;
+  return icons.KU;
 }
 
-const container=document.getElementById("characters")
-
-const checkboxes={}
-const medalTimers={}
+const container = document.getElementById('characters');
+const checkboxes = {};
+const medalTimers = {};
 
 /* CLOCK */
-
-function updateClock(){
-
-const now=new Date()
-
-const polish=new Date(
-now.toLocaleString("en-US",{timeZone:"Europe/Warsaw"})
-)
-
-let h=polish.getHours().toString().padStart(2,"0")
-let m=polish.getMinutes().toString().padStart(2,"0")
-let s=polish.getSeconds().toString().padStart(2,"0")
-
-clock.innerText=h+":"+m+":"+s
-
+function updateClock() {
+  const now = new Date();
+  const pl = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Warsaw' }));
+  document.getElementById('clock').innerText =
+    String(pl.getHours()).padStart(2,'0') + ':' +
+    String(pl.getMinutes()).padStart(2,'0') + ':' +
+    String(pl.getSeconds()).padStart(2,'0');
 }
+setInterval(updateClock, 1000); updateClock();
 
-setInterval(updateClock,1000)
-updateClock()
-
-/* TIMER MEDAL */
-
-function startTimer(el,end){
-
-function update(){
-
-let diff=end-Date.now()
-
-if(diff<=0){
-el.innerText="GOTOWE"
-return
-}
-
-let h=Math.floor(diff/3600000)
-let m=Math.floor((diff%3600000)/60000)
-let s=Math.floor((diff%60000)/1000)
-
-el.innerText=
-h.toString().padStart(2,"0")+":"+
-m.toString().padStart(2,"0")+":"+
-s.toString().padStart(2,"0")
-
-}
-
-update()
-setInterval(update,1000)
-
+/* MEDAL TIMER */
+function startMedalTimer(el, end) {
+  function update() {
+    const diff = end - Date.now();
+    if (diff <= 0) { el.innerText = 'GOTOWE'; el.className = 'medal-timer medal-done'; return; }
+    const h = Math.floor(diff/3600000);
+    const m = Math.floor((diff%3600000)/60000);
+    const s = Math.floor((diff%60000)/1000);
+    el.innerText = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    el.className = 'medal-timer';
+  }
+  update(); setInterval(update, 1000);
 }
 
 /* CREATE TASK */
+function createTaskRow(bodyEl, char, name) {
+  const icon = getIcon(name);
+  const row = document.createElement('div');
+  row.className = 'task-row';
+  row.id = 'task_' + char + '_' + name;
 
-function createTask(box,char,name,icon){
+  const left = document.createElement('div');
+  left.className = 'task-left';
+  left.innerHTML = `<img class="task-icon" src="${icon}"><span class="task-name">${name}</span>`;
 
-let row=document.createElement("div")
-row.className="task"
+  const right = document.createElement('div');
+  right.className = 'task-right';
 
-let left=document.createElement("div")
-left.className="taskLeft"
+  const cb = document.createElement('input');
+  cb.type = 'checkbox'; cb.className = 'task-cb';
+  cb.onchange = () => {
+    row.classList.toggle('done', cb.checked);
+    socket.emit('toggleTask', { char, task: name, value: cb.checked });
+  };
+  checkboxes[char + '_' + name] = cb;
 
-left.innerHTML=`<img src="${icon}">${name}`
+  const rmBtn = document.createElement('button');
+  rmBtn.className = 'remove-btn'; rmBtn.innerText = '✕';
+  rmBtn.onclick = () => { row.remove(); socket.emit('removeTask', { char, task: name }); };
 
-let cb=document.createElement("input")
-cb.type="checkbox"
-
-cb.onchange=()=>{
-
-socket.emit("toggleTask",{
-char:char,
-task:name,
-value:cb.checked
-})
-
+  right.append(cb, rmBtn);
+  row.append(left, right);
+  bodyEl.appendChild(row);
 }
 
-checkboxes[char+"_"+name]=cb
-
-row.appendChild(left)
-row.appendChild(cb)
-
-/* REMOVE BUTTON */
-
-let remove=document.createElement("button")
-remove.innerText="X"
-
-remove.onclick=()=>{
-row.remove()
-}
-
-row.appendChild(remove)
-
-box.appendChild(row)
-
+/* MEDAL ROW */
+function addMedalRow(bodyEl, char) {
+  const row = document.createElement('div');
+  row.className = 'medal-row';
+  row.innerHTML = `
+    <div class="medal-left">
+      <img class="task-icon" src="${icons.Medal}">
+      <div>
+        <div>Medal konny</div>
+        <div class="medal-timer" id="mt_${char}">—</div>
+      </div>
+    </div>
+    <button class="give-btn" onclick="giveMedal('${char}')">Oddaj</button>
+  `;
+  bodyEl.appendChild(row);
+  medalTimers[char] = document.getElementById('mt_' + char);
 }
 
 /* ADD TASK PANEL */
-
-function addTaskPanel(box,char){
-
-let panel=document.createElement("div")
-panel.className="addTask"
-
-panel.innerHTML=`
-<select id="task_${char}">
-<option value="KU">KU</option>
-<option value="Polymorph">Polymorph</option>
-<option value="Biolog">Biolog</option>
-<option value="Dowodzenie">Dowodzenie</option>
-</select>
-
-<button onclick="addTask('${char}')">Dodaj</button>
-`
-
-box.appendChild(panel)
-
+function addTaskPanel(bodyEl, char) {
+  const panel = document.createElement('div');
+  panel.className = 'add-task-panel';
+  panel.innerHTML = `
+    <select class="task-select" id="tsel_${char}">
+      <option value="KU1">KU1</option>
+      <option value="KU2">KU2</option>
+      <option value="KU3">KU3</option>
+      <option value="KU4">KU4</option>
+      <option value="KU5">KU5</option>
+      <option value="Polymorph">Polymorph</option>
+      <option value="Biolog">Biolog</option>
+      <option value="Dowodzenie">Dowodzenie</option>
+      <option value="Medal">Medal</option>
+    </select>
+    <button class="add-btn" onclick="addTask('${char}')">+ Dodaj</button>
+  `;
+  bodyEl.appendChild(panel);
 }
 
-function addTask(char){
+function addTask(char) {
+  const sel = document.getElementById('tsel_' + char);
+  const task = sel.value;
+  const card = [...document.querySelectorAll('.char-card')].find(c => c.dataset.char === char);
+  const body = card.querySelector('.char-body');
+  // Check if task already exists
+  if (document.getElementById('task_' + char + '_' + task)) return;
+  const addPanel = card.querySelector('.add-task-panel');
+  body.insertBefore(createTaskRowEl(char, task), addPanel);
+  socket.emit('addTask', { char, task });
+}
 
-let select=document.getElementById("task_"+char)
-
-let task=select.value
-
-let box=[...document.getElementsByClassName("character")]
-.find(b=>b.innerText.includes(char))
-
-let icon=icons.KU
-
-if(task==="Polymorph") icon=icons.Poly
-if(task==="Biolog") icon=icons.Bio
-if(task==="Dowodzenie") icon=icons.Dow
-
-createTask(box,char,task,icon)
-
+function createTaskRowEl(char, name) {
+  const icon = getIcon(name);
+  const row = document.createElement('div');
+  row.className = 'task-row';
+  row.id = 'task_' + char + '_' + name;
+  const left = document.createElement('div');
+  left.className = 'task-left';
+  left.innerHTML = `<img class="task-icon" src="${icon}"><span class="task-name">${name}</span>`;
+  const right = document.createElement('div');
+  right.className = 'task-right';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox'; cb.className = 'task-cb';
+  cb.onchange = () => {
+    row.classList.toggle('done', cb.checked);
+    socket.emit('toggleTask', { char, task: name, value: cb.checked });
+  };
+  checkboxes[char + '_' + name] = cb;
+  const rmBtn = document.createElement('button');
+  rmBtn.className = 'remove-btn'; rmBtn.innerText = '✕';
+  rmBtn.onclick = () => { row.remove(); socket.emit('removeTask', { char, task: name }); };
+  right.append(cb, rmBtn);
+  row.append(left, right);
+  return row;
 }
 
 /* GENERATE CHARACTERS */
+const defaultTasks = {
+  Medal:           ['KU1','KU2','KU3','Biolog','Polymorph'],
+  Bieluszek:       ['KU2','KU3','KU4','KU5','Biolog'],
+  Pojara:          ['KU1','Biolog'],
+  Suczka:          ['KU1','KU2','KU3','Biolog','Dowodzenie'],
+  Czantorianka:    ['KU1','KU2','KU3','Biolog','Dowodzenie'],
+  EwaZajączkowska: ['KU4','KU5','Biolog'],
+  Yodasz:          ['KU5','Biolog','Polymorph']
+};
+const hasMedal = ['Medal','Bieluszek','Pojara','Czantorianka','Yodasz'];
 
-for(let char in characters){
+for (const char in chars) {
+  const card = document.createElement('div');
+  card.className = 'char-card'; card.dataset.char = char;
 
-let box=document.createElement("div")
-box.className="character"
+  const header = document.createElement('div');
+  header.className = 'char-header';
+  header.innerHTML = `<img class="char-icon" src="${chars[char]}"><span class="char-name">${char}</span>`;
 
-let header=document.createElement("div")
-header.className="header"
+  const body = document.createElement('div');
+  body.className = 'char-body';
 
-header.innerHTML=`
-<img src="${characters[char]}">
-<b>${char}</b>
-`
+  card.append(header, body);
 
-box.appendChild(header)
+  // default tasks
+  (defaultTasks[char] || []).forEach(t => createTaskRow(body, char, t));
 
-/* MEDAL */
+  // medal
+  if (hasMedal.includes(char)) addMedalRow(body, char);
 
-if(char==="Medal"){
-createTask(box,char,"KU1",icons.KU)
-createTask(box,char,"KU2",icons.KU)
-createTask(box,char,"KU3",icons.KU)
-createTask(box,char,"Biolog",icons.Bio)
-createTask(box,char,"Polymorph",icons.Poly)
-addMedal(box,char)
+  addTaskPanel(body, char);
+  container.appendChild(card);
 }
 
-if(char==="Bieluszek"){
-createTask(box,char,"KU2",icons.KU)
-createTask(box,char,"KU3",icons.KU)
-createTask(box,char,"KU4",icons.KU)
-createTask(box,char,"KU5",icons.KU)
-createTask(box,char,"Biolog",icons.Bio)
-addMedal(box,char)
+function giveMedal(char) { socket.emit('horseMedal', char); }
+function setReset() {
+  socket.emit('setResetTime', {
+    hour: parseInt(document.getElementById('resetHour').value),
+    minute: parseInt(document.getElementById('resetMinute').value)
+  });
 }
+function manualReset() { socket.emit('manualReset'); }
 
-if(char==="Pojara"){
-createTask(box,char,"KU1",icons.KU)
-createTask(box,char,"Biolog",icons.Bio)
-addMedal(box,char)
-}
+socket.on('charactersUpdate', data => {
+  for (const char in data) {
+    const tasks = data[char];
+    for (const task in tasks) {
+      if (task === 'horseTimer') continue;
+      const cb = checkboxes[char + '_' + task];
+      if (cb) {
+        cb.checked = tasks[task];
+        const row = document.getElementById('task_' + char + '_' + task);
+        if (row) row.classList.toggle('done', tasks[task]);
+      }
+    }
+    if (tasks.horseTimer && medalTimers[char]) {
+      startMedalTimer(medalTimers[char], tasks.horseTimer);
+    }
+  }
+});
 
-if(char==="Suczka"){
-createTask(box,char,"KU1",icons.KU)
-createTask(box,char,"KU2",icons.KU)
-createTask(box,char,"KU3",icons.KU)
-createTask(box,char,"Biolog",icons.Bio)
-createTask(box,char,"Dowodzenie",icons.Dow)
-}
+socket.on('tasksUpdate', data => {
+  // tasks are rendered server-side from data.json on initial load; dynamic adds handled above
+});
 
-if(char==="Czantorianka"){
-createTask(box,char,"KU1",icons.KU)
-createTask(box,char,"KU2",icons.KU)
-createTask(box,char,"KU3",icons.KU)
-createTask(box,char,"Biolog",icons.Bio)
-createTask(box,char,"Dowodzenie",icons.Dow)
-addMedal(box,char)
-}
-
-if(char==="EwaZajączkowska"){
-createTask(box,char,"KU4",icons.KU)
-createTask(box,char,"KU5",icons.KU)
-createTask(box,char,"Biolog",icons.Bio)
-}
-
-if(char==="Yodasz"){
-createTask(box,char,"KU5",icons.KU)
-createTask(box,char,"Biolog",icons.Bio)
-createTask(box,char,"Polymorph",icons.Poly)
-addMedal(box,char)
-}
-
-addTaskPanel(box,char)
-
-container.appendChild(box)
-
-}
-
-function addMedal(box,char){
-
-let row=document.createElement("div")
-row.className="task"
-
-row.innerHTML=`
-<div class="taskLeft">
-<img src="${icons.Medal}">
-Medal konny
-</div>
-<button onclick="giveMedal('${char}')">Oddaj</button>
-`
-
-box.appendChild(row)
-
-let timer=document.createElement("div")
-timer.className="timer"
-
-box.appendChild(timer)
-
-medalTimers[char]=timer
-
-}
-
-function giveMedal(char){
-
-socket.emit("horseMedal",char)
-
-}
-
-function setReset(){
-
-socket.emit("setResetTime",{
-hour:parseInt(resetHour.value),
-minute:parseInt(resetMinute.value)
-})
-
-}
-
-function manualReset(){
-
-socket.emit("manualReset")
-
-}
-
-socket.on("charactersUpdate",(data)=>{
-
-for(let char in data){
-
-let tasks=data[char]
-
-for(let task in tasks){
-
-if(task==="horseTimer") continue
-
-let cb=checkboxes[char+"_"+task]
-
-if(cb) cb.checked=tasks[task]
-
-}
-
-if(tasks.horseTimer){
-
-startTimer(medalTimers[char],tasks.horseTimer)
-
-}
-
-}
-
-})
-
-socket.on("resetTime",(data)=>{
-
-let h=data.hour.toString().padStart(2,"0")
-let m=data.minute.toString().padStart(2,"0")
-
-resetDisplay.innerText=h+":"+m
-
-})
-
+socket.on('resetTime', data => {
+  document.getElementById('resetDisplay').innerText =
+    String(data.hour).padStart(2,'0') + ':' + String(data.minute).padStart(2,'0');
+  document.getElementById('resetHour').value = data.hour;
+  document.getElementById('resetMinute').value = data.minute;
+});
 </script>
-
 </body>
 </html>
