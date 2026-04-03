@@ -195,7 +195,14 @@
     <a class="nav-btn" href="/">⬅ Powrót</a>
     <div class="page-title">Grota Wygnańców</div>
   </div>
-  <button class="heat-btn" id="heatBtn" onclick="toggleHeat()">🔥 Heatmapa OFF</button>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="vol-wrap">
+      <span style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;">Pingi</span>
+      <input type="range" id="pingSize" min="6" max="40" step="1" style="width:80px;">
+      <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);min-width:24px;text-align:right;" id="pingSizeVal">14</span>
+    </div>
+    <button class="heat-btn" id="heatBtn" onclick="toggleHeat()">🔥 Heatmapa OFF</button>
+  </div>
 </div>
 
 <div class="layout">
@@ -225,6 +232,35 @@
 
 <script>
 const socket = io();
+
+/* PING SIZE */
+let pingSize = parseInt(localStorage.getItem('pingSize')) || 14;
+const pingSizeSlider = document.getElementById('pingSize');
+const pingSizeVal    = document.getElementById('pingSizeVal');
+pingSizeSlider.value = pingSize;
+pingSizeVal.innerText = pingSize;
+
+pingSizeSlider.oninput = () => {
+  pingSize = parseInt(pingSizeSlider.value);
+  pingSizeVal.innerText = pingSize;
+  localStorage.setItem('pingSize', pingSize);
+  applyPingSize();
+};
+
+function applyPingSize() {
+  document.querySelectorAll('.ping-dot').forEach(el => {
+    el.style.width  = pingSize + 'px';
+    el.style.height = pingSize + 'px';
+  });
+  document.querySelectorAll('.ping-dot img').forEach(el => {
+    el.style.width  = pingSize + 'px';
+    el.style.height = pingSize + 'px';
+  });
+  document.querySelectorAll('.ping-pulse').forEach(el => {
+    el.style.width  = pingSize + 'px';
+    el.style.height = pingSize + 'px';
+  });
+}
 
 /* STATE */
 let pings    = {};
