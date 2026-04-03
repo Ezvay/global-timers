@@ -4,10 +4,6 @@ const http = require("http").createServer(app)
 const io = require("socket.io")(http)
 const fs = require("fs")
 
-/* ======================
-   HASŁO DO CHARACTERS
-====================== */
-
 const PASSWORD = "platforma"
 
 app.use((req,res,next)=>{
@@ -26,35 +22,28 @@ input{padding:8px;font-size:16px;}button{padding:8px 16px;font-size:16px;cursor:
 
 app.use(express.static("public"))
 
-/* ======================
-   WCZYTANIE DANYCH
-====================== */
-
-let timers = {}
-let characters = {}
-let tasks = {}
-let resetHour = 23
-let resetMinute = 59
-let customPlaces = []   // [ { id, name, respawnSec, channels } ]
-let customTimers = {}   // { "place_ch": startTimestamp | null }
+/* === DANE === */
+let timers       = {}
+let characters   = {}
+let tasks        = {}
+let resetHour    = 23
+let resetMinute  = 59
+let customPlaces = []   // [{id, name, yellowSec, greenSec, channels}]
+let customTimers = {}   // {"placeId_chN": seconds}
 
 try{
   const data = JSON.parse(fs.readFileSync("data.json"))
-  timers      = data.timers      || {}
-  characters  = data.characters  || {}
-  tasks       = data.tasks       || {}
-  resetHour   = data.resetHour   || 23
-  resetMinute = data.resetMinute || 59
+  timers       = data.timers       || {}
+  characters   = data.characters   || {}
+  tasks        = data.tasks        || {}
+  resetHour    = data.resetHour    || 23
+  resetMinute  = data.resetMinute  || 59
   customPlaces = data.customPlaces || []
   customTimers = data.customTimers || {}
   console.log("Dane wczytane z data.json")
 }catch(e){
   console.log("Brak data.json — start od zera")
 }
-
-/* ======================
-   ZAPIS DANYCH
-====================== */
 
 function saveData(){
   fs.writeFileSync("data.json", JSON.stringify({
@@ -64,10 +53,7 @@ function saveData(){
   }, null, 2))
 }
 
-/* ======================
-   TIMERY (Giganty / Małpy)
-====================== */
-
+/* === TIMERY GIGANTY/MAŁPY === */
 let intervals = {}
 
 function startTimer(id){
@@ -79,12 +65,10 @@ function startTimer(id){
     io.emit("update", timers)
   },1000)
 }
-
 function stopTimer(id){
   clearInterval(intervals[id])
   intervals[id]=null
 }
-
 function resetTimer(id){
   timers[id]=0
   stopTimer(id)
@@ -92,14 +76,33 @@ function resetTimer(id){
   io.emit("update", timers)
 }
 
-/* ======================
-   RESET DZIENNY
-====================== */
+/* === CUSTOM TIMERY (liczą w górę jak giganty) === */
+let customIntervals = {}
 
+function startCustomTimer(key){
+  if(customIntervals[key]) return
+  if(!customTimers[key]) customTimers[key]=0
+  customIntervals[key]=setInterval(()=>{
+    customTimers[key]++
+    saveData()
+    io.emit("customTimersUpdate", customTimers)
+  },1000)
+}
+function stopCustomTimer(key){
+  clearInterval(customIntervals[key])
+  customIntervals[key]=null
+}
+function resetCustomTimer(key){
+  customTimers[key]=0
+  stopCustomTimer(key)
+  saveData()
+  io.emit("customTimersUpdate", customTimers)
+}
+
+/* === RESET DZIENNY === */
 let lastResetDay = null
-
 function checkReset(){
-  const now = new Date()
+  const now    = new Date()
   const polish = new Date(now.toLocaleString("en-US",{timeZone:"Europe/Warsaw"}))
   const hour   = polish.getHours()
   const minute = polish.getMinutes()
@@ -116,18 +119,15 @@ function checkReset(){
 }
 setInterval(checkReset, 30000)
 
-/* ======================
-   SOCKET
-====================== */
-
+/* === SOCKET === */
 io.on("connection",(socket)=>{
 
-  // --- Giganty / Małpy ---
-  socket.on("start",  (id)=>startTimer(id))
-  socket.on("stop",   (id)=>stopTimer(id))
-  socket.on("reset",  (id)=>resetTimer(id))
+  // Giganty / Małpy
+  socket.on("start",  id => startTimer(id))
+  socket.on("stop",   id => stopTimer(id))
+  socket.on("reset",  id => resetTimer(id))
 
-  // --- Postacie ---
+  // Postacie
   socket.on("toggleTask",(data)=>{
     const {char,task,value}=data
     if(!characters[char]) characters[char]={}
@@ -135,7 +135,6 @@ io.on("connection",(socket)=>{
     saveData()
     io.emit("charactersUpdate",characters)
   })
-
   socket.on("addTask",(data)=>{
     const {char,task}=data
     if(!tasks[char]) tasks[char]=[]
@@ -143,7 +142,6 @@ io.on("connection",(socket)=>{
     saveData()
     io.emit("tasksUpdate",tasks)
   })
-
   socket.on("removeTask",(data)=>{
     const {char,task}=data
     if(!tasks[char]) return
@@ -153,21 +151,18 @@ io.on("connection",(socket)=>{
     io.emit("tasksUpdate",tasks)
     io.emit("charactersUpdate",characters)
   })
-
   socket.on("horseMedal",(char)=>{
     if(!characters[char]) characters[char]={}
     characters[char].horseTimer = Date.now() + (23*60*60*1000)
     saveData()
     io.emit("charactersUpdate",characters)
   })
-
   socket.on("setResetTime",(data)=>{
     resetHour   = data.hour
     resetMinute = data.minute
     saveData()
     io.emit("resetTime",{hour:resetHour,minute:resetMinute})
   })
-
   socket.on("manualReset",()=>{
     for(let char in characters){
       let old = characters[char]
@@ -177,45 +172,27 @@ io.on("connection",(socket)=>{
     io.emit("charactersUpdate",characters)
   })
 
-  // --- Custom timery ---
-
-  // Dodaj miejsce
+  // Custom timery
   socket.on("addPlace",(data)=>{
-    const { name, respawnSec, channels } = data
-    if(!name || !respawnSec || !channels) return
+    const {name, yellowSec, greenSec, channels} = data
+    if(!name || !greenSec || !channels) return
     if(customPlaces.length >= 10) return
     const id = "p_" + Date.now()
-    customPlaces.push({ id, name, respawnSec: parseInt(respawnSec), channels: parseInt(channels) })
+    customPlaces.push({ id, name,
+      yellowSec: parseInt(yellowSec) || 0,
+      greenSec:  parseInt(greenSec),
+      channels:  parseInt(channels)
+    })
     saveData()
     io.emit("placesUpdate", customPlaces)
-    io.emit("customTimersUpdate", customTimers)
   })
 
-  // Usuń miejsce
   socket.on("removePlace",(placeId)=>{
     customPlaces = customPlaces.filter(p=>p.id!==placeId)
-    // usuń timery tego miejsca
     for(let key in customTimers){
-      if(key.startsWith(placeId+"_")) delete customTimers[key]
-    }
-    saveData()
-    io.emit("placesUpdate", customPlaces)
-    io.emit("customTimersUpdate", customTimers)
-  })
-
-  // Edytuj miejsce
-  socket.on("editPlace",(data)=>{
-    const { id, name, respawnSec, channels } = data
-    const place = customPlaces.find(p=>p.id===id)
-    if(!place) return
-    place.name       = name
-    place.respawnSec = parseInt(respawnSec)
-    // jeśli liczba kanałów się zmniejszyła, usuń nadmiarowe timery
-    const oldCh = place.channels
-    place.channels   = parseInt(channels)
-    if(place.channels < oldCh){
-      for(let ch=place.channels+1; ch<=oldCh; ch++){
-        delete customTimers[id+"_ch"+ch]
+      if(key.startsWith(placeId+"_")){
+        stopCustomTimer(key)
+        delete customTimers[key]
       }
     }
     saveData()
@@ -223,29 +200,38 @@ io.on("connection",(socket)=>{
     io.emit("customTimersUpdate", customTimers)
   })
 
-  // Start custom timera (zapisuje timestamp startu)
-  socket.on("startCustom",(key)=>{
-    customTimers[key] = Date.now()
+  socket.on("editPlace",(data)=>{
+    const {id, name, yellowSec, greenSec, channels} = data
+    const place = customPlaces.find(p=>p.id===id)
+    if(!place) return
+    const oldCh = place.channels
+    place.name      = name
+    place.yellowSec = parseInt(yellowSec) || 0
+    place.greenSec  = parseInt(greenSec)
+    place.channels  = parseInt(channels)
+    if(place.channels < oldCh){
+      for(let ch=place.channels+1; ch<=oldCh; ch++){
+        const key = id+"_ch"+ch
+        stopCustomTimer(key)
+        delete customTimers[key]
+      }
+    }
     saveData()
+    io.emit("placesUpdate", customPlaces)
     io.emit("customTimersUpdate", customTimers)
   })
 
-  // Reset custom timera
-  socket.on("resetCustom",(key)=>{
-    delete customTimers[key]
-    saveData()
-    io.emit("customTimersUpdate", customTimers)
-  })
+  socket.on("startCustom",  key => startCustomTimer(key))
+  socket.on("stopCustom",   key => stopCustomTimer(key))
+  socket.on("resetCustom",  key => resetCustomTimer(key))
 
   // Wyślij stan do nowego klienta
-  socket.emit("update",          timers)
-  socket.emit("charactersUpdate",characters)
-  socket.emit("tasksUpdate",     tasks)
-  socket.emit("resetTime",       {hour:resetHour,minute:resetMinute})
-  socket.emit("placesUpdate",    customPlaces)
+  socket.emit("update",             timers)
+  socket.emit("charactersUpdate",   characters)
+  socket.emit("tasksUpdate",        tasks)
+  socket.emit("resetTime",          {hour:resetHour, minute:resetMinute})
+  socket.emit("placesUpdate",       customPlaces)
   socket.emit("customTimersUpdate", customTimers)
 })
 
-http.listen(3000,()=>{
-  console.log("Server działa na porcie 3000")
-})
+http.listen(3000,()=>{ console.log("Server działa na porcie 3000") })
