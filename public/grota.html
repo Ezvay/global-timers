@@ -150,6 +150,93 @@
   .hotspot-count{color:var(--text-dim);font-size:11px;}
 
   /* POPUP */
+  /* MODE TOGGLE */
+  .mode-bar{display:flex;gap:8px;align-items:center;}
+  .mode-btn{
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+    padding:6px 14px;border-radius:2px;cursor:pointer;transition:all 0.2s;
+    border:1px solid rgba(201,168,76,0.2);color:var(--text-dim);background:rgba(255,255,255,0.03);
+  }
+  .mode-btn.active-metin  {color:#ff8060;border-color:rgba(255,100,60,0.6);background:rgba(180,50,20,0.15);}
+  .mode-btn.active-general{color:#60b0ff;border-color:rgba(60,140,255,0.6);background:rgba(20,60,180,0.15);}
+
+  /* GENERAL MARKER */
+  .general-marker{position:absolute;transform:translate(-50%,-50%);pointer-events:all;z-index:5;display:flex;flex-direction:column;align-items:center;}
+  .general-dot{
+    position:relative;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:transform 0.15s,filter 0.15s;
+    animation:ping-appear 0.3s cubic-bezier(0.23,1,0.32,1);
+    filter:drop-shadow(0 0 5px rgba(60,140,255,0.9));
+  }
+  .general-dot img{object-fit:contain;pointer-events:none;}
+  .general-dot:hover{transform:scale(1.3);filter:drop-shadow(0 0 9px rgba(100,180,255,1));}
+  .general-pulse{
+    position:absolute;top:50%;left:50%;border-radius:50%;
+    background:rgba(60,140,255,0.2);transform:translate(-50%,-50%);
+    animation:pulse-ring 2s ease-out infinite;pointer-events:none;
+  }
+  .general-ch-badge{
+    position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+    background:rgba(0,0,20,0.92);border:1.5px solid #60b0ff;border-radius:3px;
+    font-family:'Cinzel',serif;font-size:11px;font-weight:600;
+    color:#a0d0ff;padding:1px 5px;pointer-events:none;
+    white-space:nowrap;line-height:1.5;text-shadow:0 0 6px rgba(60,140,255,0.8);
+    box-shadow:0 0 6px rgba(0,0,0,0.8);
+  }
+
+  /* GENERAL SIDEBAR ITEM */
+  .general-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(30,60,120,0.4);transition:background 0.2s;}
+  .general-item:hover{background:rgba(60,140,255,0.05);}
+  .general-dot-small{width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 0 5px rgba(60,140,255,0.7));}
+  .general-dot-small img{width:32px;height:32px;object-fit:contain;}
+  .general-ch{font-family:'Cinzel',serif;font-size:11px;color:#a0d0ff;letter-spacing:1px;}
+  .general-time{font-family:'Cinzel',serif;font-size:13px;color:#6090d0;margin-top:2px;letter-spacing:1px;}
+  .general-remove{font-size:9px;color:#304060;background:none;font-family:'Cinzel',serif;letter-spacing:1px;padding:4px 8px;border:1px solid rgba(60,100,180,0.2);border-radius:2px;cursor:pointer;transition:all 0.2s;}
+  .general-remove:hover{color:#60b0ff;border-color:rgba(60,140,255,0.6);background:rgba(20,60,140,0.15);}
+
+  /* SIDEBAR SECTIONS */
+  .sidebar-section-title{
+    padding:8px 14px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;
+    text-transform:uppercase;color:var(--text-dim);background:rgba(0,0,0,0.2);
+    border-bottom:1px solid var(--border);border-top:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .sidebar-section-title.blue{color:#6090d0;border-color:rgba(60,100,180,0.3);}
+
+  /* SNAPSHOT PANEL */
+  .snap-panel{padding:10px 14px;border-bottom:1px solid var(--border);}
+  .snap-save-row{display:flex;gap:6px;margin-bottom:8px;}
+  .snap-input{
+    flex:1;background:rgba(0,0,0,0.5);border:1px solid rgba(201,168,76,0.2);
+    color:var(--text);font-family:'Crimson Text',serif;font-size:13px;
+    padding:5px 8px;border-radius:2px;outline:none;
+  }
+  .snap-input:focus{border-color:rgba(201,168,76,0.5);}
+  .snap-save-btn{
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;
+    padding:5px 12px;border-radius:2px;cursor:pointer;transition:all 0.2s;
+    border:1px solid rgba(201,168,76,0.3);color:var(--gold-dark);background:rgba(201,168,76,0.07);
+    white-space:nowrap;
+  }
+  .snap-save-btn:hover{color:var(--gold);border-color:var(--gold);background:rgba(201,168,76,0.16);}
+  .snap-item{
+    display:flex;align-items:center;gap:8px;padding:6px 0;
+    border-bottom:1px solid rgba(58,46,26,0.3);
+  }
+  .snap-info{flex:1;min-width:0;}
+  .snap-name{font-family:'Cinzel',serif;font-size:11px;color:var(--gold-light);letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .snap-meta{font-size:11px;color:var(--text-dim);font-style:italic;margin-top:1px;}
+  .snap-load-btn{
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;
+    padding:4px 8px;border-radius:2px;cursor:pointer;transition:all 0.2s;
+    border:1px solid rgba(201,168,76,0.25);color:var(--text-dim);background:rgba(201,168,76,0.05);
+  }
+  .snap-load-btn:hover{color:var(--gold);border-color:rgba(201,168,76,0.6);}
+  .snap-del-btn{
+    font-size:10px;color:#804040;background:none;border:none;cursor:pointer;padding:3px 5px;transition:color 0.2s;
+  }
+  .snap-del-btn:hover{color:#ff6060;}
+
   .popup-overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);}
   .popup-overlay.hidden{display:none;}
   .popup-box{
@@ -197,7 +284,11 @@
     <a class="nav-btn" href="/">⬅ Powrót</a>
     <div class="page-title">Grota Wygnańców</div>
   </div>
-  <div style="display:flex;align-items:center;gap:16px;">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div class="mode-bar">
+      <button class="mode-btn active-metin" id="btnMetin"   onclick="setMode('metin')">⚔ Metin</button>
+      <button class="mode-btn"              id="btnGeneral" onclick="setMode('general')">🔵 Generał</button>
+    </div>
     <div class="vol-wrap">
       <span style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;">Pingi</span>
       <input type="range" id="pingSize" min="6" max="40" step="1" style="width:80px;">
@@ -214,15 +305,27 @@
       <img src="/grota_mapa.png" id="mapImg" alt="Mapa Groty" draggable="false">
       <canvas id="heatCanvas"></canvas>
       <div id="pingLayer"></div>
-      <div class="map-hint">Kliknij na mapę aby pingować metina</div>
+      <div id="generalLayer"></div>
+      <div class="map-hint" id="mapHint">Kliknij na mapę aby pingować metina</div>
     </div>
   </div>
 
   <div class="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-title">Aktywne pingi</div>
+    <!-- SNAPSHOTS -->
+    <div class="snap-panel">
+      <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--gold-dark);text-transform:uppercase;margin-bottom:8px;">📸 Snapshoty</div>
+      <div class="snap-save-row">
+        <input class="snap-input" id="snapNameInput" placeholder="Nazwa snapshotu...">
+        <button class="snap-save-btn" onclick="saveSnapshot()">Zapisz</button>
+      </div>
+      <div id="snapList"></div>
     </div>
+
+    <div class="sidebar-section-title">⚔ Metiny</div>
     <div id="pingList"><div class="sidebar-empty">Brak aktywnych pingów</div></div>
+
+    <div class="sidebar-section-title blue">🔵 Generałowie</div>
+    <div id="generalList"><div class="sidebar-empty">Brak aktywnych generałów</div></div>
 
     <div class="hotspot-section" id="hotspotSection" style="display:none">
       <div class="hotspot-title">🔥 Gorące miejsca</div>
@@ -264,25 +367,40 @@ function applyPingSize() {
 
 /* STATE */
 let pings    = {};
-let history  = [];   // [{x,y,ts}]
+let generals = {};
+let snapshots = [];
+let history  = [];
 let heatOn   = localStorage.getItem('heat') === '1';
+let pingMode = 'metin'; // 'metin' | 'general'
 let pendingClick = null;
 let timerRafs = {};
+let generalRafs = {};
 
 /* MAP ELEMENTS */
-const mapContainer = document.getElementById('mapContainer');
-const mapImg       = document.getElementById('mapImg');
-const pingLayer    = document.getElementById('pingLayer');
-const heatCanvas   = document.getElementById('heatCanvas');
-const heatCtx      = heatCanvas.getContext('2d');
-const heatBtn      = document.getElementById('heatBtn');
+const mapContainer  = document.getElementById('mapContainer');
+const mapImg        = document.getElementById('mapImg');
+const pingLayer     = document.getElementById('pingLayer');
+const generalLayer  = document.getElementById('generalLayer');
+const heatCanvas    = document.getElementById('heatCanvas');
+const heatCtx       = heatCanvas.getContext('2d');
+const heatBtn       = document.getElementById('heatBtn');
+
+function setMode(mode) {
+  pingMode = mode;
+  document.getElementById('btnMetin').className   = 'mode-btn' + (mode==='metin'   ? ' active-metin'   : '');
+  document.getElementById('btnGeneral').className = 'mode-btn' + (mode==='general' ? ' active-general' : '');
+  document.getElementById('mapHint').innerText = mode === 'metin'
+    ? 'Kliknij na mapę aby pingować metina'
+    : 'Kliknij na mapę aby oznaczyć generała';
+  mapContainer.style.cursor = mode === 'general' ? 'crosshair' : 'crosshair';
+}
 
 /* Apply initial heat state */
 updateHeatBtn();
 
 /* Click on map */
 mapContainer.addEventListener('click', e => {
-  if (e.target.closest('.ping-dot')) return;
+  if (e.target.closest('.ping-dot') || e.target.closest('.general-dot')) return;
   const rect = mapImg.getBoundingClientRect();
   const x = (e.clientX - rect.left) / rect.width;
   const y = (e.clientY - rect.top)  / rect.height;
@@ -304,6 +422,18 @@ function openPopup() {
     btn.onclick = () => confirmPing(i);
     chBtns.appendChild(btn);
   }
+  // Update popup style by mode
+  const titleEl = popup.querySelector('.popup-title');
+  const subEl   = popup.querySelector('.popup-sub');
+  if (pingMode === 'general') {
+    titleEl.innerHTML = '🔵 Oznacz Generała';
+    titleEl.style.color = '#a0d0ff';
+    subEl.innerText = 'Wybierz kanał';
+  } else {
+    titleEl.innerHTML = '⚔ Pinguj Metina';
+    titleEl.style.color = '';
+    subEl.innerText = 'Wybierz kanał';
+  }
   popup.classList.remove('hidden');
 }
 function closePopup() { popup.classList.add('hidden'); pendingClick = null; }
@@ -311,9 +441,16 @@ popup.addEventListener('click', e => { if (e.target === popup) closePopup(); });
 
 function confirmPing(ch) {
   if (!pendingClick) return;
-  socket.emit('grotaAddPing', { x: pendingClick.x, y: pendingClick.y, ch });
+  if (pingMode === 'general') {
+    socket.emit('grotaAddGeneral', { x: pendingClick.x, y: pendingClick.y, ch });
+  } else {
+    socket.emit('grotaAddPing', { x: pendingClick.x, y: pendingClick.y, ch });
+  }
   closePopup();
 }
+
+/* Popup title updates by mode */
+const origOpenPopup = openPopup;
 
 /* FORMAT */
 function fmt(ms) {
@@ -381,6 +518,97 @@ function startTicking(p) {
 }
 
 function removePing(id) { socket.emit('grotaRemovePing', id); }
+
+/* GENERALS */
+function placeGeneral(g) {
+  const m = document.createElement('div');
+  m.className = 'general-marker'; m.id = 'gmarker_' + g.id;
+  m.style.left = (g.x * 100) + '%';
+  m.style.top  = (g.y * 100) + '%';
+  const sz = pingSize + 'px';
+  m.innerHTML = `
+    <div class="general-dot" onclick="removeGeneral('${g.id}')" title="Kliknij aby usunąć"
+         style="width:${sz};height:${sz}">
+      <div class="general-pulse" style="width:${sz};height:${sz}"></div>
+      <img src="/metin_icon.png" alt="general" style="width:${sz};height:${sz};filter:hue-rotate(180deg) saturate(1.5);">
+      <div class="general-ch-badge">${g.ch}</div>
+    </div>`;
+  generalLayer.appendChild(m);
+}
+
+function addGeneralSidebarItem(g) {
+  const item = document.createElement('div');
+  item.className = 'general-item'; item.id = 'gitem_' + g.id;
+  item.innerHTML = `
+    <div class="general-dot-small"><img src="/metin_icon.png" alt="gen" style="filter:hue-rotate(180deg) saturate(1.5)"></div>
+    <div class="ping-info">
+      <div class="general-ch">CH ${g.ch}</div>
+      <div class="general-time" id="gt_${g.id}">00:00</div>
+    </div>
+    <button class="general-remove" onclick="removeGeneral('${g.id}')">✕ Zbity</button>`;
+  document.getElementById('generalList').appendChild(item);
+}
+
+function startGeneralTick(g) {
+  function tick() {
+    const el = document.getElementById('gt_' + g.id);
+    if (el) el.innerText = fmt(Date.now() - g.startedAt);
+    generalRafs[g.id] = requestAnimationFrame(tick);
+  }
+  generalRafs[g.id] = requestAnimationFrame(tick);
+}
+
+function removeGeneral(id) { socket.emit('grotaRemoveGeneral', id); }
+
+function renderGenerals() {
+  for (const id in generalRafs) cancelAnimationFrame(generalRafs[id]);
+  generalRafs = {};
+  generalLayer.innerHTML = '';
+  const list = document.getElementById('generalList');
+  const ids = Object.keys(generals);
+  if (ids.length === 0) {
+    list.innerHTML = '<div class="sidebar-empty">Brak aktywnych generałów</div>';
+    return;
+  }
+  list.innerHTML = '';
+  for (const id of ids) { placeGeneral(generals[id]); addGeneralSidebarItem(generals[id]); startGeneralTick(generals[id]); }
+}
+
+/* SNAPSHOTS */
+function saveSnapshot() {
+  const name = document.getElementById('snapNameInput').value.trim() || 'Snapshot';
+  socket.emit('grotaSaveSnapshot', { name });
+  document.getElementById('snapNameInput').value = '';
+}
+
+function renderSnapshots() {
+  const list = document.getElementById('snapList');
+  if (!snapshots.length) { list.innerHTML = '<div style="font-size:12px;color:var(--text-dim);font-style:italic;padding:4px 0">Brak zapisanych snapshotów</div>'; return; }
+  list.innerHTML = '';
+  snapshots.forEach(snap => {
+    const d = new Date(snap.ts);
+    const time = d.toLocaleDateString('pl-PL',{day:'2-digit',month:'2-digit'}) + ' ' +
+                 d.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
+    const metinCount   = Object.keys(snap.pings||{}).length;
+    const generalCount = Object.keys(snap.generals||{}).length;
+    const row = document.createElement('div');
+    row.className = 'snap-item';
+    row.innerHTML = `
+      <div class="snap-info">
+        <div class="snap-name">${snap.name}</div>
+        <div class="snap-meta">${time} &nbsp;•&nbsp; ${metinCount}⚔ ${generalCount}🔵</div>
+      </div>
+      <button class="snap-load-btn" onclick="loadSnapshot('${snap.id}')">Wczytaj</button>
+      <button class="snap-del-btn"  onclick="deleteSnapshot('${snap.id}')">✕</button>`;
+    list.appendChild(row);
+  });
+}
+
+function loadSnapshot(id) {
+  if (!confirm('Wczytać snapshot? Nadpisze aktywne pingi i generałów.')) return;
+  socket.emit('grotaLoadSnapshot', id);
+}
+function deleteSnapshot(id) { socket.emit('grotaDeleteSnapshot', id); }
 
 /* =====================
    HEATMAPA
@@ -504,6 +732,16 @@ resizeObs.observe(mapImg);
 mapImg.addEventListener('load', () => { if (heatOn) syncCanvas(); });
 
 /* SOCKET */
+socket.on('grotaGeneralsUpdate', data => {
+  generals = data;
+  renderGenerals();
+});
+
+socket.on('grotaSnapshotsUpdate', data => {
+  snapshots = data;
+  renderSnapshots();
+});
+
 socket.on('grotaPingsUpdate', data => {
   pings = data;
   renderPings();

@@ -19,6 +19,8 @@ let customPlaces = []   // [{id, name, yellowSec, greenSec, channels}]
 let customTimers = {}   // {"placeId_chN": seconds}
 let grotaPings   = {}   // {"pingId": {id, x, y, ch, startedAt}}
 let grotaHistory = []   // [{x, y, ts}] — historia wszystkich pingów (do heatmapy)
+let grotaGenerals = {}   // {genId: {id, x, y, ch, startedAt}}
+let grotaSnapshots = []  // [{id, name, ts, pings, generals}]
 
 try{
   const data = JSON.parse(fs.readFileSync("data.json"))
@@ -31,7 +33,9 @@ try{
   customTimers = data.customTimers || {}
   grotaPings   = data.grotaPings   || {}
   charOrder    = data.charOrder    || []
-  grotaHistory = data.grotaHistory || []
+  grotaHistory    = data.grotaHistory    || []
+  grotaGenerals   = data.grotaGenerals   || {}
+  grotaSnapshots  = data.grotaSnapshots  || []
   // Migracja
   for (const char in characters) {
     const ch = characters[char]
@@ -54,7 +58,7 @@ function saveData(){
   fs.writeFileSync("data.json", JSON.stringify({
     timers, characters, tasks,
     resetHour, resetMinute,
-    customPlaces, customTimers, grotaPings, grotaHistory, charOrder
+    customPlaces, customTimers, grotaPings, grotaHistory, charOrder, grotaGenerals, grotaSnapshots
   }, null, 2))
 }
 
@@ -366,6 +370,49 @@ io.on("connection",(socket)=>{
     io.emit("charOrderUpdate", charOrder)
   })
 
+  // Generałowie
+  socket.on("grotaAddGeneral",(data)=>{
+    const id = "g_" + Date.now() + "_" + Math.random().toString(36).slice(2,6)
+    grotaGenerals[id] = { id, x: data.x, y: data.y, ch: data.ch, startedAt: Date.now() }
+    saveData()
+    io.emit("grotaGeneralsUpdate", grotaGenerals)
+  })
+  socket.on("grotaRemoveGeneral",(id)=>{
+    delete grotaGenerals[id]
+    saveData()
+    io.emit("grotaGeneralsUpdate", grotaGenerals)
+  })
+
+  // Snapshoty
+  socket.on("grotaSaveSnapshot",(data)=>{
+    const snap = {
+      id:   "snap_" + Date.now(),
+      name: data.name || "Snapshot",
+      ts:   Date.now(),
+      pings:    JSON.parse(JSON.stringify(grotaPings)),
+      generals: JSON.parse(JSON.stringify(grotaGenerals))
+    }
+    grotaSnapshots.unshift(snap)
+    if(grotaSnapshots.length > 10) grotaSnapshots = grotaSnapshots.slice(0,10)
+    saveData()
+    io.emit("grotaSnapshotsUpdate", grotaSnapshots)
+  })
+  socket.on("grotaLoadSnapshot",(snapId)=>{
+    const snap = grotaSnapshots.find(s=>s.id===snapId)
+    if(!snap) return
+    // Restore pings and generals from snapshot
+    grotaPings    = JSON.parse(JSON.stringify(snap.pings))
+    grotaGenerals = JSON.parse(JSON.stringify(snap.generals))
+    saveData()
+    io.emit("grotaPingsUpdate",    grotaPings)
+    io.emit("grotaGeneralsUpdate", grotaGenerals)
+  })
+  socket.on("grotaDeleteSnapshot",(snapId)=>{
+    grotaSnapshots = grotaSnapshots.filter(s=>s.id!==snapId)
+    saveData()
+    io.emit("grotaSnapshotsUpdate", grotaSnapshots)
+  })
+
   // Wyślij stan do nowego klienta
   socket.emit("update",             timers)
   socket.emit("tasksUpdate",        tasks)
@@ -374,7 +421,9 @@ io.on("connection",(socket)=>{
   socket.emit("placesUpdate",       customPlaces)
   socket.emit("customTimersUpdate", customTimers)
   socket.emit("grotaPingsUpdate",    grotaPings)
-  socket.emit("grotaHistoryUpdate", grotaHistory)
+  socket.emit("grotaHistoryUpdate",  grotaHistory)
+  socket.emit("grotaGeneralsUpdate", grotaGenerals)
+  socket.emit("grotaSnapshotsUpdate", grotaSnapshots)
   socket.emit("charOrderUpdate",    charOrder)
 })
 
