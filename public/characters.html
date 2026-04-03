@@ -234,66 +234,65 @@ const chars = {
   Yodasz:            '/icons/sura.png'
 };
 const icons = {
-  KU:         '/icons/skillbook.png',
-  Poly:       '/icons/polymorph.png',
-  Bio:        '/icons/orctooth.png',
-  Medal:      '/icons/horsemedal.png',
-  Dow:        '/icons/skillbook.png'
+  KU:    '/icons/skillbook.png',
+  Poly:  '/icons/polymorph.png',
+  Bio:   '/icons/orctooth.png',
+  Medal: '/icons/horsemedal.png',
+  Dow:   '/icons/skillbook.png'
 };
 function getIcon(task) {
   if (task.startsWith('KU')) return icons.KU;
-  if (task === 'Polymorph') return icons.Poly;
-  if (task === 'Biolog') return icons.Bio;
-  if (task === 'Medal') return icons.Medal;
+  if (task === 'Polymorph')  return icons.Poly;
+  if (task === 'Biolog')     return icons.Bio;
+  if (task === 'Medal')      return icons.Medal;
   if (task === 'Dowodzenie') return icons.Dow;
   return icons.KU;
 }
 
-const container = document.getElementById('characters');
+const container  = document.getElementById('characters');
 const checkboxes = {};
-const medalTimers = {};
+const medalTimers   = {};
 const medalIntervals = {};
+const hasMedal = ['Medal','Bieluszek','Pojara','Czantorianka','Yodasz'];
 
 /* CLOCK */
 function updateClock() {
-  const now = new Date();
-  const pl = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Warsaw' }));
+  const pl = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Warsaw' }));
   document.getElementById('clock').innerText =
-    String(pl.getHours()).padStart(2,'0') + ':' +
-    String(pl.getMinutes()).padStart(2,'0') + ':' +
+    String(pl.getHours()).padStart(2,'0')+':'+
+    String(pl.getMinutes()).padStart(2,'0')+':'+
     String(pl.getSeconds()).padStart(2,'0');
 }
 setInterval(updateClock, 1000); updateClock();
 
-/* MEDAL TIMER */
+/* MEDAL COUNTDOWN */
 function startMedalTimer(char, el, end) {
-  if (medalIntervals[char]) { clearInterval(medalIntervals[char]); }
-  function update() {
+  if (medalIntervals[char]) clearInterval(medalIntervals[char]);
+  function tick() {
     const diff = end - Date.now();
-    if (diff <= 0) { el.innerText = "GOTOWE"; el.className = "medal-timer medal-done"; clearInterval(medalIntervals[char]); return; }
+    if (diff <= 0) {
+      el.innerText = 'GOTOWE'; el.className = 'medal-timer medal-done';
+      clearInterval(medalIntervals[char]); return;
+    }
     const h = Math.floor(diff/3600000);
     const m = Math.floor((diff%3600000)/60000);
     const s = Math.floor((diff%60000)/1000);
-    el.innerText = String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
-    el.className = "medal-timer";
+    el.innerText = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    el.className = 'medal-timer';
   }
-  update();
-  medalIntervals[char] = setInterval(update, 1000);
+  tick();
+  medalIntervals[char] = setInterval(tick, 1000);
 }
 
-/* CREATE TASK */
-function createTaskRow(bodyEl, char, name) {
-  const icon = getIcon(name);
+/* CREATE TASK ROW — shared by both init and dynamic add */
+function createTaskRow(char, name) {
   const row = document.createElement('div');
   row.className = 'task-row';
   row.id = 'task_' + char + '_' + name;
 
   const left = document.createElement('div');
   left.className = 'task-left';
-  left.innerHTML = `<img class="task-icon" src="${icon}"><span class="task-name">${name}</span>`;
-
-  const right = document.createElement('div');
-  right.className = 'task-right';
+  left.innerHTML = `<img class="task-icon" src="${getIcon(name)}"><span class="task-name">${name}</span>`;
 
   const cb = document.createElement('input');
   cb.type = 'checkbox'; cb.className = 'task-cb';
@@ -305,11 +304,17 @@ function createTaskRow(bodyEl, char, name) {
 
   const rmBtn = document.createElement('button');
   rmBtn.className = 'remove-btn'; rmBtn.innerText = '✕';
-  rmBtn.onclick = () => { row.remove(); socket.emit('removeTask', { char, task: name }); };
+  rmBtn.onclick = () => {
+    delete checkboxes[char + '_' + name];
+    row.remove();
+    socket.emit('removeTask', { char, task: name });
+  };
 
+  const right = document.createElement('div');
+  right.className = 'task-right';
   right.append(cb, rmBtn);
   row.append(left, right);
-  bodyEl.appendChild(row);
+  return row;
 }
 
 /* MEDAL ROW */
@@ -327,13 +332,14 @@ function addMedalRow(bodyEl, char) {
     <button class="give-btn" onclick="giveMedal('${char}')">Oddaj</button>
   `;
   bodyEl.appendChild(row);
-  medalTimers[char] = document.getElementById('mt_' + char);
+  medalTimers[char] = row.querySelector('#mt_' + char) || row.querySelector('.medal-timer');
 }
 
 /* ADD TASK PANEL */
 function addTaskPanel(bodyEl, char) {
   const panel = document.createElement('div');
   panel.className = 'add-task-panel';
+  panel.id = 'addpanel_' + char;
   panel.innerHTML = `
     <select class="task-select" id="tsel_${char}">
       <option value="KU1">KU1</option>
@@ -351,55 +357,17 @@ function addTaskPanel(bodyEl, char) {
   bodyEl.appendChild(panel);
 }
 
+/* USER CLICKS ADD */
 function addTask(char) {
   const sel = document.getElementById('tsel_' + char);
   const task = sel.value;
-  const card = [...document.querySelectorAll('.char-card')].find(c => c.dataset.char === char);
-  const body = card.querySelector('.char-body');
-  // Check if task already exists
-  if (document.getElementById('task_' + char + '_' + task)) return;
-  const addPanel = card.querySelector('.add-task-panel');
-  body.insertBefore(createTaskRowEl(char, task), addPanel);
+  if (document.getElementById('task_' + char + '_' + task)) return; // already exists
+  const panel = document.getElementById('addpanel_' + char);
+  panel.parentElement.insertBefore(createTaskRow(char, task), panel);
   socket.emit('addTask', { char, task });
 }
 
-function createTaskRowEl(char, name) {
-  const icon = getIcon(name);
-  const row = document.createElement('div');
-  row.className = 'task-row';
-  row.id = 'task_' + char + '_' + name;
-  const left = document.createElement('div');
-  left.className = 'task-left';
-  left.innerHTML = `<img class="task-icon" src="${icon}"><span class="task-name">${name}</span>`;
-  const right = document.createElement('div');
-  right.className = 'task-right';
-  const cb = document.createElement('input');
-  cb.type = 'checkbox'; cb.className = 'task-cb';
-  cb.onchange = () => {
-    row.classList.toggle('done', cb.checked);
-    socket.emit('toggleTask', { char, task: name, value: cb.checked });
-  };
-  checkboxes[char + '_' + name] = cb;
-  const rmBtn = document.createElement('button');
-  rmBtn.className = 'remove-btn'; rmBtn.innerText = '✕';
-  rmBtn.onclick = () => { row.remove(); socket.emit('removeTask', { char, task: name }); };
-  right.append(cb, rmBtn);
-  row.append(left, right);
-  return row;
-}
-
-/* GENERATE CHARACTERS */
-const defaultTasks = {
-  Medal:           ['KU1','KU2','KU3','Biolog','Polymorph'],
-  Bieluszek:       ['KU2','KU3','KU4','KU5','Biolog'],
-  Pojara:          ['KU1','Biolog'],
-  Suczka:          ['KU1','KU2','KU3','Biolog','Dowodzenie'],
-  Czantorianka:    ['KU1','KU2','KU3','Biolog','Dowodzenie'],
-  EwaZajączkowska: ['KU4','KU5','Biolog'],
-  Yodasz:          ['KU5','Biolog','Polymorph']
-};
-const hasMedal = ['Medal','Bieluszek','Pojara','Czantorianka','Yodasz'];
-
+/* BUILD CHARACTER CARDS (shells only — tasks filled by tasksUpdate) */
 for (const char in chars) {
   const card = document.createElement('div');
   card.className = 'char-card'; card.dataset.char = char;
@@ -409,29 +377,50 @@ for (const char in chars) {
   header.innerHTML = `<img class="char-icon" src="${chars[char]}"><span class="char-name">${char}</span>`;
 
   const body = document.createElement('div');
-  body.className = 'char-body';
+  body.className = 'char-body'; body.id = 'body_' + char;
+
+  if (hasMedal.includes(char)) addMedalRow(body, char);
+  addTaskPanel(body, char);
 
   card.append(header, body);
-
-  // default tasks
-  (defaultTasks[char] || []).forEach(t => createTaskRow(body, char, t));
-
-  // medal
-  if (hasMedal.includes(char)) addMedalRow(body, char);
-
-  addTaskPanel(body, char);
   container.appendChild(card);
 }
 
 function giveMedal(char) { socket.emit('horseMedal', char); }
 function setReset() {
   socket.emit('setResetTime', {
-    hour: parseInt(document.getElementById('resetHour').value),
+    hour:   parseInt(document.getElementById('resetHour').value),
     minute: parseInt(document.getElementById('resetMinute').value)
   });
 }
 function manualReset() { socket.emit('manualReset'); }
 
+/* TASKS FROM SERVER — renders task list from data.json on connect and after any change */
+socket.on('tasksUpdate', data => {
+  for (const char in data) {
+    const body  = document.getElementById('body_' + char);
+    const panel = document.getElementById('addpanel_' + char);
+    if (!body || !panel) continue;
+
+    // Remove task rows that are no longer on the server
+    body.querySelectorAll('.task-row').forEach(row => {
+      const taskName = row.id.replace('task_' + char + '_', '');
+      if (!data[char].includes(taskName)) {
+        delete checkboxes[char + '_' + taskName];
+        row.remove();
+      }
+    });
+
+    // Add task rows that are on server but not yet in DOM
+    data[char].forEach(task => {
+      if (!document.getElementById('task_' + char + '_' + task)) {
+        body.insertBefore(createTaskRow(char, task), panel);
+      }
+    });
+  }
+});
+
+/* CHECKBOXES + MEDAL TIMER STATE FROM SERVER */
 socket.on('charactersUpdate', data => {
   for (const char in data) {
     const tasks = data[char];
@@ -439,9 +428,9 @@ socket.on('charactersUpdate', data => {
       if (task === 'horseTimer') continue;
       const cb = checkboxes[char + '_' + task];
       if (cb) {
-        cb.checked = tasks[task];
+        cb.checked = !!tasks[task];
         const row = document.getElementById('task_' + char + '_' + task);
-        if (row) row.classList.toggle('done', tasks[task]);
+        if (row) row.classList.toggle('done', !!tasks[task]);
       }
     }
     if (tasks.horseTimer && medalTimers[char]) {
@@ -450,14 +439,10 @@ socket.on('charactersUpdate', data => {
   }
 });
 
-socket.on('tasksUpdate', data => {
-  // tasks are rendered server-side from data.json on initial load; dynamic adds handled above
-});
-
 socket.on('resetTime', data => {
   document.getElementById('resetDisplay').innerText =
     String(data.hour).padStart(2,'0') + ':' + String(data.minute).padStart(2,'0');
-  document.getElementById('resetHour').value = data.hour;
+  document.getElementById('resetHour').value   = data.hour;
   document.getElementById('resetMinute').value = data.minute;
 });
 </script>
