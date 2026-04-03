@@ -14,23 +14,7 @@ const DB_NAME   = "global_timers"
 const COL_NAME  = "state"
 const DOC_ID    = "main"
 
-/* ======================
-   HASŁO DO CHARACTERS
-====================== */
-
-app.use((req,res,next)=>{
-  if(req.path === "/characters.html"){
-    if(req.query.password !== PASSWORD){
-      return res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Logowanie</title>
-<style>body{background:#111;color:white;font-family:Arial;text-align:center;margin-top:100px;}
-input{padding:8px;font-size:16px;}button{padding:8px 16px;font-size:16px;cursor:pointer;}</style>
-</head><body><h2>Strona chroniona hasłem</h2>
-<form method="GET"><input type="password" name="password" placeholder="Hasło"><button>Zaloguj</button></form>
-</body></html>`)
-    }
-  }
-  next()
-})
+/* Hasło sprawdzane przez Socket.io — brak blokady URL */
 
 app.use(express.static("public"))
 
@@ -40,6 +24,8 @@ app.use(express.static("public"))
 
 let timers        = {}
 let characters    = {}
+let runningTimers       = new Set()  // które timery były uruchomione
+let runningCustomTimers = new Set()  // które custom timery były uruchomione
 let tasks         = {}
 let resetHour     = 23
 let resetMinute   = 59
@@ -99,21 +85,26 @@ async function connectDB() {
 
 // Debounced save — nie zapisuj częściej niż co 2s
 let saveTimer = null
+async function saveNow() {
+  if (!col) return
+  try {
+    await col.replaceOne(
+      { _id: DOC_ID },
+      { _id: DOC_ID, timers, characters, tasks, resetHour, resetMinute,
+        customPlaces, customTimers, grotaPings, grotaHistory,
+        grotaGenerals, grotaSnapshots, charOrder,
+        runningTimers: [...runningTimers],
+        runningCustomTimers: [...runningCustomTimers] },
+      { upsert: true }
+    )
+  } catch(e) {
+    console.error("Błąd zapisu:", e.message)
+  }
+}
+
 function saveData() {
   if (saveTimer) clearTimeout(saveTimer)
-  saveTimer = setTimeout(async () => {
-    try {
-      await col.replaceOne(
-        { _id: DOC_ID },
-        { _id: DOC_ID, timers, characters, tasks, resetHour, resetMinute,
-          customPlaces, customTimers, grotaPings, grotaHistory,
-          grotaGenerals, grotaSnapshots, charOrder },
-        { upsert: true }
-      )
-    } catch(e) {
-      console.error("Błąd zapisu:", e.message)
-    }
-  }, 2000)
+  saveTimer = setTimeout(saveNow, 500)
 }
 
 /* ======================
@@ -125,6 +116,7 @@ let intervals = {}
 function startTimer(id){
   if(intervals[id]) return
   if(!timers[id]) timers[id]=0
+  runningTimers.add(id)
   intervals[id]=setInterval(()=>{
     timers[id]++
     saveData()
@@ -134,6 +126,8 @@ function startTimer(id){
 function stopTimer(id){
   clearInterval(intervals[id])
   intervals[id]=null
+  runningTimers.delete(id)
+  saveData()
 }
 function resetTimer(id){
   timers[id]=0
@@ -151,6 +145,7 @@ let customIntervals = {}
 function startCustomTimer(key){
   if(customIntervals[key]) return
   if(!customTimers[key]) customTimers[key]=0
+  runningCustomTimers.add(key)
   customIntervals[key]=setInterval(()=>{
     customTimers[key]++
     saveData()
@@ -160,6 +155,8 @@ function startCustomTimer(key){
 function stopCustomTimer(key){
   clearInterval(customIntervals[key])
   customIntervals[key]=null
+  runningCustomTimers.delete(key)
+  saveData()
 }
 function resetCustomTimer(key){
   customTimers[key]=0
@@ -225,7 +222,7 @@ io.on("connection",(socket)=>{
     const {char,task,value}=data
     if(!characters[char]) characters[char]={}
     characters[char][task]=value
-    saveData()
+    saveNow()  // natychmiastowy zapis — checkbox jest krytyczny
     io.emit("charactersUpdate",characters)
   })
   socket.on("addTask",(data)=>{
@@ -478,7 +475,36 @@ io.on("connection",(socket)=>{
    START
 ====================== */
 
+// Zapisz dane przed zamknięciem procesu (np. deploy)
+async function gracefulShutdown(signal) {
+  console.log("Zamykanie (" + signal + ") — zapisuję dane...")
+  if (saveTimer) clearTimeout(saveTimer)
+  await saveNow()
+  console.log("Dane zapisane. Zamykam.")
+  process.exit(0)
+}
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"))
+process.on("SIGINT",  () => gracefulShutdown("SIGINT"))
+
 connectDB().then(()=>{
+
+  // ── Wznów timery Giganty/Małpy które były uruchomione przed restartem ──
+  // timers{} zawiera sekundy zapisane w DB — jeśli > 0 to timer był aktywny
+  // Problem: nie wiemy które BYŁY uruchomione, a które tylko zatrzymane z wartością > 0
+  // Rozwiązanie: zapisujemy osobno listę "running" timerów
+  for(const id in timers){
+    if(runningTimers.has(id)){
+      startTimer(id)
+      console.log("Wznowiono timer:", id)
+    }
+  }
+  for(const key in customTimers){
+    if(runningCustomTimers.has(key)){
+      startCustomTimer(key)
+      console.log("Wznowiono custom timer:", key)
+    }
+  }
+
   http.listen(3000,()=>{ console.log("Server działa na porcie 3000") })
 }).catch(err=>{
   console.error("Błąd połączenia z MongoDB:", err)
