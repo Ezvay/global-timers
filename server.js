@@ -6,20 +6,6 @@ const fs = require("fs")
 
 const PASSWORD = "platforma"
 
-app.use((req,res,next)=>{
-  if(req.path === "/characters.html"){
-    if(req.query.password !== PASSWORD){
-      return res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Logowanie</title>
-<style>body{background:#111;color:white;font-family:Arial;text-align:center;margin-top:100px;}
-input{padding:8px;font-size:16px;}button{padding:8px 16px;font-size:16px;cursor:pointer;}</style>
-</head><body><h2>Strona chroniona hasłem</h2>
-<form method="GET"><input type="password" name="password" placeholder="Hasło"><button>Zaloguj</button></form>
-</body></html>`)
-    }
-  }
-  next()
-})
-
 app.use(express.static("public"))
 
 /* === DANE === */
@@ -121,6 +107,11 @@ setInterval(checkReset, 30000)
 
 /* === SOCKET === */
 io.on("connection",(socket)=>{
+
+  // Weryfikacja hasła
+  socket.on("checkPassword", (pass, cb) => {
+    cb(pass === PASSWORD)
+  })
 
   // Giganty / Małpy
   socket.on("start",  id => startTimer(id))
