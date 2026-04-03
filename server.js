@@ -64,7 +64,9 @@ async function connectDB() {
     grotaHistory   = doc.grotaHistory   || []
     grotaGenerals  = doc.grotaGenerals  || {}
     grotaSnapshots = doc.grotaSnapshots || []
-    charOrder      = doc.charOrder      || []
+    charOrder           = doc.charOrder           || []
+    runningTimers       = new Set(doc.runningTimers       || [])
+    runningCustomTimers = new Set(doc.runningCustomTimers || [])
 
     // Migracja
     for (const char in characters) {
@@ -76,6 +78,19 @@ async function connectDB() {
         delete ch.spiritStoneTimer
       }
       if (!ch.stones) ch.stones = {}
+    }
+    // Nadrabiaj czas który minął podczas restartu
+    if (doc.shutdownAt && doc.runningTimers && doc.runningTimers.length > 0) {
+      const elapsed = Math.floor((Date.now() - doc.shutdownAt) / 1000)
+      if (elapsed > 0 && elapsed < 3600) { // max 1h nadrabiania
+        for (const id of doc.runningTimers) {
+          if (timers[id] !== undefined) timers[id] += elapsed
+        }
+        for (const key of (doc.runningCustomTimers || [])) {
+          if (customTimers[key] !== undefined) customTimers[key] += elapsed
+        }
+        console.log("Nadrobiono " + elapsed + "s przestoju")
+      }
     }
     console.log("Dane wczytane z MongoDB")
   } else {
@@ -479,6 +494,13 @@ io.on("connection",(socket)=>{
 async function gracefulShutdown(signal) {
   console.log("Zamykanie (" + signal + ") — zapisuję dane...")
   if (saveTimer) clearTimeout(saveTimer)
+  // Zapisz timestamp zamknięcia żeby po restarcie nadrobić czas
+  const shutdownTs = Date.now()
+  if (col) {
+    try {
+      await col.updateOne({ _id: DOC_ID }, { $set: { shutdownAt: shutdownTs } })
+    } catch(e) {}
+  }
   await saveNow()
   console.log("Dane zapisane. Zamykam.")
   process.exit(0)
