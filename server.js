@@ -30,11 +30,18 @@ try{
   customTimers = data.customTimers || {}
   grotaPings   = data.grotaPings   || {}
   grotaHistory = data.grotaHistory || []
-  // Migracja: jeśli postać ma horseTimer ale brak hasMedal — ustaw hasMedal
+  // Migracja
   for (const char in characters) {
-    if (characters[char].horseTimer && !characters[char].hasMedal) {
-      characters[char].hasMedal = true
+    const ch = characters[char]
+    if (ch.horseTimer && !ch.hasMedal) ch.hasMedal = true
+    // stary format kamienia → nowy
+    if (ch.hasStone && !ch.stones) {
+      const sid = 'stone_legacy'
+      ch.stones = { [sid]: { name: 'Kamień Duchowy', timerEnd: ch.spiritStoneTimer || null } }
+      delete ch.hasStone
+      delete ch.spiritStoneTimer
     }
+    if (!ch.stones) ch.stones = {}
   }
   console.log("Dane wczytane z data.json")
 }catch(e){
@@ -106,7 +113,7 @@ function checkReset(){
   if(hour===resetHour && minute===resetMinute && lastResetDay!==day){
     for(let char in characters){
       let old = characters[char]
-      characters[char] = { horseTimer: old.horseTimer || null, hasMedal: old.hasMedal || false, spiritStoneTimer: old.spiritStoneTimer || null, hasStone: old.hasStone || false, bioCurrent: old.bioCurrent || null, bioDoneToday: 0, bioDoneChecked: false, bioDoneTotal: old.bioDoneTotal || 0 }
+      characters[char] = { horseTimer: old.horseTimer || null, hasMedal: old.hasMedal || false, horseLevel: old.horseLevel || 0, stones: old.stones || {}, bioCurrent: old.bioCurrent || null, bioDoneToday: 0, bioDoneChecked: false, bioDoneTotal: old.bioDoneTotal || 0 }
     }
     lastResetDay = day
     saveData()
@@ -158,9 +165,12 @@ io.on("connection",(socket)=>{
     saveData()
     io.emit("charactersUpdate",characters)
   })
-  socket.on("addMedal",(char)=>{
+  socket.on("addMedal",(data)=>{
+    const char  = typeof data === 'string' ? data : data.char
+    const level = typeof data === 'object' ? (parseInt(data.level)||0) : 0
     if(!characters[char]) characters[char]={}
-    characters[char].hasMedal = true
+    characters[char].hasMedal   = true
+    characters[char].horseLevel = level
     saveData()
     io.emit("charactersUpdate", characters)
   })
@@ -179,7 +189,7 @@ io.on("connection",(socket)=>{
     if(!characters[char]) characters[char]={}
     if(current !== undefined) characters[char].bioCurrent  = current
     if(doneToday !== undefined) characters[char].bioDoneToday = parseInt(doneToday) || 0
-    if(doneTotal  !== undefined) characters[char].bioDoneTotal = parseInt(doneTotal)  || 0
+    if(doneTotal  !== undefined) characters[char].bioDoneTotal  = parseInt(doneTotal)  || 0
     if(action === 'oddaj'){
       characters[char].bioDoneTotal   = (characters[char].bioDoneTotal || 0) + 1
       characters[char].bioDoneChecked = true
@@ -188,29 +198,47 @@ io.on("connection",(socket)=>{
     io.emit("charactersUpdate", characters)
   })
 
-  socket.on("addStone",(char)=>{
+  // Multi-stone: stones = { stoneId: {name, timerEnd} }
+  socket.on("addStone",(data)=>{
+    const {char, stoneId, name} = data
     if(!characters[char]) characters[char]={}
-    characters[char].hasStone = true
+    if(!characters[char].stones) characters[char].stones = {}
+    characters[char].stones[stoneId] = { name: name||stoneId, timerEnd: null }
     saveData()
     io.emit("charactersUpdate", characters)
   })
 
-  socket.on("removeStone",(char)=>{
-    if(!characters[char]) return
-    delete characters[char].hasStone
-    delete characters[char].spiritStoneTimer
+  socket.on("removeStone",(data)=>{
+    const {char, stoneId} = data
+    if(!characters[char]?.stones) return
+    delete characters[char].stones[stoneId]
+    saveData()
+    io.emit("charactersUpdate", characters)
+  })
+
+  socket.on("renameStone",(data)=>{
+    const {char, stoneId, name} = data
+    if(!characters[char]?.stones?.[stoneId]) return
+    characters[char].stones[stoneId].name = name
     saveData()
     io.emit("charactersUpdate", characters)
   })
 
   socket.on("spiritStone",(data)=>{
-    const {char, hours} = data
-    if(!characters[char]) characters[char]={}
-    characters[char].spiritStoneTimer = Date.now() + (hours * 3600 * 1000)
+    const {char, stoneId, hours} = data
+    if(!characters[char]?.stones?.[stoneId]) return
+    characters[char].stones[stoneId].timerEnd = Date.now() + (hours * 3600 * 1000)
     saveData()
     io.emit("charactersUpdate", characters)
   })
 
+  socket.on("setHorseLevel",(data)=>{
+    const {char, level} = data
+    if(!characters[char]) characters[char]={}
+    characters[char].horseLevel = parseInt(level)||0
+    saveData()
+    io.emit("charactersUpdate", characters)
+  })
   socket.on("setResetTime",(data)=>{
     resetHour   = data.hour
     resetMinute = data.minute
@@ -220,7 +248,7 @@ io.on("connection",(socket)=>{
   socket.on("manualReset",()=>{
     for(let char in characters){
       let old = characters[char]
-      characters[char] = { horseTimer: old.horseTimer || null, hasMedal: old.hasMedal || false, spiritStoneTimer: old.spiritStoneTimer || null, hasStone: old.hasStone || false, bioCurrent: old.bioCurrent || null, bioDoneToday: 0, bioDoneChecked: false, bioDoneTotal: old.bioDoneTotal || 0 }
+      characters[char] = { horseTimer: old.horseTimer || null, hasMedal: old.hasMedal || false, horseLevel: old.horseLevel || 0, stones: old.stones || {}, bioCurrent: old.bioCurrent || null, bioDoneToday: 0, bioDoneChecked: false, bioDoneTotal: old.bioDoneTotal || 0 }
     }
     saveData()
     io.emit("charactersUpdate",characters)

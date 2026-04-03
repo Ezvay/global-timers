@@ -403,16 +403,14 @@
   </div>
 </div>
 
-<!-- MODAL KAMIEŃ DUCHOWY -->
-<div class="stone-modal-overlay hidden" id="stoneModal">
-  <div class="stone-modal-box">
-    <div class="stone-modal-title"><img src="/kamien_duchowy.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:8px;">Kamień Duchowy</div>
-    <div class="stone-modal-char" id="stoneModalChar"></div>
-    <div class="stone-modal-label">Za ile godzin można oddać następny?</div>
-    <input class="stone-modal-input" id="stoneModalInput" type="number" min="1" max="72" placeholder="np. 24">
-    <div class="stone-modal-hint">Wpisz liczbę godzin</div>
-    <button class="stone-modal-confirm" onclick="confirmStone()">Ustaw timer</button>
-    <button class="stone-modal-cancel" onclick="closeStoneModal()">Anuluj</button>
+<!-- UNIVERSAL INIT MODAL -->
+<div class="stone-modal-overlay hidden" id="initModal">
+  <div class="stone-modal-box" style="min-width:320px">
+    <div class="stone-modal-title" id="initModalTitle"></div>
+    <div class="stone-modal-char" id="initModalSub"></div>
+    <div id="initModalFields"></div>
+    <button class="stone-modal-confirm" onclick="confirmInitModal()">Zatwierdź</button>
+    <button class="stone-modal-cancel" onclick="closeInitModal()">Anuluj</button>
   </div>
 </div>
 
@@ -541,41 +539,67 @@ const BIOLOG_ITEMS = [
   { id:'klejnot_w',     name:'Klejnot Wierności',       qty:20, img:'https://pl-wiki.metin2.gameforge.com/images/3/39/Klejnot_Wierno%C5%9Bci.png' },
 ];
 
-const stoneTimers   = {};
+const stoneTimers   = {}; // key = char+'_'+stoneId
 const stoneIntervals = {};
-let stonePendingChar = null;
 
-/* SPIRIT STONE MODAL */
-function openStoneModal(char) {
-  stonePendingChar = char;
-  document.getElementById('stoneModalChar').innerText = char;
-  document.getElementById('stoneModalInput').value = '';
-  document.getElementById('stoneModal').classList.remove('hidden');
-  setTimeout(() => document.getElementById('stoneModalInput').focus(), 50);
+/* ═══ UNIVERSAL INIT MODAL ═══ */
+let initModalCallback = null;
+
+function openInitModal(title, sub, fields, onConfirm) {
+  // fields: [{id, label, type, placeholder, value}]
+  document.getElementById('initModalTitle').innerText = title;
+  document.getElementById('initModalSub').innerText = sub;
+  const wrap = document.getElementById('initModalFields');
+  wrap.innerHTML = fields.map(f => `
+    <div style="margin-bottom:12px">
+      <div class="stone-modal-label" style="margin-bottom:6px">${f.label}</div>
+      <input class="stone-modal-input" id="initField_${f.id}"
+        type="${f.type||'text'}" placeholder="${f.placeholder||''}"
+        value="${f.value||''}">
+    </div>`).join('');
+  initModalCallback = onConfirm;
+  document.getElementById('initModal').classList.remove('hidden');
+  setTimeout(() => { const first = wrap.querySelector('input'); if(first) first.focus(); }, 50);
 }
-function closeStoneModal() {
-  document.getElementById('stoneModal').classList.add('hidden');
-  stonePendingChar = null;
+function closeInitModal() {
+  document.getElementById('initModal').classList.add('hidden');
+  initModalCallback = null;
 }
-function confirmStone() {
-  const hours = parseFloat(document.getElementById('stoneModalInput').value);
-  if (!hours || hours <= 0) return;
-  socket.emit('spiritStone', { char: stonePendingChar, hours });
-  closeStoneModal();
+function confirmInitModal() {
+  if (!initModalCallback) return;
+  const wrap = document.getElementById('initModalFields');
+  const vals = {};
+  wrap.querySelectorAll('input').forEach(inp => { vals[inp.id.replace('initField_','')] = inp.value; });
+  initModalCallback(vals);
+  closeInitModal();
 }
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeStoneModal();
-  if (e.key === 'Enter' && stonePendingChar) confirmStone();
+  if (e.key === 'Escape') closeInitModal();
+  if (e.key === 'Enter' && initModalCallback) confirmInitModal();
 });
 
-/* SPIRIT STONE COUNTDOWN */
-function startStoneTimer(char, el, end) {
-  if (stoneIntervals[char]) clearInterval(stoneIntervals[char]);
+/* OPEN STONE TIMER MODAL (for existing stone row) */
+function openStoneModal(char, stoneId) {
+  openInitModal(
+    '💎 Kamień Duchowy',
+    char + (stoneId ? ' — ' + stoneId : ''),
+    [{ id:'hours', label:'Za ile godzin można oddać następny?', type:'number', placeholder:'np. 24' }],
+    vals => {
+      const hours = parseFloat(vals.hours);
+      if (!hours || hours <= 0) return;
+      socket.emit('spiritStone', { char, stoneId, hours });
+    }
+  );
+}
+
+/* SPIRIT STONE COUNTDOWN — timerId = char_stoneId */
+function startStoneTimer(timerId, el, end) {
+  if (stoneIntervals[timerId]) clearInterval(stoneIntervals[timerId]);
   function tick() {
     const diff = end - Date.now();
     if (diff <= 0) {
       el.innerText = 'GOTOWE'; el.className = 'stone-timer done';
-      clearInterval(stoneIntervals[char]); return;
+      clearInterval(stoneIntervals[timerId]); return;
     }
     const h = Math.floor(diff/3600000);
     const m = Math.floor((diff%3600000)/60000);
@@ -584,7 +608,7 @@ function startStoneTimer(char, el, end) {
     el.className = 'stone-timer';
   }
   tick();
-  stoneIntervals[char] = setInterval(tick, 1000);
+  stoneIntervals[timerId] = setInterval(tick, 1000);
 }
 
 /* CLOCK */
@@ -679,15 +703,33 @@ function createTaskRow(char, name) {
 }
 
 /* MEDAL ROW */
-function buildMedalRow(char) {
+function buildMedalRow(char, horseLevel) {
   const row = document.createElement('div');
   row.className = 'medal-row';
   row.id = 'medalrow_' + char;
+
+  const levelEl = document.createElement('span');
+  levelEl.id = 'horselevel_' + char;
+  levelEl.style.cssText = 'font-family:Cinzel,serif;font-size:10px;color:var(--gold-dark);letter-spacing:1px;cursor:pointer;border-bottom:1px dashed rgba(201,168,76,0.3);padding:0 2px;';
+  levelEl.title = 'Kliknij aby zmienić level';
+  levelEl.innerText = 'Lv ' + (horseLevel || 0);
+  levelEl.onclick = () => {
+    openInitModal(
+      '🏅 Medal Konny',
+      char + ' — zmień level konia',
+      [{ id:'level', label:'Aktualny level konia', type:'number', value: horseLevel||0 }],
+      vals => {
+        const lv = parseInt(vals.level) || 0;
+        socket.emit('setHorseLevel', { char, level: lv });
+      }
+    );
+  };
+
   row.innerHTML = `
     <div class="medal-left">
       <img class="task-icon" src="${icons.Medal}">
       <div>
-        <div>Medal konny</div>
+        <div style="display:flex;align-items:center;gap:6px;">Medal konny <span id="horselevel_${char}_placeholder"></span></div>
         <div class="medal-timer" id="mt_${char}">—</div>
       </div>
     </div>
@@ -696,12 +738,13 @@ function buildMedalRow(char) {
       <button class="remove-btn" onclick="removeMedal('${char}')" title="Usuń">✕</button>
     </div>
   `;
+  row.querySelector('#horselevel_' + char + '_placeholder').replaceWith(levelEl);
   medalTimers[char] = row.querySelector('#mt_' + char) || row.querySelector('.medal-timer');
   return row;
 }
 
 function addMedalRow(bodyEl, char) {
-  bodyEl.appendChild(buildMedalRow(char));
+  bodyEl.appendChild(buildMedalRow(char, 0));
 }
 
 function removeMedal(char) {
@@ -787,33 +830,88 @@ function removeBio(char) {
   socket.emit('updateBio', { char, current: null, doneToday: 0, bioDoneChecked: false });
 }
 
-function buildStoneRow(char) {
-  const row = document.createElement('div');
-  row.className = 'stone-row';
-  row.id = 'stonerow_' + char;
-  row.innerHTML = `
-    <div class="stone-left">
-      <img class="task-icon" src="/kamien_duchowy.png" style="width:22px;height:22px;object-fit:contain;">
-      <div>
-        <div class="stone-name">Kamień Duchowy</div>
-        <div class="stone-timer" id="st_stone_${char}">—</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:6px;align-items:center;">
-      <button class="stone-btn" onclick="openStoneModal('${char}')">Ustaw</button>
-      <button class="remove-btn" onclick="removeStone('${char}')" title="Usuń">✕</button>
-    </div>
-  `;
-  stoneTimers[char] = row.querySelector('#st_stone_' + char);
+function buildStoneRow(char, stoneId, stoneName, timerEnd, skillLevel) {
+  const domId   = 'stonerow_' + char + '_' + stoneId;
+  const timerId  = char + '_' + stoneId;
+  const row      = document.createElement('div');
+  row.className  = 'stone-row';
+  row.id         = domId;
+
+  // editable name
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'stone-name task-name-editable';
+  nameSpan.title = 'Kliknij aby zmienić nazwę';
+  nameSpan.innerText = stoneName || stoneId;
+  nameSpan.onclick = () => {
+    const inp = document.createElement('input');
+    inp.className = 'task-name-input'; inp.value = nameSpan.innerText;
+    nameSpan.replaceWith(inp); inp.focus(); inp.select();
+    function finish() {
+      const val = inp.value.trim() || stoneId;
+      nameSpan.innerText = val; inp.replaceWith(nameSpan);
+      socket.emit('renameStone', { char, stoneId, name: val });
+    }
+    inp.onblur = finish;
+    inp.onkeydown = ev => { if(ev.key==='Enter') finish(); if(ev.key==='Escape'){ inp.value=nameSpan.innerText; finish(); } };
+  };
+
+  // editable skill level
+  const levelSpan = document.createElement('span');
+  levelSpan.id = 'stonelevel_' + char + '_' + stoneId;
+  levelSpan.style.cssText = 'font-family:Cinzel,serif;font-size:10px;color:#9060c0;letter-spacing:1px;cursor:pointer;border-bottom:1px dashed rgba(140,80,200,0.35);padding:0 2px;margin-left:4px;';
+  levelSpan.title = 'Kliknij aby zmienić level skilla';
+  levelSpan.innerText = 'G' + (skillLevel || 0);
+  levelSpan.onclick = () => {
+    openInitModal(
+      '💎 Kamień Duchowy',
+      char + ' — ' + (nameSpan.innerText),
+      [{ id:'level', label:'Aktualny level skilla (G)', type:'number', value: skillLevel||0, placeholder:'np. 5' }],
+      vals => {
+        const lv = parseInt(vals.level) || 0;
+        levelSpan.innerText = 'G' + lv;
+        skillLevel = lv;
+        socket.emit('setStoneSkillLevel', { char, stoneId, level: lv });
+      }
+    );
+  };
+
+  const timerEl = document.createElement('div');
+  timerEl.className = 'stone-timer';
+  timerEl.id = 'st_stone_' + char + '_' + stoneId;
+  timerEl.innerText = '—';
+
+  const left = document.createElement('div');
+  left.className = 'stone-left';
+  const img = document.createElement('img');
+  img.className = 'task-icon'; img.src = '/kamien_duchowy.png';
+  img.style.cssText = 'width:22px;height:22px;object-fit:contain;';
+  const textWrap = document.createElement('div');
+  const nameRow = document.createElement('div');
+  nameRow.style.cssText = 'display:flex;align-items:center;gap:2px;';
+  nameRow.append(nameSpan, levelSpan);
+  textWrap.append(nameRow, timerEl);
+  left.append(img, textWrap);
+
+  const right = document.createElement('div');
+  right.style.cssText = 'display:flex;gap:6px;align-items:center;';
+  right.innerHTML = `
+    <button class="stone-btn" onclick="openStoneModal('${char}','${stoneId}')">Ustaw</button>
+    <button class="remove-btn" onclick="removeStone('${char}','${stoneId}')" title="Usuń">✕</button>`;
+
+  row.append(left, right);
+  stoneTimers[timerId] = timerEl;
+  if (timerEnd) startStoneTimer(timerId, timerEl, timerEnd);
   return row;
 }
 
-function removeStone(char) {
-  const row = document.getElementById('stonerow_' + char);
+function removeStone(char, stoneId) {
+  const domId = 'stonerow_' + char + '_' + stoneId;
+  const timerId = char + '_' + stoneId;
+  const row = document.getElementById(domId);
   if (row) row.remove();
-  if (stoneIntervals[char]) { clearInterval(stoneIntervals[char]); delete stoneIntervals[char]; }
-  delete stoneTimers[char];
-  socket.emit('removeStone', char);
+  if (stoneIntervals[timerId]) { clearInterval(stoneIntervals[timerId]); delete stoneIntervals[timerId]; }
+  delete stoneTimers[timerId];
+  socket.emit('removeStone', { char, stoneId });
 }
 
 /* ADD TASK PANEL */
@@ -843,28 +941,55 @@ function addTaskPanel(bodyEl, char) {
 function addTask(char) {
   const sel = document.getElementById('tsel_' + char);
   const task = sel.value;
-  // Special handling for medal
+  // Special handling for medal — ask for horse level
   if (task === '__medal__') {
     if (document.getElementById('medalrow_' + char)) return;
-    const panel = document.getElementById('addpanel_' + char);
-    panel.parentElement.insertBefore(buildMedalRow(char), panel);
-    socket.emit('addMedal', char);
+    openInitModal(
+      '🏅 Medal Konny',
+      'Dodaj do: ' + char,
+      [{ id:'level', label:'Aktualny level konia', type:'number', placeholder:'np. 15', value:'' }],
+      vals => {
+        const level = parseInt(vals.level) || 0;
+        socket.emit('addMedal', { char, level });
+      }
+    );
     return;
   }
   // Special handling for biolog
   if (task === '__bio__') {
     if (document.getElementById('biorow_' + char)) return;
-    const panel = document.getElementById('addpanel_' + char);
-    panel.parentElement.insertBefore(buildBioRow(char, {}), panel);
-    socket.emit('updateBio', { char, current: null, done: 0 });
+    openInitModal(
+      '🌿 Biolog',
+      'Dodaj do: ' + char,
+      [
+        { id:'total', label:'Ile sztuk już oddano łącznie?', type:'number', placeholder:'np. 12', value:'' },
+        { id:'current', label:'Aktualny przedmiot (wybierz po dodaniu)', placeholder:'', value:'' }
+      ],
+      vals => {
+        const total = parseInt(vals.total) || 0;
+        const panel = document.getElementById('addpanel_' + char);
+        panel.parentElement.insertBefore(buildBioRow(char, { bioDoneTotal: total, bioCurrent: null, bioDoneToday: 0, bioDoneChecked: false }), panel);
+        socket.emit('updateBio', { char, current: null, doneTotal: total, doneToday: 0 });
+      }
+    );
     return;
   }
-  // Special handling for spirit stone
+  // Special handling for spirit stone — ask for name
   if (task === '__stone__') {
-    if (document.getElementById('stonerow_' + char)) return;
-    const panel = document.getElementById('addpanel_' + char);
-    panel.parentElement.insertBefore(buildStoneRow(char), panel);
-    socket.emit('addStone', char);
+    openInitModal(
+      '💎 Kamień Duchowy',
+      'Dodaj do: ' + char,
+      [
+        { id:'name', label:'Nazwa skilla (np. Miecz, Tarcza)', placeholder:'np. Miecz' },
+        { id:'level', label:'Aktualny level skilla (G)', type:'number', placeholder:'np. 5', value:'' }
+      ],
+      vals => {
+        const name  = vals.name.trim() || 'Kamień';
+        const level = parseInt(vals.level) || 0;
+        const stoneId = 'stone_' + Date.now();
+        socket.emit('addStone', { char, stoneId, name, skillLevel: level });
+      }
+    );
     return;
   }
   if (document.getElementById('task_' + char + '_' + task)) return;
@@ -930,7 +1055,7 @@ socket.on('charactersUpdate', data => {
   for (const char in data) {
     const tasks = data[char];
     for (const task in tasks) {
-      if (['horseTimer','spiritStoneTimer','hasStone','hasMedal','bioCurrent','bioDoneToday','bioDoneTotal','bioDoneChecked'].includes(task)) continue;
+      if (['horseTimer','spiritStoneTimer','hasStone','hasMedal','bioCurrent','bioDoneToday','bioDoneTotal','bioDoneChecked','stones','horseLevel'].includes(task)) continue;
       const cb = checkboxes[char + '_' + task];
       if (cb) {
         cb.checked = !!tasks[task];
@@ -945,24 +1070,40 @@ socket.on('charactersUpdate', data => {
     const medalRow = document.getElementById('medalrow_' + char);
     if (tasks.hasMedal && !medalRow) {
       const panel = document.getElementById('addpanel_' + char);
-      if (panel) panel.parentElement.insertBefore(buildMedalRow(char), panel);
+      if (panel) panel.parentElement.insertBefore(buildMedalRow(char, tasks.horseLevel||0), panel);
     } else if (tasks.hasMedal === false && medalRow) {
       medalRow.remove();
       if (medalIntervals[char]) { clearInterval(medalIntervals[char]); delete medalIntervals[char]; }
       delete medalTimers[char];
+    } else if (tasks.hasMedal && medalRow) {
+      const lvEl = document.getElementById('horselevel_' + char);
+      if (lvEl && tasks.horseLevel !== undefined) lvEl.innerText = 'Lv ' + tasks.horseLevel;
     }
-    // Show/hide stone row based on server state
-    const stoneRow = document.getElementById('stonerow_' + char);
-    if (tasks.hasStone && !stoneRow) {
-      const panel = document.getElementById('addpanel_' + char);
-      if (panel) panel.parentElement.insertBefore(buildStoneRow(char), panel);
-    } else if (!tasks.hasStone && stoneRow) {
-      stoneRow.remove();
-      if (stoneIntervals[char]) { clearInterval(stoneIntervals[char]); delete stoneIntervals[char]; }
-      delete stoneTimers[char];
-    }
-    if (tasks.spiritStoneTimer && stoneTimers[char]) {
-      startStoneTimer(char, stoneTimers[char], tasks.spiritStoneTimer);
+    // Multi-stone sync
+    const serverStones = tasks.stones || {};
+    // Remove stones no longer on server
+    document.querySelectorAll('[id^="stonerow_' + char + '_"]').forEach(el => {
+      const sid = el.id.replace('stonerow_' + char + '_', '');
+      if (!serverStones[sid]) {
+        el.remove();
+        const tid = char + '_' + sid;
+        if (stoneIntervals[tid]) { clearInterval(stoneIntervals[tid]); delete stoneIntervals[tid]; }
+        delete stoneTimers[tid];
+      }
+    });
+    // Add/update stones from server
+    for (const sid in serverStones) {
+      const st = serverStones[sid];
+      const domId = 'stonerow_' + char + '_' + sid;
+      const timerId = char + '_' + sid;
+      if (!document.getElementById(domId)) {
+        const panel = document.getElementById('addpanel_' + char);
+        if (panel) panel.parentElement.insertBefore(buildStoneRow(char, sid, st.name, st.timerEnd, st.skillLevel||0), panel);
+      } else {
+        // update timer
+        const timerEl = document.getElementById('st_stone_' + char + '_' + sid);
+        if (timerEl && st.timerEnd) startStoneTimer(timerId, timerEl, st.timerEnd);
+      }
     }
     // Biolog panel sync
     const bioRow = document.getElementById('biorow_' + char);
