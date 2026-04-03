@@ -11,54 +11,17 @@ const fs = require("fs")
 const PASSWORD = "platforma"
 
 app.use((req,res,next)=>{
-
-if(req.path === "/characters.html"){
-
-if(req.query.password !== PASSWORD){
-
-return res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Logowanie</title>
-<style>
-body{
-background:#111;
-color:white;
-font-family:Arial;
-text-align:center;
-margin-top:100px;
-}
-input{
-padding:8px;
-font-size:16px;
-}
-button{
-padding:8px 16px;
-font-size:16px;
-cursor:pointer;
-}
-</style>
-</head>
-<body>
-
-<h2>Strona chroniona hasłem</h2>
-
-<form method="GET">
-<input type="password" name="password" placeholder="Hasło">
-<button>Zaloguj</button>
-</form>
-
-</body>
-</html>
-`)
-}
-
-}
-
-next()
-
+  if(req.path === "/characters.html"){
+    if(req.query.password !== PASSWORD){
+      return res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Logowanie</title>
+<style>body{background:#111;color:white;font-family:Arial;text-align:center;margin-top:100px;}
+input{padding:8px;font-size:16px;}button{padding:8px 16px;font-size:16px;cursor:pointer;}</style>
+</head><body><h2>Strona chroniona hasłem</h2>
+<form method="GET"><input type="password" name="password" placeholder="Hasło"><button>Zaloguj</button></form>
+</body></html>`)
+    }
+  }
+  next()
 })
 
 app.use(express.static("public"))
@@ -70,27 +33,23 @@ app.use(express.static("public"))
 let timers = {}
 let characters = {}
 let tasks = {}
-
 let resetHour = 23
 let resetMinute = 59
+let customPlaces = []   // [ { id, name, respawnSec, channels } ]
+let customTimers = {}   // { "place_ch": startTimestamp | null }
 
 try{
-
-const data = JSON.parse(fs.readFileSync("data.json"))
-
-timers = data.timers || {}
-characters = data.characters || {}
-tasks = data.tasks || {}
-
-resetHour = data.resetHour || 23
-resetMinute = data.resetMinute || 59
-
-console.log("Dane wczytane z data.json")
-
+  const data = JSON.parse(fs.readFileSync("data.json"))
+  timers      = data.timers      || {}
+  characters  = data.characters  || {}
+  tasks       = data.tasks       || {}
+  resetHour   = data.resetHour   || 23
+  resetMinute = data.resetMinute || 59
+  customPlaces = data.customPlaces || []
+  customTimers = data.customTimers || {}
+  console.log("Dane wczytane z data.json")
 }catch(e){
-
-console.log("Brak data.json — start od zera")
-
+  console.log("Brak data.json — start od zera")
 }
 
 /* ======================
@@ -98,102 +57,64 @@ console.log("Brak data.json — start od zera")
 ====================== */
 
 function saveData(){
-
-const data = {
-timers,
-characters,
-tasks,
-resetHour,
-resetMinute
-}
-
-fs.writeFileSync("data.json",JSON.stringify(data,null,2))
-
+  fs.writeFileSync("data.json", JSON.stringify({
+    timers, characters, tasks,
+    resetHour, resetMinute,
+    customPlaces, customTimers
+  }, null, 2))
 }
 
 /* ======================
-   TIMERY
+   TIMERY (Giganty / Małpy)
 ====================== */
 
 let intervals = {}
 
 function startTimer(id){
-
-if(intervals[id]) return
-
-if(!timers[id]) timers[id]=0
-
-intervals[id]=setInterval(()=>{
-
-timers[id]++
-
-saveData()
-
-io.emit("update",timers)
-
-},1000)
-
+  if(intervals[id]) return
+  if(!timers[id]) timers[id]=0
+  intervals[id]=setInterval(()=>{
+    timers[id]++
+    saveData()
+    io.emit("update", timers)
+  },1000)
 }
 
 function stopTimer(id){
-
-clearInterval(intervals[id])
-intervals[id]=null
-
+  clearInterval(intervals[id])
+  intervals[id]=null
 }
 
 function resetTimer(id){
-
-timers[id]=0
-stopTimer(id)
-
-saveData()
-
-io.emit("update",timers)
-
+  timers[id]=0
+  stopTimer(id)
+  saveData()
+  io.emit("update", timers)
 }
 
 /* ======================
-   RESET GODZINA
+   RESET DZIENNY
 ====================== */
 
 let lastResetDay = null
 
 function checkReset(){
-
-const now = new Date()
-
-const polish = new Date(
-now.toLocaleString("en-US",{timeZone:"Europe/Warsaw"})
-)
-
-const hour = polish.getHours()
-const minute = polish.getMinutes()
-const day = polish.toDateString()
-
-if(hour === resetHour && minute === resetMinute && lastResetDay !== day){
-
-for(let char in characters){
-
-let old = characters[char]
-
-characters[char] = {
-horseTimer: old.horseTimer || null
+  const now = new Date()
+  const polish = new Date(now.toLocaleString("en-US",{timeZone:"Europe/Warsaw"}))
+  const hour   = polish.getHours()
+  const minute = polish.getMinutes()
+  const day    = polish.toDateString()
+  if(hour===resetHour && minute===resetMinute && lastResetDay!==day){
+    for(let char in characters){
+      let old = characters[char]
+      characters[char] = { horseTimer: old.horseTimer || null }
+    }
+    lastResetDay = day
+    saveData()
+    io.emit("charactersUpdate", characters)
+  }
 }
-
-}
-
-lastResetDay = day
-
-saveData()
-
-io.emit("charactersUpdate",characters)
-
-}
-
-}
-
-setInterval(checkReset,30000)
+setInterval(checkReset, 30000)
 
 /* ======================
    SOCKET
@@ -201,106 +122,130 @@ setInterval(checkReset,30000)
 
 io.on("connection",(socket)=>{
 
-socket.on("start",(id)=>startTimer(id))
-socket.on("stop",(id)=>stopTimer(id))
-socket.on("reset",(id)=>resetTimer(id))
+  // --- Giganty / Małpy ---
+  socket.on("start",  (id)=>startTimer(id))
+  socket.on("stop",   (id)=>stopTimer(id))
+  socket.on("reset",  (id)=>resetTimer(id))
 
-socket.on("toggleTask",(data)=>{
+  // --- Postacie ---
+  socket.on("toggleTask",(data)=>{
+    const {char,task,value}=data
+    if(!characters[char]) characters[char]={}
+    characters[char][task]=value
+    saveData()
+    io.emit("charactersUpdate",characters)
+  })
 
-const {char,task,value}=data
+  socket.on("addTask",(data)=>{
+    const {char,task}=data
+    if(!tasks[char]) tasks[char]=[]
+    if(!tasks[char].includes(task)) tasks[char].push(task)
+    saveData()
+    io.emit("tasksUpdate",tasks)
+  })
 
-if(!characters[char]) characters[char]={}
+  socket.on("removeTask",(data)=>{
+    const {char,task}=data
+    if(!tasks[char]) return
+    tasks[char] = tasks[char].filter(t=>t!==task)
+    if(characters[char]) delete characters[char][task]
+    saveData()
+    io.emit("tasksUpdate",tasks)
+    io.emit("charactersUpdate",characters)
+  })
 
-characters[char][task]=value
+  socket.on("horseMedal",(char)=>{
+    if(!characters[char]) characters[char]={}
+    characters[char].horseTimer = Date.now() + (23*60*60*1000)
+    saveData()
+    io.emit("charactersUpdate",characters)
+  })
 
-saveData()
+  socket.on("setResetTime",(data)=>{
+    resetHour   = data.hour
+    resetMinute = data.minute
+    saveData()
+    io.emit("resetTime",{hour:resetHour,minute:resetMinute})
+  })
 
-io.emit("charactersUpdate",characters)
+  socket.on("manualReset",()=>{
+    for(let char in characters){
+      let old = characters[char]
+      characters[char] = { horseTimer: old.horseTimer || null }
+    }
+    saveData()
+    io.emit("charactersUpdate",characters)
+  })
 
-})
+  // --- Custom timery ---
 
-socket.on("addTask",(data)=>{
+  // Dodaj miejsce
+  socket.on("addPlace",(data)=>{
+    const { name, respawnSec, channels } = data
+    if(!name || !respawnSec || !channels) return
+    if(customPlaces.length >= 10) return
+    const id = "p_" + Date.now()
+    customPlaces.push({ id, name, respawnSec: parseInt(respawnSec), channels: parseInt(channels) })
+    saveData()
+    io.emit("placesUpdate", customPlaces)
+    io.emit("customTimersUpdate", customTimers)
+  })
 
-const {char,task}=data
+  // Usuń miejsce
+  socket.on("removePlace",(placeId)=>{
+    customPlaces = customPlaces.filter(p=>p.id!==placeId)
+    // usuń timery tego miejsca
+    for(let key in customTimers){
+      if(key.startsWith(placeId+"_")) delete customTimers[key]
+    }
+    saveData()
+    io.emit("placesUpdate", customPlaces)
+    io.emit("customTimersUpdate", customTimers)
+  })
 
-if(!tasks[char]) tasks[char]=[]
+  // Edytuj miejsce
+  socket.on("editPlace",(data)=>{
+    const { id, name, respawnSec, channels } = data
+    const place = customPlaces.find(p=>p.id===id)
+    if(!place) return
+    place.name       = name
+    place.respawnSec = parseInt(respawnSec)
+    // jeśli liczba kanałów się zmniejszyła, usuń nadmiarowe timery
+    const oldCh = place.channels
+    place.channels   = parseInt(channels)
+    if(place.channels < oldCh){
+      for(let ch=place.channels+1; ch<=oldCh; ch++){
+        delete customTimers[id+"_ch"+ch]
+      }
+    }
+    saveData()
+    io.emit("placesUpdate", customPlaces)
+    io.emit("customTimersUpdate", customTimers)
+  })
 
-tasks[char].push(task)
+  // Start custom timera (zapisuje timestamp startu)
+  socket.on("startCustom",(key)=>{
+    customTimers[key] = Date.now()
+    saveData()
+    io.emit("customTimersUpdate", customTimers)
+  })
 
-saveData()
+  // Reset custom timera
+  socket.on("resetCustom",(key)=>{
+    delete customTimers[key]
+    saveData()
+    io.emit("customTimersUpdate", customTimers)
+  })
 
-io.emit("tasksUpdate",tasks)
-
-})
-
-socket.on("removeTask",(data)=>{
-
-const {char,task}=data
-
-if(!tasks[char]) return
-
-tasks[char] = tasks[char].filter(t=>t!==task)
-
-delete characters[char][task]
-
-saveData()
-
-io.emit("tasksUpdate",tasks)
-io.emit("charactersUpdate",characters)
-
-})
-
-socket.on("horseMedal",(char)=>{
-
-if(!characters[char]) characters[char]={}
-
-characters[char].horseTimer =
-Date.now() + (23*60*60*1000)
-
-saveData()
-
-io.emit("charactersUpdate",characters)
-
-})
-
-socket.on("setResetTime",(data)=>{
-
-resetHour = data.hour
-resetMinute = data.minute
-
-saveData()
-
-io.emit("resetTime",{hour:resetHour,minute:resetMinute})
-
-})
-
-socket.on("manualReset",()=>{
-
-for(let char in characters){
-
-let old = characters[char]
-
-characters[char] = {
-horseTimer: old.horseTimer || null
-}
-
-}
-
-saveData()
-
-io.emit("charactersUpdate",characters)
-
-})
-
-socket.emit("update",timers)
-socket.emit("charactersUpdate",characters)
-socket.emit("tasksUpdate",tasks)
-socket.emit("resetTime",{hour:resetHour,minute:resetMinute})
-
+  // Wyślij stan do nowego klienta
+  socket.emit("update",          timers)
+  socket.emit("charactersUpdate",characters)
+  socket.emit("tasksUpdate",     tasks)
+  socket.emit("resetTime",       {hour:resetHour,minute:resetMinute})
+  socket.emit("placesUpdate",    customPlaces)
+  socket.emit("customTimersUpdate", customTimers)
 })
 
 http.listen(3000,()=>{
-
-console.log("Server działa")
-
+  console.log("Server działa na porcie 3000")
 })

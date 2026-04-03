@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Własne Timery</title>
+<script src="/socket.io/socket.io.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #f0d080;
+    --gold-dark: #7a5f1e;
+    --bg: #090806;
+    --surface: #110e09;
+    --border: #3a2e1a;
+    --text: #d4c4a0;
+    --text-dim: #7a6a50;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Crimson Text', serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .bg-layer {
+    position: fixed; inset: 0; z-index: 0;
+    background: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(139,26,26,0.1) 0%, transparent 60%), #090806;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1300px; margin: 0 auto; padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(to bottom, rgba(17,14,9,0.96), rgba(9,8,6,0.8));
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .page-title { font-family: 'Cinzel', serif; font-size: 18px; font-weight: 600; color: var(--gold-light); letter-spacing: 2px; text-shadow: 0 0 20px rgba(201,168,76,0.4); }
+  .nav-btn {
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--gold-dark); background: rgba(201,168,76,0.06);
+    border: 1px solid rgba(201,168,76,0.25); border-radius: 2px;
+    padding: 7px 14px; cursor: pointer; text-decoration: none; display: inline-block;
+    transition: all 0.2s;
+  }
+  .nav-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.12); }
+
+  /* VOLUME */
+  .vol-wrap { display: flex; align-items: center; gap: 8px; font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; color: var(--text-dim); }
+  input[type=range] { -webkit-appearance:none; width:90px; height:3px; background: linear-gradient(to right,var(--gold),var(--gold-dark)); border-radius:2px; outline:none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; height:13px; border-radius:50%; background:var(--gold); cursor:pointer; box-shadow:0 0 6px rgba(201,168,76,0.5); }
+
+  /* ADD PLACE PANEL */
+  .add-panel {
+    position: relative; z-index: 1;
+    max-width: 1300px; margin: 18px auto 0; padding: 0 20px;
+  }
+  .add-panel-inner {
+    background: rgba(17,14,9,0.7); border: 1px solid var(--border); border-radius: 3px;
+    padding: 14px 18px;
+    display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
+  }
+  .add-panel-inner::before {
+    content: ''; position: absolute; top:0; left:20px; right:20px; height:1px;
+    background: linear-gradient(to right, transparent, rgba(201,168,76,0.15), transparent);
+  }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+  .field input, .field select {
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(201,168,76,0.2);
+    color: var(--text); font-family: 'Crimson Text', serif; font-size: 15px;
+    padding: 6px 10px; border-radius: 2px; outline: none; transition: border-color 0.2s;
+  }
+  .field input:focus, .field select:focus { border-color: rgba(201,168,76,0.55); }
+  .field input[type=number] { width: 90px; }
+  .field input[type=text]   { width: 200px; }
+  .add-btn {
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--gold-dark); background: rgba(201,168,76,0.08);
+    border: 1px solid rgba(201,168,76,0.3); border-radius: 2px;
+    padding: 8px 18px; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .add-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.16); }
+  .add-btn:disabled { opacity: 0.4; cursor: default; }
+  .place-count { font-family: 'Cinzel', serif; font-size: 10px; color: var(--text-dim); letter-spacing: 1px; align-self: center; }
+
+  /* MAIN */
+  .main { position: relative; z-index: 1; max-width: 1300px; margin: 18px auto 40px; padding: 0 20px; }
+
+  /* PLACE CARD */
+  .place-card {
+    background: linear-gradient(160deg, #1c1510, #0e0b07);
+    border: 1px solid var(--border); border-radius: 3px;
+    margin-bottom: 16px; overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .place-card:hover { border-color: rgba(201,168,76,0.3); }
+  .place-card::before {
+    content: ''; display: block; height: 1px;
+    background: linear-gradient(to right, transparent, rgba(201,168,76,0.2), transparent);
+  }
+
+  /* PLACE HEADER */
+  .place-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.3);
+  }
+  .place-header-left { display: flex; align-items: center; gap: 14px; }
+  .place-name { font-family: 'Cinzel', serif; font-size: 15px; font-weight: 600; color: var(--gold-light); letter-spacing: 1px; }
+  .place-meta { font-size: 13px; color: var(--text-dim); font-style: italic; }
+
+  /* EDIT FORM (hidden by default) */
+  .edit-form {
+    display: none; align-items: flex-end; gap: 10px; flex-wrap: wrap;
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.2);
+  }
+  .edit-form.open { display: flex; }
+  .edit-form input {
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(201,168,76,0.2);
+    color: var(--text); font-family: 'Crimson Text', serif; font-size: 14px;
+    padding: 5px 8px; border-radius: 2px; outline: none; transition: border-color 0.2s;
+  }
+  .edit-form input:focus { border-color: rgba(201,168,76,0.55); }
+  .edit-form input[type=number] { width: 80px; }
+  .edit-form input[type=text]   { width: 160px; }
+
+  /* PLACE ACTIONS */
+  .place-actions { display: flex; gap: 8px; }
+  .icon-btn {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 2px; cursor: pointer; transition: all 0.2s;
+    border: 1px solid rgba(201,168,76,0.2); color: var(--text-dim); background: rgba(255,255,255,0.03);
+  }
+  .icon-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.5); background: rgba(201,168,76,0.1); }
+  .icon-btn.del { border-color: rgba(180,50,50,0.25); color: #804040; }
+  .icon-btn.del:hover { color: #ff6060; border-color: rgba(200,60,60,0.6); background: rgba(140,30,30,0.15); }
+  .icon-btn.save { color: #60a060; border-color: rgba(80,160,80,0.3); }
+  .icon-btn.save:hover { color: #80ff80; border-color: rgba(80,200,80,0.6); background: rgba(40,120,40,0.15); }
+
+  /* CHANNEL GRID */
+  .ch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; padding: 14px; }
+
+  /* CHANNEL CARD */
+  .ch-card {
+    background: rgba(0,0,0,0.35); border: 1px solid #3a3028; border-radius: 3px;
+    padding: 12px 10px; text-align: center; position: relative; overflow: hidden;
+    transition: border-color 0.4s, background 0.4s, box-shadow 0.4s;
+  }
+  .ch-card::before { content:''; position:absolute; top:0;left:0;right:0;height:1px; background: linear-gradient(to right, transparent, rgba(201,168,76,0.12), transparent); }
+  .ch-card.st-idle    { border-color: #3a3028; }
+  .ch-card.st-running { border-color: #5a3520; background: rgba(80,30,10,0.3); }
+  .ch-card.st-ready   { border-color: #2a6a35; background: rgba(20,80,35,0.3); box-shadow: 0 0 22px rgba(50,200,80,0.25); animation: pulse-green 1.8s ease-in-out infinite; }
+
+  @keyframes pulse-green {
+    0%,100% { box-shadow: 0 0 22px rgba(50,200,80,0.25); }
+    50%      { box-shadow: 0 0 40px rgba(50,200,80,0.55); }
+  }
+
+  .ch-label { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; }
+  .ch-time {
+    font-family: 'Cinzel', serif; font-size: 20px; font-weight: 600;
+    letter-spacing: 2px; color: var(--text); margin: 6px 0;
+    transition: color 0.4s;
+  }
+  .ch-card.st-running .ch-time { color: #e08040; text-shadow: 0 0 12px rgba(220,120,40,0.4); }
+  .ch-card.st-ready   .ch-time { color: #60e080; text-shadow: 0 0 14px rgba(80,220,100,0.6); }
+
+  .ch-status { font-size: 12px; color: var(--text-dim); font-style: italic; margin-bottom: 8px; min-height: 16px; }
+  .ch-card.st-ready .ch-status { color: #60e080; font-style: normal; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px; }
+
+  .ch-btns { display: flex; gap: 5px; justify-content: center; margin-top: 6px; }
+  .ch-btn {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 2px; cursor: pointer; transition: all 0.2s;
+    border: 1px solid rgba(201,168,76,0.25); color: var(--gold-dark);
+    background: rgba(201,168,76,0.05);
+  }
+  .ch-btn:hover { color: var(--gold); border-color: var(--gold); background: rgba(201,168,76,0.14); }
+  .ch-btn.start:hover { color: #80ff80; border-color: #40a050; background: rgba(60,140,70,0.15); }
+  .ch-btn.reset:hover { color: #ff8080; border-color: #a04040; background: rgba(140,40,40,0.12); }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center; padding: 60px 20px;
+    font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 3px;
+    color: var(--text-dim); text-transform: uppercase;
+  }
+  .empty-state::before {
+    content: '⚔'; display: block; font-size: 30px; margin-bottom: 14px; opacity: 0.3;
+  }
+</style>
+</head>
+<body>
+<div class="bg-layer"></div>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <a class="nav-btn" href="/">⬅ Powrót</a>
+    <div class="page-title">Własne Timery</div>
+  </div>
+  <div class="vol-wrap">
+    <span style="font-size:13px">🔊</span>
+    <input type="range" id="volSlider" min="0" max="1" step="0.05">
+    <span>Głośność</span>
+  </div>
+</div>
+
+<!-- ADD PLACE PANEL -->
+<div class="add-panel">
+  <div class="add-panel-inner">
+    <div class="field">
+      <label>Nazwa miejsca</label>
+      <input type="text" id="inpName" placeholder="np. Loch Mantikory" maxlength="40">
+    </div>
+    <div class="field">
+      <label>Respawn (min)</label>
+      <input type="number" id="inpRespawn" placeholder="60" min="1" max="9999" value="">
+    </div>
+    <div class="field">
+      <label>Liczba kanałów</label>
+      <input type="number" id="inpChannels" placeholder="4" min="1" max="20" value="">
+    </div>
+    <button class="add-btn" id="addPlaceBtn" onclick="addPlace()">+ Dodaj miejsce</button>
+    <div class="place-count" id="placeCount">0 / 10</div>
+  </div>
+</div>
+
+<div class="main" id="main">
+  <div class="empty-state" id="emptyState">Brak miejsc — dodaj pierwsze powyżej</div>
+</div>
+
+<script>
+const socket = io();
+
+/* AUDIO */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let volume = parseFloat(localStorage.getItem('vol_custom')) || 0.25;
+const volSlider = document.getElementById('volSlider');
+volSlider.value = volume;
+volSlider.oninput = () => { volume = parseFloat(volSlider.value); localStorage.setItem('vol_custom', volume); };
+
+function beep(freq=880, dur=0.15) {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.frequency.value = freq; osc.start();
+  gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  osc.stop(audioCtx.currentTime + dur);
+}
+function tripleBeep() { beep(); setTimeout(()=>beep(),220); setTimeout(()=>beep(),440); }
+
+/* STATE */
+let places = [];          // [ {id, name, respawnSec, channels} ]
+let customTimers = {};    // { "placeId_ch1": startTimestamp }
+let tickIntervals = {};   // client-side tick intervals per channel key
+
+/* ADD PLACE */
+function addPlace() {
+  const name     = document.getElementById('inpName').value.trim();
+  const respawn  = parseInt(document.getElementById('inpRespawn').value);
+  const channels = parseInt(document.getElementById('inpChannels').value);
+  if (!name)               return flash('inpName',    'Podaj nazwę!');
+  if (!respawn || respawn < 1) return flash('inpRespawn', 'Podaj czas respawnu!');
+  if (!channels || channels < 1) return flash('inpChannels', 'Podaj liczbę kanałów!');
+  if (places.length >= 10) return;
+  socket.emit('addPlace', { name, respawnSec: respawn * 60, channels });
+  document.getElementById('inpName').value = '';
+  document.getElementById('inpRespawn').value = '';
+  document.getElementById('inpChannels').value = '';
+}
+
+function flash(id, msg) {
+  const el = document.getElementById(id);
+  el.style.borderColor = 'rgba(200,60,60,0.8)';
+  el.placeholder = msg;
+  setTimeout(() => { el.style.borderColor = ''; el.placeholder = ''; }, 1800);
+}
+
+/* REMOVE PLACE */
+function removePlace(placeId) {
+  if (!confirm('Usunąć to miejsce wraz ze wszystkimi timerami?')) return;
+  // stop client ticks
+  for (const key in tickIntervals) {
+    if (key.startsWith(placeId + '_')) { clearInterval(tickIntervals[key]); delete tickIntervals[key]; }
+  }
+  socket.emit('removePlace', placeId);
+}
+
+/* TOGGLE EDIT FORM */
+function toggleEdit(placeId) {
+  const form = document.getElementById('editform_' + placeId);
+  form.classList.toggle('open');
+}
+
+/* SAVE EDIT */
+function saveEdit(placeId) {
+  const name     = document.getElementById('ename_'     + placeId).value.trim();
+  const respawn  = parseInt(document.getElementById('erespawn_'  + placeId).value);
+  const channels = parseInt(document.getElementById('echannels_' + placeId).value);
+  if (!name || !respawn || !channels) return;
+  socket.emit('editPlace', { id: placeId, name, respawnSec: respawn * 60, channels });
+  document.getElementById('editform_' + placeId).classList.remove('open');
+}
+
+/* START CHANNEL */
+function startCh(placeId, ch) {
+  const key = placeId + '_ch' + ch;
+  socket.emit('startCustom', key);
+}
+
+/* RESET CHANNEL */
+function resetCh(placeId, ch) {
+  const key = placeId + '_ch' + ch;
+  if (tickIntervals[key]) { clearInterval(tickIntervals[key]); delete tickIntervals[key]; }
+  socket.emit('resetCustom', key);
+}
+
+/* FORMAT MM:SS or HH:MM:SS */
+function fmt(sec) {
+  sec = Math.max(0, Math.round(sec));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+
+/* TICK — updates display every second client-side */
+function startTick(key, place) {
+  if (tickIntervals[key]) { clearInterval(tickIntervals[key]); }
+  const cardEl = document.getElementById('chcard_' + key);
+  const timeEl = document.getElementById('chtime_' + key);
+  const statEl = document.getElementById('chstat_' + key);
+  if (!cardEl || !timeEl) return;
+
+  let beeped = false;
+
+  function tick() {
+    const startTs = customTimers[key];
+    if (!startTs) { clearInterval(tickIntervals[key]); delete tickIntervals[key]; return; }
+    const elapsed = (Date.now() - startTs) / 1000;
+    const remaining = place.respawnSec - elapsed;
+
+    if (remaining <= 0) {
+      // READY
+      cardEl.className = 'ch-card st-ready';
+      timeEl.innerText = '00:00';
+      if (statEl) statEl.innerText = 'GOTOWE';
+      if (!beeped) { tripleBeep(); beeped = true; }
+    } else {
+      cardEl.className = 'ch-card st-running';
+      timeEl.innerText = fmt(remaining);
+      if (statEl) {
+        const pct = Math.round((elapsed / place.respawnSec) * 100);
+        statEl.innerText = pct + '%';
+      }
+      beeped = false;
+    }
+  }
+  tick();
+  tickIntervals[key] = setInterval(tick, 500);
+}
+
+/* BUILD / REBUILD PLACE CARD */
+function buildPlaceCard(place) {
+  const existing = document.getElementById('place_' + place.id);
+  if (existing) existing.remove();
+
+  const card = document.createElement('div');
+  card.className = 'place-card';
+  card.id = 'place_' + place.id;
+
+  const respawnMin = (place.respawnSec / 60).toFixed(place.respawnSec % 60 === 0 ? 0 : 1);
+
+  card.innerHTML = `
+    <div class="place-header">
+      <div class="place-header-left">
+        <span class="place-name">${place.name}</span>
+        <span class="place-meta">Respawn: ${respawnMin} min &nbsp;•&nbsp; ${place.channels} kanałów</span>
+      </div>
+      <div class="place-actions">
+        <button class="icon-btn" onclick="toggleEdit('${place.id}')">✎ Edytuj</button>
+        <button class="icon-btn del" onclick="removePlace('${place.id}')">✕ Usuń</button>
+      </div>
+    </div>
+
+    <div class="edit-form" id="editform_${place.id}">
+      <div class="field" style="flex-direction:row;align-items:center;gap:6px">
+        <label style="white-space:nowrap;font-size:9px">Nazwa:</label>
+        <input type="text" id="ename_${place.id}" value="${place.name}" maxlength="40">
+      </div>
+      <div class="field" style="flex-direction:row;align-items:center;gap:6px">
+        <label style="white-space:nowrap;font-size:9px">Respawn (min):</label>
+        <input type="number" id="erespawn_${place.id}" value="${respawnMin}" min="1" max="9999">
+      </div>
+      <div class="field" style="flex-direction:row;align-items:center;gap:6px">
+        <label style="white-space:nowrap;font-size:9px">Kanały:</label>
+        <input type="number" id="echannels_${place.id}" value="${place.channels}" min="1" max="20">
+      </div>
+      <button class="icon-btn save" onclick="saveEdit('${place.id}')">✔ Zapisz</button>
+      <button class="icon-btn" onclick="toggleEdit('${place.id}')">Anuluj</button>
+    </div>
+
+    <div class="ch-grid" id="chgrid_${place.id}"></div>
+  `;
+
+  document.getElementById('main').appendChild(card);
+  buildChannels(place);
+}
+
+function buildChannels(place) {
+  const grid = document.getElementById('chgrid_' + place.id);
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  for (let ch = 1; ch <= place.channels; ch++) {
+    const key = place.id + '_ch' + ch;
+    const chDiv = document.createElement('div');
+    chDiv.className = 'ch-card st-idle';
+    chDiv.id = 'chcard_' + key;
+    chDiv.innerHTML = `
+      <div class="ch-label">Kanał ${ch}</div>
+      <div class="ch-time" id="chtime_${key}">--:--</div>
+      <div class="ch-status" id="chstat_${key}">bezczynny</div>
+      <div class="ch-btns">
+        <button class="ch-btn start" onclick="startCh('${place.id}',${ch})">Start</button>
+        <button class="ch-btn reset" onclick="resetCh('${place.id}',${ch})">Reset</button>
+      </div>
+    `;
+    grid.appendChild(chDiv);
+
+    // If this channel already has a running timer, start ticking
+    if (customTimers[key]) startTick(key, place);
+  }
+}
+
+/* UPDATE DISPLAYS when server sends new timer state */
+function refreshTimers() {
+  for (const place of places) {
+    for (let ch = 1; ch <= place.channels; ch++) {
+      const key = place.id + '_ch' + ch;
+      const cardEl = document.getElementById('chcard_' + key);
+      const timeEl = document.getElementById('chtime_' + key);
+      const statEl = document.getElementById('chstat_' + key);
+      if (!cardEl) continue;
+
+      if (customTimers[key]) {
+        startTick(key, place);
+      } else {
+        // idle
+        if (tickIntervals[key]) { clearInterval(tickIntervals[key]); delete tickIntervals[key]; }
+        cardEl.className = 'ch-card st-idle';
+        if (timeEl) timeEl.innerText = '--:--';
+        if (statEl) statEl.innerText = 'bezczynny';
+      }
+    }
+  }
+}
+
+/* SOCKET EVENTS */
+socket.on('placesUpdate', data => {
+  places = data;
+  const main = document.getElementById('main');
+
+  // Remove cards for deleted places
+  main.querySelectorAll('.place-card').forEach(el => {
+    const id = el.id.replace('place_', '');
+    if (!places.find(p => p.id === id)) el.remove();
+  });
+
+  // Add or rebuild cards
+  places.forEach(place => buildPlaceCard(place));
+
+  // Empty state
+  document.getElementById('emptyState').style.display = places.length ? 'none' : 'block';
+
+  // Update counter
+  document.getElementById('placeCount').innerText = places.length + ' / 10';
+  document.getElementById('addPlaceBtn').disabled = places.length >= 10;
+
+  refreshTimers();
+});
+
+socket.on('customTimersUpdate', data => {
+  customTimers = data;
+  refreshTimers();
+});
+</script>
+</body>
+</html>
