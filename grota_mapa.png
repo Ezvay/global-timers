@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Postacie</title>
+<script src="/socket.io/socket.io.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #f0d080;
+    --gold-dark: #7a5f1e;
+    --bg: #090806;
+    --surface: #110e09;
+    --border: #3a2e1a;
+    --text: #d4c4a0;
+    --text-dim: #7a6a50;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Crimson Text', serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .bg-layer {
+    position: fixed; inset: 0; z-index: 0;
+    background: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(80,20,20,0.12) 0%, transparent 55%), #090806;
+  }
+  /* TOP NAV */
+  .topnav {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1200px; margin: 0 auto; padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(to bottom, rgba(17,14,9,0.96), rgba(9,8,6,0.8));
+  }
+  .nav-left { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .nav-btn {
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px;
+    color: var(--gold-dark); background: rgba(201,168,76,0.06);
+    border: 1px solid rgba(201,168,76,0.25); border-radius: 2px;
+    padding: 7px 14px; cursor: pointer; text-decoration: none; display: inline-block;
+    transition: all 0.2s; text-transform: uppercase;
+  }
+  .nav-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.12); }
+  /* STATUS BAR */
+  .statusbar {
+    position: relative; z-index: 1;
+    max-width: 1200px; margin: 0 auto;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    padding: 10px 20px;
+    background: rgba(17,14,9,0.5);
+    border-bottom: 1px solid rgba(58,46,26,0.5);
+    font-size: 14px;
+  }
+  .status-item { display: flex; align-items: center; gap: 8px; }
+  .status-label { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+  .status-value { font-family: 'Cinzel', serif; font-size: 14px; color: var(--gold); letter-spacing: 1px; }
+  .divider-v { width: 1px; height: 20px; background: var(--border); }
+  /* RESET CONTROLS */
+  .reset-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .num-input {
+    width: 48px; text-align: center;
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(201,168,76,0.25);
+    color: var(--gold); font-family: 'Cinzel', serif; font-size: 13px;
+    padding: 4px 6px; border-radius: 2px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .num-input:focus { border-color: rgba(201,168,76,0.6); }
+  .action-btn {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--gold-dark); background: rgba(201,168,76,0.06);
+    border: 1px solid rgba(201,168,76,0.25); border-radius: 2px;
+    padding: 6px 12px; cursor: pointer; transition: all 0.2s;
+  }
+  .action-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.14); }
+  .action-btn.danger { color: #cc5555; border-color: rgba(180,60,60,0.3); background: rgba(140,40,40,0.06); }
+  .action-btn.danger:hover { color: #ff8080; border-color: rgba(200,60,60,0.7); background: rgba(140,40,40,0.18); }
+  /* MAIN */
+  .main {
+    position: relative; z-index: 1;
+    max-width: 1200px; margin: 20px auto; padding: 0 20px 40px;
+  }
+  .page-title {
+    font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 5px;
+    color: var(--text-dim); text-transform: uppercase; text-align: center;
+    margin-bottom: 20px;
+  }
+  .ornament-line {
+    display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 24px;
+  }
+  .ornament-line::before, .ornament-line::after {
+    content: ''; flex: 1; height: 1px; max-width: 150px;
+    background: linear-gradient(to right, transparent, var(--gold-dark), transparent);
+  }
+  .ornament-diamond { width: 6px; height: 6px; background: var(--gold); transform: rotate(45deg); opacity: 0.6; }
+  /* GRID */
+  .char-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+  }
+  /* CHARACTER CARD */
+  .char-card {
+    background: linear-gradient(160deg, #1c1510, #0e0b07);
+    border: 1px solid var(--border); border-radius: 3px; overflow: hidden;
+    position: relative; transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .char-card:hover { border-color: rgba(201,168,76,0.35); box-shadow: 0 4px 30px rgba(0,0,0,0.5); }
+  .char-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(to right, transparent, rgba(201,168,76,0.3), transparent);
+  }
+  .char-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.35);
+    border-bottom: 1px solid var(--border);
+  }
+  .char-icon { width: 32px; height: 32px; object-fit: contain; filter: saturate(0.8); }
+  .char-name {
+    font-family: 'Cinzel', serif; font-size: 13px; font-weight: 600;
+    color: var(--gold-light); letter-spacing: 1px;
+  }
+  .char-body { padding: 10px 12px 12px; }
+  /* TASKS */
+  .task-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 8px; margin-bottom: 4px; border-radius: 2px;
+    background: rgba(0,0,0,0.3); border: 1px solid rgba(58,46,26,0.5);
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .task-row.done {
+    background: rgba(42,160,70,0.08);
+    border-color: rgba(42,160,70,0.3);
+  }
+  .task-left { display: flex; align-items: center; gap: 8px; }
+  .task-icon { width: 18px; height: 18px; object-fit: contain; opacity: 0.85; }
+  .task-name { font-size: 14px; color: var(--text); }
+  .task-row.done .task-name { color: #70d080; }
+  .task-right { display: flex; align-items: center; gap: 6px; }
+  /* CHECKBOX */
+  .task-cb { appearance: none; width: 16px; height: 16px; border: 1px solid rgba(201,168,76,0.35); background: rgba(0,0,0,0.4); border-radius: 2px; cursor: pointer; position: relative; transition: all 0.2s; flex-shrink: 0; }
+  .task-cb:checked { background: rgba(42,160,70,0.3); border-color: rgba(60,200,80,0.7); }
+  .task-cb:checked::after { content: '✓'; position: absolute; top: -1px; left: 2px; font-size: 12px; color: #80ff90; }
+  /* REMOVE BTN */
+  .remove-btn {
+    font-size: 10px; color: rgba(180,60,60,0.6); background: none;
+    border: none; cursor: pointer; padding: 2px 4px; transition: color 0.2s; line-height: 1;
+  }
+  .remove-btn:hover { color: #ff6060; }
+  /* MEDAL ROW */
+  .medal-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 8px; margin-bottom: 4px; border-radius: 2px;
+    background: rgba(201,168,76,0.05); border: 1px solid rgba(201,168,76,0.2);
+  }
+  .medal-left { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--gold-dark); }
+  .medal-timer { font-family: 'Cinzel', serif; font-size: 12px; color: var(--text-dim); margin-top: 2px; letter-spacing: 1px; }
+  .medal-done { color: #60e080; }
+  .give-btn {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--gold-dark); background: rgba(201,168,76,0.08);
+    border: 1px solid rgba(201,168,76,0.3); border-radius: 2px;
+    padding: 4px 10px; cursor: pointer; transition: all 0.2s;
+  }
+  .give-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.18); }
+  /* ADD TASK */
+  .add-task-panel {
+    display: flex; align-items: center; gap: 6px; margin-top: 8px;
+    padding: 6px 8px; border-radius: 2px;
+    background: rgba(0,0,0,0.2); border: 1px dashed rgba(201,168,76,0.15);
+  }
+  .task-select {
+    flex: 1; background: rgba(0,0,0,0.5); border: 1px solid rgba(201,168,76,0.2);
+    color: var(--text-dim); font-family: 'Crimson Text', serif; font-size: 13px;
+    padding: 4px 6px; border-radius: 2px; outline: none;
+  }
+  .add-btn {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--gold-dark); background: rgba(201,168,76,0.08);
+    border: 1px solid rgba(201,168,76,0.3); border-radius: 2px;
+    padding: 5px 10px; cursor: pointer; transition: all 0.2s;
+  }
+  .add-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.18); }
+
+  /* KAMIEŃ DUCHOWY */
+  .stone-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 8px; margin-bottom: 4px; border-radius: 2px;
+    background: rgba(60,20,80,0.25); border: 1px solid rgba(140,80,200,0.3);
+    transition: background 0.2s;
+  }
+  .stone-left { display: flex; align-items: center; gap: 8px; }
+  .stone-icon { width: 20px; height: 20px; font-size: 18px; line-height: 1; }
+  .stone-name { font-size: 14px; color: #c0a0e0; }
+  .stone-timer { font-family: 'Cinzel', serif; font-size: 12px; color: var(--text-dim); margin-top: 2px; letter-spacing: 1px; }
+  .stone-timer.done { color: #a060e0; font-weight: 600; }
+  .stone-btn {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    color: #9060c0; background: rgba(120,60,180,0.1);
+    border: 1px solid rgba(140,80,200,0.35); border-radius: 2px;
+    padding: 4px 10px; cursor: pointer; transition: all 0.2s;
+  }
+  .stone-btn:hover { color: #c080ff; border-color: rgba(180,100,255,0.7); background: rgba(120,60,180,0.22); }
+
+  /* MODAL KAMIENIA */
+  .stone-modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  }
+  .stone-modal-overlay.hidden { display: none; }
+  .stone-modal-box {
+    background: linear-gradient(160deg,#1a1020,#0d0810);
+    border: 1px solid rgba(140,80,200,0.5); border-radius: 4px;
+    padding: 30px 36px; width: 320px; text-align: center;
+    box-shadow: 0 0 60px rgba(0,0,0,0.9), 0 0 30px rgba(120,60,180,0.15);
+    position: relative;
+  }
+  .stone-modal-box::before, .stone-modal-box::after {
+    content:''; position:absolute; width:14px; height:14px;
+    border-color: rgba(140,80,200,0.5); border-style:solid;
+  }
+  .stone-modal-box::before { top:7px; left:7px; border-width:1px 0 0 1px; }
+  .stone-modal-box::after  { bottom:7px; right:7px; border-width:0 1px 1px 0; }
+  .stone-modal-title { font-family:'Cinzel',serif; font-size:13px; letter-spacing:3px; color:#c080ff; text-transform:uppercase; margin-bottom:6px; }
+  .stone-modal-char  { font-size:14px; color:var(--text-dim); font-style:italic; margin-bottom:20px; }
+  .stone-modal-label { font-family:'Cinzel',serif; font-size:9px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; margin-bottom:8px; }
+  .stone-modal-input {
+    width:100%; background:rgba(0,0,0,0.6);
+    border:1px solid rgba(140,80,200,0.3); border-radius:2px;
+    color:#c0a0e0; font-family:'Cinzel',serif; font-size:18px;
+    letter-spacing:2px; text-align:center;
+    padding:10px 14px; outline:none; margin-bottom:16px;
+    transition:border-color 0.2s;
+  }
+  .stone-modal-input:focus { border-color:rgba(180,100,255,0.7); }
+  .stone-modal-hint { font-size:12px; color:var(--text-dim); font-style:italic; margin-bottom:18px; }
+  .stone-modal-confirm {
+    width:100%; font-family:'Cinzel',serif; font-size:11px; letter-spacing:3px; text-transform:uppercase;
+    padding:11px; background:rgba(120,60,180,0.15); border:1px solid rgba(140,80,200,0.5);
+    border-radius:2px; color:#c080ff; cursor:pointer; transition:all 0.25s; margin-bottom:8px;
+  }
+  .stone-modal-confirm:hover { background:rgba(120,60,180,0.3); border-color:rgba(180,100,255,0.8); box-shadow:0 0 16px rgba(120,60,180,0.3); }
+  .stone-modal-cancel {
+    width:100%; font-family:'Cinzel',serif; font-size:9px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--text-dim); background:none; border:1px solid rgba(255,255,255,0.08);
+    border-radius:2px; padding:7px; cursor:pointer; transition:all 0.2s;
+  }
+  .stone-modal-cancel:hover { color:var(--text); border-color:rgba(255,255,255,0.2); }
+
+  /* MODAL HASŁA */
+  .auth-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(5,4,3,0.92);
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(6px);
+    transition: opacity 0.4s;
+  }
+  .auth-overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .auth-box {
+    position: relative;
+    background: linear-gradient(160deg, #1e1810, #100d08);
+    border: 1px solid var(--gold-dark);
+    border-radius: 4px;
+    padding: 40px 44px;
+    width: 360px;
+    text-align: center;
+    box-shadow: 0 0 80px rgba(0,0,0,0.9), 0 0 40px rgba(201,168,76,0.08);
+  }
+  .auth-box::before, .auth-box::after {
+    content: ''; position: absolute; width: 18px; height: 18px;
+    border-color: rgba(201,168,76,0.5); border-style: solid;
+  }
+  .auth-box::before { top: 8px; left: 8px; border-width: 1px 0 0 1px; }
+  .auth-box::after  { bottom: 8px; right: 8px; border-width: 0 1px 1px 0; }
+
+  .auth-ornament {
+    display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 20px;
+  }
+  .auth-ornament::before, .auth-ornament::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(to right, transparent, var(--gold-dark));
+  }
+  .auth-ornament::after { background: linear-gradient(to left, transparent, var(--gold-dark)); }
+  .auth-diamond { width: 7px; height: 7px; background: var(--gold); transform: rotate(45deg); box-shadow: 0 0 8px rgba(201,168,76,0.6); }
+
+  .auth-title {
+    font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 4px;
+    color: var(--gold-light); text-transform: uppercase; margin-bottom: 6px;
+  }
+  .auth-sub {
+    font-size: 14px; color: var(--text-dim); font-style: italic; margin-bottom: 28px;
+  }
+
+  .auth-input-wrap { position: relative; margin-bottom: 10px; }
+  .auth-input {
+    width: 100%; background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(201,168,76,0.25); border-radius: 2px;
+    color: var(--text); font-family: 'Cinzel', serif; font-size: 16px;
+    letter-spacing: 4px; text-align: center;
+    padding: 12px 16px; outline: none;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+  .auth-input:focus { border-color: rgba(201,168,76,0.6); box-shadow: 0 0 16px rgba(201,168,76,0.1); }
+  .auth-input.error { border-color: rgba(200,50,50,0.8); box-shadow: 0 0 16px rgba(200,50,50,0.15); animation: shake 0.35s ease; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%     { transform: translateX(-8px); }
+    60%     { transform: translateX(8px); }
+  }
+  .auth-error { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; color: #cc4444; height: 16px; margin-bottom: 16px; transition: opacity 0.2s; }
+
+  .auth-btn {
+    width: 100%; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 4px;
+    text-transform: uppercase; padding: 12px;
+    background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.4);
+    border-radius: 2px; color: var(--gold); cursor: pointer;
+    transition: all 0.25s;
+  }
+  .auth-btn:hover { background: rgba(201,168,76,0.2); border-color: var(--gold); box-shadow: 0 0 20px rgba(201,168,76,0.15); }
+  .auth-btn:active { transform: scale(0.98); }
+
+  /* ukryj zawartość dopóki niezalogowany */
+  .page-content { transition: opacity 0.4s; }
+  .page-content.locked { opacity: 0; pointer-events: none; user-select: none; }
+</style>
+</head>
+<body>
+<div class="bg-layer"></div>
+
+<!-- MODAL HASŁA -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-ornament"><div class="auth-diamond"></div></div>
+    <div class="auth-title">Strefa Chroniona</div>
+    <div class="auth-sub">Wpisz hasło aby wejść</div>
+    <div class="auth-input-wrap">
+      <input class="auth-input" id="authInput" type="password" placeholder="••••••••" autocomplete="off">
+    </div>
+    <div class="auth-error" id="authError"></div>
+    <button class="auth-btn" onclick="submitPassword()">Wejdź</button>
+  </div>
+</div>
+
+<!-- MODAL KAMIEŃ DUCHOWY -->
+<div class="stone-modal-overlay hidden" id="stoneModal">
+  <div class="stone-modal-box">
+    <div class="stone-modal-title"><img src="/kamien_duchowy.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:8px;">Kamień Duchowy</div>
+    <div class="stone-modal-char" id="stoneModalChar"></div>
+    <div class="stone-modal-label">Za ile godzin można oddać następny?</div>
+    <input class="stone-modal-input" id="stoneModalInput" type="number" min="1" max="72" placeholder="np. 24">
+    <div class="stone-modal-hint">Wpisz liczbę godzin</div>
+    <button class="stone-modal-confirm" onclick="confirmStone()">Ustaw timer</button>
+    <button class="stone-modal-cancel" onclick="closeStoneModal()">Anuluj</button>
+  </div>
+</div>
+
+<div class="page-content locked" id="pageContent">
+
+<div class="topnav">
+  <div class="nav-left">
+    <a class="nav-btn" href="/">⬅ Powrót</a>
+    <a class="nav-btn" href="/giants.html">Kraina Gigantów</a>
+    <a class="nav-btn" href="/monkeys.html">Loch Małp</a>
+  </div>
+</div>
+
+<div class="statusbar">
+  <div class="status-item">
+    <span class="status-label">Czas PL</span>
+    <span class="status-value" id="clock">--:--:--</span>
+  </div>
+  <div class="divider-v"></div>
+  <div class="status-item">
+    <span class="status-label">Reset</span>
+    <span class="status-value" id="resetDisplay">--:--</span>
+  </div>
+  <div class="divider-v"></div>
+  <div class="reset-controls">
+    <span class="status-label">Ustaw reset</span>
+    <input class="num-input" id="resetHour" type="number" min="0" max="23" value="23">
+    <span style="color:var(--gold-dark);font-family:'Cinzel',serif">:</span>
+    <input class="num-input" id="resetMinute" type="number" min="0" max="59" value="59">
+    <button class="action-btn" onclick="setReset()">Ustaw</button>
+    <button class="action-btn danger" onclick="manualReset()">⟳ Manual Reset</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="ornament-line"><div class="ornament-diamond"></div></div>
+  <div class="page-title">Postacie Gildii</div>
+  <div class="char-grid" id="characters"></div>
+</div>
+
+</div> <!-- /page-content -->
+
+<script>
+const socket = io();
+
+/* === AUTORYZACJA === */
+const authOverlay = document.getElementById('authOverlay');
+const pageContent = document.getElementById('pageContent');
+const authInput   = document.getElementById('authInput');
+const authError   = document.getElementById('authError');
+
+// Sprawdź czy hasło zapisane w sessionStorage
+if (sessionStorage.getItem('auth') === '1') {
+  unlock();
+}
+
+authInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitPassword(); });
+// Fokus na input po załadowaniu
+setTimeout(() => authInput.focus(), 100);
+
+function submitPassword() {
+  const pass = authInput.value;
+  socket.emit('checkPassword', pass, ok => {
+    if (ok) {
+      sessionStorage.setItem('auth', '1');
+      unlock();
+    } else {
+      authInput.classList.add('error');
+      authError.innerText = 'Nieprawidłowe hasło';
+      setTimeout(() => { authInput.classList.remove('error'); authError.innerText = ''; }, 1500);
+      authInput.value = '';
+      authInput.focus();
+    }
+  });
+}
+
+function unlock() {
+  authOverlay.classList.add('hidden');
+  pageContent.classList.remove('locked');
+  // po animacji całkiem ukryj overlay
+  setTimeout(() => { authOverlay.style.display = 'none'; }, 400);
+}
+
+const chars = {
+  Medal:             '/icons/warrior.png',
+  Bieluszek:         '/icons/ninja.png',
+  Pojara:            '/icons/shaman.png',
+  Suczka:            '/icons/shaman.png',
+  Czantorianka:      '/icons/shaman.png',
+  EwaZajączkowska:   '/icons/warriorw.png',
+  Yodasz:            '/icons/sura.png'
+};
+const icons = {
+  KU:    '/icons/skillbook.png',
+  Poly:  '/icons/polymorph.png',
+  Bio:   '/icons/orctooth.png',
+  Medal: '/icons/horsemedal.png',
+  Dow:   '/icons/skillbook.png'
+};
+function getIcon(task) {
+  if (task.startsWith('KU')) return icons.KU;
+  if (task === 'Polymorph')  return icons.Poly;
+  if (task === 'Biolog')     return icons.Bio;
+  if (task === 'Medal')      return icons.Medal;
+  if (task === 'Dowodzenie') return icons.Dow;
+  return icons.KU;
+}
+
+const container  = document.getElementById('characters');
+const checkboxes = {};
+const medalTimers   = {};
+const medalIntervals = {};
+const hasMedal = ['Medal','Bieluszek','Pojara','Czantorianka','Yodasz'];
+const stoneTimers   = {};
+const stoneIntervals = {};
+let stonePendingChar = null;
+
+/* SPIRIT STONE MODAL */
+function openStoneModal(char) {
+  stonePendingChar = char;
+  document.getElementById('stoneModalChar').innerText = char;
+  document.getElementById('stoneModalInput').value = '';
+  document.getElementById('stoneModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('stoneModalInput').focus(), 50);
+}
+function closeStoneModal() {
+  document.getElementById('stoneModal').classList.add('hidden');
+  stonePendingChar = null;
+}
+function confirmStone() {
+  const hours = parseFloat(document.getElementById('stoneModalInput').value);
+  if (!hours || hours <= 0) return;
+  socket.emit('spiritStone', { char: stonePendingChar, hours });
+  closeStoneModal();
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeStoneModal();
+  if (e.key === 'Enter' && stonePendingChar) confirmStone();
+});
+
+/* SPIRIT STONE COUNTDOWN */
+function startStoneTimer(char, el, end) {
+  if (stoneIntervals[char]) clearInterval(stoneIntervals[char]);
+  function tick() {
+    const diff = end - Date.now();
+    if (diff <= 0) {
+      el.innerText = 'GOTOWE'; el.className = 'stone-timer done';
+      clearInterval(stoneIntervals[char]); return;
+    }
+    const h = Math.floor(diff/3600000);
+    const m = Math.floor((diff%3600000)/60000);
+    const s = Math.floor((diff%60000)/1000);
+    el.innerText = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    el.className = 'stone-timer';
+  }
+  tick();
+  stoneIntervals[char] = setInterval(tick, 1000);
+}
+
+/* CLOCK */
+function updateClock() {
+  const pl = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Warsaw' }));
+  document.getElementById('clock').innerText =
+    String(pl.getHours()).padStart(2,'0')+':'+
+    String(pl.getMinutes()).padStart(2,'0')+':'+
+    String(pl.getSeconds()).padStart(2,'0');
+}
+setInterval(updateClock, 1000); updateClock();
+
+/* MEDAL COUNTDOWN */
+function startMedalTimer(char, el, end) {
+  if (medalIntervals[char]) clearInterval(medalIntervals[char]);
+  function tick() {
+    const diff = end - Date.now();
+    if (diff <= 0) {
+      el.innerText = 'GOTOWE'; el.className = 'medal-timer medal-done';
+      clearInterval(medalIntervals[char]); return;
+    }
+    const h = Math.floor(diff/3600000);
+    const m = Math.floor((diff%3600000)/60000);
+    const s = Math.floor((diff%60000)/1000);
+    el.innerText = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    el.className = 'medal-timer';
+  }
+  tick();
+  medalIntervals[char] = setInterval(tick, 1000);
+}
+
+/* CREATE TASK ROW — shared by both init and dynamic add */
+function createTaskRow(char, name) {
+  const row = document.createElement('div');
+  row.className = 'task-row';
+  row.id = 'task_' + char + '_' + name;
+
+  const left = document.createElement('div');
+  left.className = 'task-left';
+  left.innerHTML = `<img class="task-icon" src="${getIcon(name)}"><span class="task-name">${name}</span>`;
+
+  const cb = document.createElement('input');
+  cb.type = 'checkbox'; cb.className = 'task-cb';
+  cb.onchange = () => {
+    row.classList.toggle('done', cb.checked);
+    socket.emit('toggleTask', { char, task: name, value: cb.checked });
+  };
+  checkboxes[char + '_' + name] = cb;
+
+  const rmBtn = document.createElement('button');
+  rmBtn.className = 'remove-btn'; rmBtn.innerText = '✕';
+  rmBtn.onclick = () => {
+    delete checkboxes[char + '_' + name];
+    row.remove();
+    socket.emit('removeTask', { char, task: name });
+  };
+
+  const right = document.createElement('div');
+  right.className = 'task-right';
+  right.append(cb, rmBtn);
+  row.append(left, right);
+  return row;
+}
+
+/* MEDAL ROW */
+function addMedalRow(bodyEl, char) {
+  const row = document.createElement('div');
+  row.className = 'medal-row';
+  row.innerHTML = `
+    <div class="medal-left">
+      <img class="task-icon" src="${icons.Medal}">
+      <div>
+        <div>Medal konny</div>
+        <div class="medal-timer" id="mt_${char}">—</div>
+      </div>
+    </div>
+    <button class="give-btn" onclick="giveMedal('${char}')">Oddaj</button>
+  `;
+  bodyEl.appendChild(row);
+  medalTimers[char] = row.querySelector('#mt_' + char) || row.querySelector('.medal-timer');
+}
+
+/* SPIRIT STONE ROW */
+function addStoneRow(bodyEl, char) {
+  const row = document.createElement('div');
+  row.className = 'stone-row';
+  row.innerHTML = `
+    <div class="stone-left">
+      <img class="task-icon" src="/kamien_duchowy.png" style="width:22px;height:22px;object-fit:contain;">
+      <div>
+        <div class="stone-name">Kamień Duchowy</div>
+        <div class="stone-timer" id="st_stone_${char}">—</div>
+      </div>
+    </div>
+    <button class="stone-btn" onclick="openStoneModal('${char}')">Ustaw</button>
+  `;
+  bodyEl.appendChild(row);
+  stoneTimers[char] = row.querySelector('#st_stone_' + char);
+}
+
+/* ADD TASK PANEL */
+function addTaskPanel(bodyEl, char) {
+  const panel = document.createElement('div');
+  panel.className = 'add-task-panel';
+  panel.id = 'addpanel_' + char;
+  panel.innerHTML = `
+    <select class="task-select" id="tsel_${char}">
+      <option value="KU1">KU1</option>
+      <option value="KU2">KU2</option>
+      <option value="KU3">KU3</option>
+      <option value="KU4">KU4</option>
+      <option value="KU5">KU5</option>
+      <option value="Polymorph">Polymorph</option>
+      <option value="Biolog">Biolog</option>
+      <option value="Dowodzenie">Dowodzenie</option>
+      <option value="Medal">Medal</option>
+    </select>
+    <button class="add-btn" onclick="addTask('${char}')">+ Dodaj</button>
+  `;
+  bodyEl.appendChild(panel);
+}
+
+/* USER CLICKS ADD */
+function addTask(char) {
+  const sel = document.getElementById('tsel_' + char);
+  const task = sel.value;
+  if (document.getElementById('task_' + char + '_' + task)) return; // already exists
+  const panel = document.getElementById('addpanel_' + char);
+  panel.parentElement.insertBefore(createTaskRow(char, task), panel);
+  socket.emit('addTask', { char, task });
+}
+
+/* BUILD CHARACTER CARDS (shells only — tasks filled by tasksUpdate) */
+for (const char in chars) {
+  const card = document.createElement('div');
+  card.className = 'char-card'; card.dataset.char = char;
+
+  const header = document.createElement('div');
+  header.className = 'char-header';
+  header.innerHTML = `<img class="char-icon" src="${chars[char]}"><span class="char-name">${char}</span>`;
+
+  const body = document.createElement('div');
+  body.className = 'char-body'; body.id = 'body_' + char;
+
+  if (hasMedal.includes(char)) addMedalRow(body, char);
+  addStoneRow(body, char);
+  addTaskPanel(body, char);
+
+  card.append(header, body);
+  container.appendChild(card);
+}
+
+function giveMedal(char) { socket.emit('horseMedal', char); }
+function setReset() {
+  socket.emit('setResetTime', {
+    hour:   parseInt(document.getElementById('resetHour').value),
+    minute: parseInt(document.getElementById('resetMinute').value)
+  });
+}
+function manualReset() { socket.emit('manualReset'); }
+
+/* TASKS FROM SERVER — renders task list from data.json on connect and after any change */
+socket.on('tasksUpdate', data => {
+  for (const char in data) {
+    const body  = document.getElementById('body_' + char);
+    const panel = document.getElementById('addpanel_' + char);
+    if (!body || !panel) continue;
+
+    // Remove task rows that are no longer on the server
+    body.querySelectorAll('.task-row').forEach(row => {
+      const taskName = row.id.replace('task_' + char + '_', '');
+      if (!data[char].includes(taskName)) {
+        delete checkboxes[char + '_' + taskName];
+        row.remove();
+      }
+    });
+
+    // Add task rows that are on server but not yet in DOM
+    data[char].forEach(task => {
+      if (!document.getElementById('task_' + char + '_' + task)) {
+        body.insertBefore(createTaskRow(char, task), panel);
+      }
+    });
+  }
+});
+
+/* CHECKBOXES + MEDAL TIMER STATE FROM SERVER */
+socket.on('charactersUpdate', data => {
+  for (const char in data) {
+    const tasks = data[char];
+    for (const task in tasks) {
+      if (task === 'horseTimer' || task === 'spiritStoneTimer') continue;
+      const cb = checkboxes[char + '_' + task];
+      if (cb) {
+        cb.checked = !!tasks[task];
+        const row = document.getElementById('task_' + char + '_' + task);
+        if (row) row.classList.toggle('done', !!tasks[task]);
+      }
+    }
+    if (tasks.horseTimer && medalTimers[char]) {
+      startMedalTimer(char, medalTimers[char], tasks.horseTimer);
+    }
+    if (tasks.spiritStoneTimer && stoneTimers[char]) {
+      startStoneTimer(char, stoneTimers[char], tasks.spiritStoneTimer);
+    }
+  }
+});
+
+socket.on('resetTime', data => {
+  document.getElementById('resetDisplay').innerText =
+    String(data.hour).padStart(2,'0') + ':' + String(data.minute).padStart(2,'0');
+  document.getElementById('resetHour').value   = data.hour;
+  document.getElementById('resetMinute').value = data.minute;
+});
+</script>
+</body>
+</html>
