@@ -252,6 +252,7 @@ function getIcon(task) {
 const container = document.getElementById('characters');
 const checkboxes = {};
 const medalTimers = {};
+const medalIntervals = {};
 
 /* CLOCK */
 function updateClock() {
@@ -265,17 +266,19 @@ function updateClock() {
 setInterval(updateClock, 1000); updateClock();
 
 /* MEDAL TIMER */
-function startMedalTimer(el, end) {
+function startMedalTimer(char, el, end) {
+  if (medalIntervals[char]) { clearInterval(medalIntervals[char]); }
   function update() {
     const diff = end - Date.now();
-    if (diff <= 0) { el.innerText = 'GOTOWE'; el.className = 'medal-timer medal-done'; return; }
+    if (diff <= 0) { el.innerText = "GOTOWE"; el.className = "medal-timer medal-done"; clearInterval(medalIntervals[char]); return; }
     const h = Math.floor(diff/3600000);
     const m = Math.floor((diff%3600000)/60000);
     const s = Math.floor((diff%60000)/1000);
-    el.innerText = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
-    el.className = 'medal-timer';
+    el.innerText = String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+    el.className = "medal-timer";
   }
-  update(); setInterval(update, 1000);
+  update();
+  medalIntervals[char] = setInterval(update, 1000);
 }
 
 /* CREATE TASK */
@@ -442,7 +445,7 @@ socket.on('charactersUpdate', data => {
       }
     }
     if (tasks.horseTimer && medalTimers[char]) {
-      startMedalTimer(medalTimers[char], tasks.horseTimer);
+      startMedalTimer(char, medalTimers[char], tasks.horseTimer);
     }
   }
 });
