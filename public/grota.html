@@ -58,7 +58,7 @@
     box-shadow:0 0 40px rgba(0,0,0,0.8);
     max-width:100%;
   }
-  .map-container img{display:block;width:min(1080px,100vw - 290px);height:auto;user-select:none;pointer-events:none;image-rendering:pixelated;image-rendering:-moz-crisp-edges;image-rendering:crisp-edges;}
+  .map-container img{display:block;height:auto;user-select:none;pointer-events:none;}
   .map-hint{
     position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
     font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;text-transform:uppercase;
@@ -290,6 +290,11 @@
       <button class="mode-btn"              id="btnGeneral" onclick="setMode('general')">🔵 Generał</button>
     </div>
     <div class="vol-wrap">
+      <span style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;">Mapa</span>
+      <input type="range" id="mapSize" min="30" max="100" step="1" style="width:80px;">
+      <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);min-width:28px;text-align:right;" id="mapSizeVal">100%</span>
+    </div>
+    <div class="vol-wrap">
       <span style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;">Pingi</span>
       <input type="range" id="pingSize" min="6" max="40" step="1" style="width:80px;">
       <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);min-width:24px;text-align:right;" id="pingSizeVal">14</span>
@@ -351,6 +356,28 @@ pingSizeSlider.oninput = () => {
   localStorage.setItem('pingSize', pingSize);
   applyPingSize();
 };
+
+/* MAP SIZE */
+let mapSizePct = parseInt(localStorage.getItem('mapSize')) || 100;
+const mapSizeSlider = document.getElementById('mapSize');
+const mapSizeVal    = document.getElementById('mapSizeVal');
+mapSizeSlider.value = mapSizePct;
+mapSizeVal.innerText = mapSizePct + '%';
+applyMapSize();
+
+mapSizeSlider.oninput = () => {
+  mapSizePct = parseInt(mapSizeSlider.value);
+  mapSizeVal.innerText = mapSizePct + '%';
+  localStorage.setItem('mapSize', mapSizePct);
+  applyMapSize();
+};
+
+function applyMapSize() {
+  const w = Math.round(1080 * mapSizePct / 100);
+  mapImg.style.width = w + 'px';
+  // Przelicz canvas heatmapy
+  if (heatOn) syncCanvas();
+}
 
 function applyPingSize() {
   const sz = pingSize + 'px';
