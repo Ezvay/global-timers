@@ -152,6 +152,10 @@
     display: flex; align-items: center; justify-content: space-between;
     padding: 6px 8px; margin-bottom: 4px; border-radius: 2px;
     background: rgba(201,168,76,0.05); border: 1px solid rgba(201,168,76,0.2);
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .medal-row.done-today {
+    background: rgba(42,160,70,0.1); border-color: rgba(60,200,80,0.4);
   }
   .medal-left { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--gold-dark); }
   .medal-timer { font-family: 'Cinzel', serif; font-size: 12px; color: var(--text-dim); margin-top: 2px; letter-spacing: 1px; }
@@ -181,6 +185,38 @@
     padding: 5px 10px; cursor: pointer; transition: all 0.2s;
   }
   .add-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.18); }
+
+  /* DODAJ/USUŃ POSTAĆ */
+  .char-mgmt-bar {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    max-width: 1200px; margin: 0 auto 16px; padding: 0 20px;
+  }
+  .char-mgmt-input {
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(201,168,76,0.25);
+    color: var(--text); font-family: 'Crimson Text', serif; font-size: 15px;
+    padding: 6px 10px; border-radius: 2px; outline: none; width: 180px;
+    transition: border-color 0.2s;
+  }
+  .char-mgmt-input:focus { border-color: rgba(201,168,76,0.55); }
+  .char-mgmt-btn {
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--gold-dark); background: rgba(201,168,76,0.07);
+    border: 1px solid rgba(201,168,76,0.3); border-radius: 2px;
+    padding: 7px 16px; cursor: pointer; transition: all 0.2s;
+  }
+  .char-mgmt-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.15); }
+  .char-delete-btn {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    color: #804040; border: 1px solid rgba(180,50,50,0.25); border-radius: 2px;
+    background: rgba(140,30,30,0.06); padding: 3px 8px; cursor: pointer; transition: all 0.2s;
+    margin-left: auto; flex-shrink: 0;
+  }
+  .char-delete-btn:hover { color: #ff6060; border-color: rgba(200,60,60,0.6); background: rgba(140,30,30,0.18); }
+  .icon-select {
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(201,168,76,0.25);
+    color: var(--text); font-family: 'Crimson Text', serif; font-size: 14px;
+    padding: 6px 8px; border-radius: 2px; outline: none;
+  }
 
   /* DRAG & DROP */
   .char-grid {
@@ -222,6 +258,10 @@
   .bio-panel {
     padding: 6px 8px; margin-bottom: 4px; border-radius: 2px;
     background: rgba(10,30,10,0.35); border: 1px solid rgba(40,120,40,0.35);
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .bio-panel.done-today {
+    background: rgba(42,160,70,0.1); border-color: rgba(60,200,80,0.45);
   }
   .bio-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   .bio-icon { width: 20px; height: 20px; object-fit: contain; }
@@ -472,6 +512,20 @@
 <div class="main">
   <div class="ornament-line"><div class="ornament-diamond"></div></div>
   <div class="page-title">Postacie Gildii</div>
+  <div class="char-mgmt-bar">
+    <input class="char-mgmt-input" id="newCharName" placeholder="Nazwa postaci..." maxlength="30">
+    <select class="icon-select" id="newCharIcon">
+      <option value="/icons/warrior.png">⚔ Wojownik</option>
+      <option value="/icons/warriorw.png">⚔ Wojowniczka</option>
+      <option value="/icons/ninja.png">🥷 Ninja</option>
+      <option value="/icons/ninjaw.png">🥷 Ninjka</option>
+      <option value="/icons/shaman.png">🔮 Szaman</option>
+      <option value="/icons/shamanm.png">🔮 Szamanka</option>
+      <option value="/icons/sura.png">🗡 Sura</option>
+      <option value="/icons/sura_w.png">🗡 Sura (w)</option>
+    </select>
+    <button class="char-mgmt-btn" onclick="addNewChar()">+ Dodaj postać</button>
+  </div>
   <div class="char-grid" id="characters"></div>
 </div>
 
@@ -518,7 +572,7 @@ function unlock() {
   setTimeout(() => { authOverlay.style.display = 'none'; }, 400);
 }
 
-const chars = {
+let chars = {
   Medal:             '/icons/warrior.png',
   Bieluszek:         '/icons/ninja.png',
   Pojara:            '/icons/shaman.png',
@@ -758,7 +812,7 @@ function buildMedalRow(char, horseLevel) {
       </div>
     </div>
     <div style="display:flex;gap:6px;align-items:center;">
-      <button class="give-btn" onclick="giveMedal('${char}')">Oddaj</button>
+      <button class="give-btn" id="givebtn_${char}" onclick="giveMedal('${char}')">Oddaj</button>
       <button class="remove-btn" onclick="removeMedal('${char}')" title="Usuń">✕</button>
     </div>
   `;
@@ -864,7 +918,27 @@ function saveBioItem(char) {
 function oddajBio(char) {
   const btn = document.getElementById('biobtn_' + char);
   if (btn && btn.disabled) return;
-  socket.emit('updateBio', { char, action: 'oddaj' });
+  openInitModal('🌿 Biolog', char + ' — czy oddano pomyślnie?', [], null);
+  const wrap = document.getElementById('initModalFields');
+  wrap.innerHTML = `
+    <div style="display:flex;gap:10px;justify-content:center;margin:8px 0">
+      <button class="stone-modal-confirm" style="flex:1;background:rgba(42,160,70,0.15);border-color:rgba(60,200,80,0.5);color:#80ff90"
+              onclick="confirmBioGive('${char}',true)">✔ Pomyślnie</button>
+      <button class="stone-modal-confirm" style="flex:1;background:rgba(180,50,50,0.12);border-color:rgba(200,60,60,0.4);color:#ff8080"
+              onclick="confirmBioGive('${char}',false)">✕ Niepomyślnie</button>
+    </div>`;
+  document.querySelector('.stone-modal-confirm:last-child').style.display = 'none';
+  document.querySelector('.stone-modal-cancel').style.display = 'none';
+}
+
+function confirmBioGive(char, success) {
+  closeInitModal();
+  if (success) {
+    socket.emit('updateBio', { char, action: 'oddaj' });
+  } else {
+    // Zablokuj tylko na dziś bez dodawania do licznika
+    socket.emit('updateBio', { char, action: 'oddaj_nie' });
+  }
 }
 
 function removeBio(char) {
@@ -1041,25 +1115,8 @@ function addTask(char) {
   socket.emit('addTask', { char, task });
 }
 
-/* BUILD CHARACTER CARDS (shells only — tasks filled by tasksUpdate) */
-for (const char in chars) {
-  const card = document.createElement('div');
-  card.className = 'char-card'; card.dataset.char = char;
-
-  const header = document.createElement('div');
-  header.className = 'char-header';
-  header.innerHTML = `<img class="char-icon" src="${chars[char]}"><span class="char-name">${char}</span><span class="drag-handle">⠿</span>`;
-  header.style.position = 'relative';
-
-  const body = document.createElement('div');
-  body.className = 'char-body'; body.id = 'body_' + char;
-
-  addTaskPanel(body, char);
-
-  card.append(header, body);
-  container.appendChild(card);
-  initDrag(card);
-}
+/* BUILD CHARACTER CARDS — ładowane z serwera przez charsListUpdate */
+// (karty budowane po otrzymaniu charsListUpdate)
 
 /* ═══ DRAG & DROP — order chars ═══ */
 let dragSrc = null;
@@ -1126,7 +1183,57 @@ function applyCharOrder(order) {
   });
 }
 
-function giveMedal(char) { socket.emit('horseMedal', char); }
+function giveMedal(char) {
+  const btn = document.getElementById('givebtn_' + char);
+  if (btn && btn.disabled) return;
+  socket.emit('horseMedal', char);
+  socket.emit('setMedalGivenToday', { char, given: true });
+}
+/* DODAJ/USUŃ POSTAĆ */
+function addNewChar() {
+  const name = document.getElementById('newCharName').value.trim();
+  const icon = document.getElementById('newCharIcon').value;
+  if (!name) return;
+  if (chars[name]) { alert('Postać o tej nazwie już istnieje!'); return; }
+  socket.emit('addChar', { name, icon });
+  document.getElementById('newCharName').value = '';
+}
+
+function removeChar(name) {
+  openInitModal(
+    '⚠ Usuń postać',
+    'Wpisz kod aby usunąć: ' + name,
+    [{ id:'code', label:'Kod bezpieczeństwa', placeholder:'1234567' }],
+    vals => {
+      if (vals.code !== '1234567') {
+        alert('Nieprawidłowy kod!');
+        return;
+      }
+      socket.emit('removeChar', name);
+    }
+  );
+}
+
+function buildCharCard(char, icon) {
+  const card = document.createElement('div');
+  card.className = 'char-card'; card.dataset.char = char;
+
+  const header = document.createElement('div');
+  header.className = 'char-header';
+  header.style.position = 'relative';
+  header.innerHTML = `<img class="char-icon" src="${icon}"><span class="char-name">${char}</span><span class="drag-handle">⠿</span><button class="char-delete-btn" onclick="removeChar('${char}')">✕ Usuń</button>`;
+
+  const body = document.createElement('div');
+  body.className = 'char-body'; body.id = 'body_' + char;
+
+  addTaskPanel(body, char);
+
+  card.append(header, body);
+  container.appendChild(card);
+  initDrag(card);
+  return card;
+}
+
 function setReset() {
   socket.emit('setResetTime', {
     hour:   parseInt(document.getElementById('resetHour').value),
@@ -1179,7 +1286,7 @@ socket.on('tasksUpdate', data => {
 
 /* CHECKBOXES + MEDAL TIMER STATE FROM SERVER */
 const SKIP_KEYS = new Set(['horseTimer','spiritStoneTimer','hasStone','hasMedal','bioCurrent',
-  'bioDoneToday','bioDoneTotal','bioDoneChecked','stones','horseLevel']);
+  'bioDoneToday','bioDoneTotal','bioDoneChecked','stones','horseLevel','medalGivenToday']);
 
 let lastCharData = {};
 
@@ -1211,6 +1318,20 @@ socket.on('charactersUpdate', data => {
       const lvEl = document.getElementById('horselevel_' + char);
       if (lvEl && tasks.horseLevel !== undefined) lvEl.innerText = 'Lv ' + tasks.horseLevel;
     }
+    // Medal given today — zielona ramka + zablokowany przycisk
+    if (medalRow) {
+      const giveBtn = document.getElementById('givebtn_' + char);
+      const givenToday = !!tasks.medalGivenToday;
+      medalRow.classList.toggle('done-today', givenToday);
+      if (giveBtn) {
+        giveBtn.disabled = givenToday;
+        giveBtn.style.opacity = givenToday ? '0.4' : '1';
+        giveBtn.style.cursor  = givenToday ? 'default' : 'pointer';
+        giveBtn.innerText = givenToday ? '✔ Oddano dziś' : 'Oddaj';
+      }
+    }
+    // Bio done today — zielona ramka
+    const bioRow = document.getElementById('biorow_' + char);
     // Start medal timer AFTER row is guaranteed in DOM
     if (tasks.horseTimer && medalTimers[char]) {
       startMedalTimer(char, medalTimers[char], tasks.horseTimer);
@@ -1242,7 +1363,7 @@ socket.on('charactersUpdate', data => {
       }
     }
     // Biolog panel sync
-    const bioRow = document.getElementById('biorow_' + char);
+    if (bioRow) bioRow.classList.toggle('done-today', !!tasks.bioDoneChecked);
     const hasBioData = tasks.bioCurrent != null || (tasks.bioDoneTotal || 0) > 0;
     if (hasBioData && !bioRow) {
       const panel = document.getElementById('addpanel_' + char);
@@ -1274,6 +1395,26 @@ socket.on('charactersUpdate', data => {
 socket.on('charOrderUpdate', order => {
   window._savedCharOrder = order;
   applyCharOrder(order);
+});
+
+socket.on('charsListUpdate', data => {
+  // Dodaj nowe
+  for (const name in data) {
+    if (!chars[name]) {
+      chars[name] = data[name];
+      if (!document.querySelector('.char-card[data-char="' + name + '"]')) {
+        buildCharCard(name, data[name]);
+      }
+    }
+  }
+  // Usuń których już nie ma
+  document.querySelectorAll('.char-card').forEach(card => {
+    if (!data[card.dataset.char]) {
+      card.remove();
+      delete chars[card.dataset.char];
+    }
+  });
+  if (window._savedCharOrder) applyCharOrder(window._savedCharOrder);
 });
 
 socket.on('resetTime', data => {

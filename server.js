@@ -24,6 +24,7 @@ app.use(express.static("public"))
 
 let timers        = {}
 let characters    = {}
+let charsList     = {}   // {name: iconPath}
 let runningTimers       = new Set()  // które timery były uruchomione
 let runningCustomTimers = new Set()  // które custom timery były uruchomione
 let tasks         = {}
@@ -65,8 +66,26 @@ async function connectDB() {
     grotaGenerals  = doc.grotaGenerals  || {}
     grotaSnapshots = doc.grotaSnapshots || []
     charOrder           = doc.charOrder           || []
+  charsList           = doc.charsList           || {}
     runningTimers       = new Set(doc.runningTimers       || [])
     runningCustomTimers = new Set(doc.runningCustomTimers || [])
+
+    // Migracja charsList
+    if (Object.keys(charsList).length === 0 && Object.keys(characters).length > 0) {
+      // Pierwsze uruchomienie z nowym systemem — zachowaj istniejące postacie
+      const defaultIcons = {
+        Medal: '/icons/warrior.png', Bieluszek: '/icons/ninja.png',
+        Pojara: '/icons/shaman.png', Suczka: '/icons/shaman.png',
+        Czantorianka: '/icons/shaman.png', EwaZajączkowska: '/icons/warriorw.png',
+        Yodasz: '/icons/sura.png'
+      }
+      for (const char in characters) {
+        charsList[char] = defaultIcons[char] || '/icons/warrior.png'
+      }
+      for (const char in tasks) {
+        if (!charsList[char]) charsList[char] = '/icons/warrior.png'
+      }
+    }
 
     // Migracja
     for (const char in characters) {
@@ -206,6 +225,7 @@ function checkReset(){
         bioCurrent:     old.bioCurrent     || null,
         bioDoneToday:   0,
         bioDoneChecked: false,
+        medalGivenToday: false,
         bioDoneTotal:   old.bioDoneTotal   || 0
       }
       for(let key in old){ if(!PROTECTED_KEYS.has(key)) fresh[key] = false }
@@ -337,6 +357,10 @@ io.on("connection",(socket)=>{
       characters[char].bioDoneTotal   = (characters[char].bioDoneTotal||0)+1
       characters[char].bioDoneChecked = true
     }
+    if(action==='oddaj_nie'){
+      // Niepomyślne — zablokuj tylko przycisk bez licznika
+      characters[char].bioDoneChecked = true
+    }
     saveData()
     io.emit("charactersUpdate",characters)
   })
@@ -359,6 +383,7 @@ io.on("connection",(socket)=>{
         bioCurrent:     old.bioCurrent     || null,
         bioDoneToday:   0,
         bioDoneChecked: false,
+        medalGivenToday: false,
         bioDoneTotal:   old.bioDoneTotal   || 0
       }
       for(let key in old){ if(!PROTECTED_KEYS.has(key)) fresh[key] = false }
@@ -373,6 +398,36 @@ io.on("connection",(socket)=>{
     charOrder=order
     saveData()
     io.emit("charOrderUpdate",charOrder)
+  })
+
+  socket.on("addChar",(data)=>{
+    const {name, icon} = data
+    if(!name || charsList[name]) return
+    charsList[name] = icon || '/icons/warrior.png'
+    if(!characters[name]) characters[name] = { stones: {} }
+    if(!tasks[name]) tasks[name] = []
+    saveData()
+    io.emit("charsListUpdate", charsList)
+    io.emit("tasksUpdate", tasks)
+    io.emit("charactersUpdate", characters)
+  })
+
+  socket.on("removeChar",(name)=>{
+    delete charsList[name]
+    delete characters[name]
+    delete tasks[name]
+    charOrder = charOrder.filter(n => n !== name)
+    saveData()
+    io.emit("charsListUpdate", charsList)
+    io.emit("charOrderUpdate", charOrder)
+  })
+
+  socket.on("setMedalGivenToday",(data)=>{
+    const {char, given} = data
+    if(!characters[char]) characters[char]={}
+    characters[char].medalGivenToday = given
+    saveData()
+    io.emit("charactersUpdate", characters)
   })
 
   // Custom timery (Własne Timery)
@@ -484,6 +539,7 @@ io.on("connection",(socket)=>{
   socket.emit("grotaGeneralsUpdate", grotaGenerals)
   socket.emit("grotaSnapshotsUpdate",grotaSnapshots)
   socket.emit("charOrderUpdate",     charOrder)
+  socket.emit("charsListUpdate",     charsList)
 })
 
 /* ======================
