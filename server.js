@@ -70,21 +70,20 @@ async function connectDB() {
     runningTimers       = new Set(doc.runningTimers       || [])
     runningCustomTimers = new Set(doc.runningCustomTimers || [])
 
-    // Migracja charsList
-    if (Object.keys(charsList).length === 0 && Object.keys(characters).length > 0) {
-      // Pierwsze uruchomienie z nowym systemem — zachowaj istniejące postacie
-      const defaultIcons = {
-        Medal: '/icons/warrior.png', Bieluszek: '/icons/ninja.png',
-        Pojara: '/icons/shaman.png', Suczka: '/icons/shaman.png',
-        Czantorianka: '/icons/shaman.png', EwaZajączkowska: '/icons/warriorw.png',
-        Yodasz: '/icons/sura.png'
-      }
-      for (const char in characters) {
-        charsList[char] = defaultIcons[char] || '/icons/warrior.png'
-      }
-      for (const char in tasks) {
-        if (!charsList[char]) charsList[char] = '/icons/warrior.png'
-      }
+    // Migracja charsList — zawsze uzupełniaj brakujące postacie
+    const defaultIcons = {
+      Medal: '/icons/warrior.png', Bieluszek: '/icons/ninja.png',
+      Pojara: '/icons/shaman.png', Suczka: '/icons/shaman.png',
+      Czantorianka: '/icons/shaman.png', EwaZajączkowska: '/icons/warriorw.png',
+      Yodasz: '/icons/sura.png'
+    }
+    // Dodaj do charsList wszystkich z characters których tam nie ma
+    for (const char in characters) {
+      if (!charsList[char]) charsList[char] = defaultIcons[char] || '/icons/warrior.png'
+    }
+    // Dodaj do charsList wszystkich z tasks których tam nie ma
+    for (const char in tasks) {
+      if (!charsList[char]) charsList[char] = defaultIcons[char] || '/icons/warrior.png'
     }
 
     // Migracja
