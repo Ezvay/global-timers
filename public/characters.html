@@ -257,7 +257,7 @@
   /* BIOLOG panel */
   .bio-panel {
     padding: 6px 8px; margin-bottom: 4px; border-radius: 2px;
-    background: rgba(10,30,10,0.35); border: 1px solid rgba(40,120,40,0.35);
+    background: rgba(201,168,76,0.05); border: 1px solid rgba(201,168,76,0.2);
     transition: background 0.3s, border-color 0.3s;
   }
   .bio-panel.done-ok {
@@ -268,26 +268,26 @@
   }
   .bio-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   .bio-icon { width: 20px; height: 20px; object-fit: contain; }
-  .bio-title { font-size: 14px; color: #80c080; }
+  .bio-title { font-size: 14px; color: var(--text); }
   .bio-done-wrap { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
   .bio-done-label { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; }
   .bio-done-input {
     width: 50px; text-align: center;
-    background: rgba(0,0,0,0.5); border: 1px solid rgba(40,120,40,0.4);
-    color: #80c080; font-family: 'Cinzel', serif; font-size: 13px;
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(201,168,76,0.2);
+    color: var(--text); font-family: 'Cinzel', serif; font-size: 13px;
     padding: 3px 6px; border-radius: 2px; outline: none;
   }
-  .bio-done-input:focus { border-color: rgba(80,200,80,0.7); }
+  .bio-done-input:focus { border-color: rgba(201,168,76,0.5); }
   .bio-current-label { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
   .bio-select {
-    width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(40,120,40,0.35);
-    color: #80c080; font-family: 'Crimson Text', serif; font-size: 13px;
+    width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(201,168,76,0.2);
+    color: var(--text); font-family: 'Crimson Text', serif; font-size: 13px;
     padding: 4px 6px; border-radius: 2px; outline: none;
   }
-  .bio-select:focus { border-color: rgba(80,200,80,0.7); }
-  .bio-item-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 4px 0; border-top: 1px solid rgba(40,120,40,0.2); }
+  .bio-select:focus { border-color: rgba(201,168,76,0.5); }
+  .bio-item-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 4px 0; border-top: 1px solid rgba(201,168,76,0.15); }
   .bio-item-icon { width: 22px; height: 22px; object-fit: contain; }
-  .bio-item-name { font-size: 13px; color: #a0e0a0; flex: 1; }
+  .bio-item-name { font-size: 13px; color: var(--text); flex: 1; }
   .bio-item-qty { font-family: 'Cinzel', serif; font-size: 10px; color: var(--text-dim); }
   .bio-done-today {
     display: inline-flex; align-items: center; gap: 6px;
@@ -303,10 +303,12 @@
   .bio-oddaj-btn {
     font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
     padding: 5px 14px; border-radius: 2px; cursor: pointer; transition: all 0.2s;
-    border: 1px solid rgba(60,180,60,0.4); color: #60c060;
-    background: rgba(40,120,40,0.1); margin-top: 4px; width: 100%;
+    border: 1px solid rgba(201,168,76,0.3); color: var(--gold-dark);
+    background: rgba(201,168,76,0.07); margin-top: 4px; width: 100%;
   }
-  .bio-oddaj-btn:hover { color: #90ff90; border-color: rgba(80,220,80,0.7); background: rgba(40,140,40,0.2); }
+  .bio-oddaj-btn:hover { color: var(--gold); border-color: rgba(201,168,76,0.6); background: rgba(201,168,76,0.15); }
+  .bio-panel.done-ok .bio-oddaj-btn  { border-color: rgba(60,180,60,0.4); color: #60c060; background: rgba(40,120,40,0.1); }
+  .bio-panel.done-fail .bio-oddaj-btn { border-color: rgba(180,60,60,0.4); color: #c06060; background: rgba(120,40,40,0.1); }
   .bio-total { font-size: 11px; color: var(--text-dim); font-style: italic; margin-top: 2px; }
 
   /* KAMIEŃ DUCHOWY */
@@ -855,7 +857,7 @@ function buildBioRow(char, data) {
 
   const checkedClass = bioChecked ? '' : 'unchecked';
   const checkedText  = bioChecked
-    ? `✔ Oddano dziś: ${bioDoneToday} szt.`
+    ? `✔ Oddano: ${bioDoneToday} szt.`
     : `Oddane dziś: ${bioDoneToday} szt.`;
 
   row.innerHTML = `
@@ -872,7 +874,7 @@ function buildBioRow(char, data) {
     <div class="bio-item-row" id="bioitem_${char}"></div>
     <button class="bio-oddaj-btn" id="biobtn_${char}" onclick="oddajBio('${char}')"
       ${bioChecked ? 'disabled style="opacity:0.4;cursor:default;"' : ''}>
-      ${bioChecked ? '✔ Oddano dziś' : '+ Oddaj'}
+      ${bioChecked ? '✔ Oddano' : bioTried ? '✕ Niepomyślnie' : '+ Oddaj'}
     </button>
     <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
       <span class="bio-total" style="flex:1" id="biototal_${char}">Łącznie oddane: ${bioDoneTotal} szt.</span>
@@ -1322,7 +1324,20 @@ function applyCharsData(data) {
     const medalRow = document.getElementById('medalrow_' + char);
     if (tasks.hasMedal && !medalRow) {
       const panel = document.getElementById('addpanel_' + char);
-      if (panel) panel.parentElement.insertBefore(buildMedalRow(char, tasks.horseLevel||0), panel);
+      if (panel) {
+        panel.parentElement.insertBefore(buildMedalRow(char, tasks.horseLevel||0), panel);
+        // Od razu ustaw stan givenToday jeśli wiemy
+        const newRow = document.getElementById('medalrow_' + char);
+        const newBtn = document.getElementById('givebtn_' + char);
+        const givenNow = !!tasks.medalGivenToday;
+        if (newRow) newRow.classList.toggle('done-today', givenNow);
+        if (newBtn) {
+          newBtn.disabled = givenNow;
+          newBtn.style.opacity = givenNow ? '0.4' : '1';
+          newBtn.style.cursor  = givenNow ? 'default' : 'pointer';
+          newBtn.innerText = givenNow ? '✔ Oddano' : 'Oddaj';
+        }
+      }
     } else if (!tasks.hasMedal && medalRow) {
       medalRow.remove();
       if (medalIntervals[char]) { clearInterval(medalIntervals[char]); delete medalIntervals[char]; }
@@ -1340,7 +1355,7 @@ function applyCharsData(data) {
         giveBtn.disabled = givenToday;
         giveBtn.style.opacity = givenToday ? '0.4' : '1';
         giveBtn.style.cursor  = givenToday ? 'default' : 'pointer';
-        giveBtn.innerText = givenToday ? '✔ Oddano dziś' : 'Oddaj';
+        giveBtn.innerText = givenToday ? '✔ Oddano' : 'Oddaj';
       }
     }
     // Bio done today — zielona ramka
@@ -1404,7 +1419,7 @@ function applyCharsData(data) {
         btn.disabled = blocked;
         btn.style.opacity = blocked ? '0.4' : '1';
         btn.style.cursor  = blocked ? 'default' : 'pointer';
-        btn.innerText = checked ? '✔ Oddano dziś' : (tried ? '✕ Próbowano dziś' : '+ Oddaj');
+        btn.innerText = checked ? '✔ Oddano' : (tried ? '✕ Niepomyślnie' : '+ Oddaj');
       }
       if (total) total.innerText = `Łącznie oddane: ${tasks.bioDoneTotal||0} szt.`;
     }
