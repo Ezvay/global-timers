@@ -25,6 +25,7 @@ app.use(express.static("public"))
 let timers        = {}
 let characters    = {}
 let charsList     = {}   // {name: iconPath}
+let skarbiec      = { inwestycje: {}, sprzedaz: [] }  // {inwestycje: {nick: zł}, sprzedaz: [{id,opis,kwota,ts}]}
 let runningTimers       = new Set()  // które timery były uruchomione
 let runningCustomTimers = new Set()  // które custom timery były uruchomione
 let tasks         = {}
@@ -67,6 +68,7 @@ async function connectDB() {
     grotaSnapshots = doc.grotaSnapshots || []
     charOrder           = doc.charOrder           || []
   charsList           = doc.charsList           || {}
+  skarbiec            = doc.skarbiec            || { inwestycje: {}, sprzedaz: [] }
     runningTimers       = new Set(doc.runningTimers       || [])
     runningCustomTimers = new Set(doc.runningCustomTimers || [])
 
@@ -298,6 +300,8 @@ io.on("connection",(socket)=>{
     if(!characters[char]) return
     delete characters[char].hasMedal
     delete characters[char].horseTimer
+    delete characters[char].horseLevel
+    delete characters[char].medalGivenToday
     saveData()
     io.emit("charactersUpdate",characters)
   })
@@ -395,6 +399,38 @@ io.on("connection",(socket)=>{
   })
 
   // Kolejność postaci
+  // Skarbiec
+  socket.on("skarbiecSetInwestycja",(data)=>{
+    const {nick, kwota} = data
+    if(!skarbiec.inwestycje) skarbiec.inwestycje = {}
+    skarbiec.inwestycje[nick] = parseFloat(kwota) || 0
+    saveNow()
+    io.emit("skarbiecUpdate", skarbiec)
+  })
+  socket.on("skarbiecAddSprzedaz",(data)=>{
+    const {opis, kwota} = data
+    if(!skarbiec.sprzedaz) skarbiec.sprzedaz = []
+    skarbiec.sprzedaz.unshift({ id: 'sp_'+Date.now(), opis, kwota: parseFloat(kwota)||0, ts: Date.now() })
+    saveNow()
+    io.emit("skarbiecUpdate", skarbiec)
+  })
+  socket.on("skarbiecRemoveSprzedaz",(id)=>{
+    skarbiec.sprzedaz = (skarbiec.sprzedaz||[]).filter(s=>s.id!==id)
+    saveNow()
+    io.emit("skarbiecUpdate", skarbiec)
+  })
+  socket.on("skarbiecAddNick",(nick)=>{
+    if(!skarbiec.inwestycje) skarbiec.inwestycje = {}
+    if(skarbiec.inwestycje[nick] === undefined) skarbiec.inwestycje[nick] = 0
+    saveNow()
+    io.emit("skarbiecUpdate", skarbiec)
+  })
+  socket.on("skarbiecRemoveNick",(nick)=>{
+    if(skarbiec.inwestycje) delete skarbiec.inwestycje[nick]
+    saveNow()
+    io.emit("skarbiecUpdate", skarbiec)
+  })
+
   socket.on("setCharOrder",(order)=>{
     charOrder=order
     saveData()
@@ -532,6 +568,7 @@ io.on("connection",(socket)=>{
   socket.emit("update",              timers)
   // charsListUpdate MUSI być pierwsza — buduje karty postaci
   socket.emit("charsListUpdate",     charsList)
+  socket.emit("skarbiecUpdate",       skarbiec)
   socket.emit("charOrderUpdate",     charOrder)
   socket.emit("tasksUpdate",         tasks)
   socket.emit("charactersUpdate",    characters)
