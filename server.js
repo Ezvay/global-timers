@@ -530,6 +530,9 @@ io.on("connection",(socket)=>{
 
   // Wyślij stan do nowego klienta
   socket.emit("update",              timers)
+  // charsListUpdate MUSI być pierwsza — buduje karty postaci
+  socket.emit("charsListUpdate",     charsList)
+  socket.emit("charOrderUpdate",     charOrder)
   socket.emit("tasksUpdate",         tasks)
   socket.emit("charactersUpdate",    characters)
   socket.emit("resetTime",           {hour:resetHour,minute:resetMinute})
@@ -539,8 +542,6 @@ io.on("connection",(socket)=>{
   socket.emit("grotaHistoryUpdate",  grotaHistory)
   socket.emit("grotaGeneralsUpdate", grotaGenerals)
   socket.emit("grotaSnapshotsUpdate",grotaSnapshots)
-  socket.emit("charOrderUpdate",     charOrder)
-  socket.emit("charsListUpdate",     charsList)
 })
 
 /* ======================

@@ -260,8 +260,11 @@
     background: rgba(10,30,10,0.35); border: 1px solid rgba(40,120,40,0.35);
     transition: background 0.3s, border-color 0.3s;
   }
-  .bio-panel.done-today {
+  .bio-panel.done-ok {
     background: rgba(42,160,70,0.1); border-color: rgba(60,200,80,0.45);
+  }
+  .bio-panel.done-fail {
+    background: rgba(160,42,42,0.1); border-color: rgba(200,60,60,0.45);
   }
   .bio-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   .bio-icon { width: 20px; height: 20px; object-fit: contain; }
@@ -842,7 +845,8 @@ function buildBioRow(char, data) {
   const bioChecked   = data.bioDoneChecked || false;
 
   const row = document.createElement('div');
-  row.className = 'bio-panel' + (bioChecked ? ' done-today' : '');
+  const bioTried = data.bioTriedToday || false;
+  row.className = 'bio-panel' + (bioChecked ? ' done-ok' : bioTried ? ' done-fail' : '');
   row.id = 'biorow_' + char;
 
   const opts = BIOLOG_ITEMS.map(i =>
@@ -918,25 +922,35 @@ function saveBioItem(char) {
 function oddajBio(char) {
   const btn = document.getElementById('biobtn_' + char);
   if (btn && btn.disabled) return;
-  openInitModal('🌿 Biolog', char + ' — czy oddano pomyślnie?', [], null);
-  const wrap = document.getElementById('initModalFields');
-  wrap.innerHTML = `
-    <div style="display:flex;gap:10px;justify-content:center;margin:8px 0">
-      <button class="stone-modal-confirm" style="flex:1;background:rgba(42,160,70,0.15);border-color:rgba(60,200,80,0.5);color:#80ff90"
-              onclick="confirmBioGive('${char}',true)">✔ Pomyślnie</button>
-      <button class="stone-modal-confirm" style="flex:1;background:rgba(180,50,50,0.12);border-color:rgba(200,60,60,0.4);color:#ff8080"
-              onclick="confirmBioGive('${char}',false)">✕ Niepomyślnie</button>
+  // Pokaż modal z dwoma przyciskami
+  document.getElementById('initModal').classList.remove('hidden');
+  document.getElementById('initModalTitle').innerText = '🌿 Biolog';
+  document.getElementById('initModalSub').innerText   = char + ' — czy oddano pomyślnie?';
+  document.getElementById('initModalFields').innerHTML = `
+    <div style="display:flex;gap:10px;justify-content:center;margin:12px 0">
+      <button onclick="confirmBioGive('${char}',true)"
+        style="flex:1;padding:10px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;
+               background:rgba(42,160,70,0.15);border:1px solid rgba(60,200,80,0.5);
+               color:#80ff90;border-radius:2px;cursor:pointer;">✔ Pomyślnie</button>
+      <button onclick="confirmBioGive('${char}',false)"
+        style="flex:1;padding:10px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;
+               background:rgba(180,50,50,0.12);border:1px solid rgba(200,60,60,0.4);
+               color:#ff8080;border-radius:2px;cursor:pointer;">✕ Niepomyślnie</button>
     </div>`;
-  document.querySelector('.stone-modal-confirm:last-child').style.display = 'none';
-  document.querySelector('.stone-modal-cancel').style.display = 'none';
+  // Ukryj domyślny confirm button, pokaż anuluj
+  document.querySelector('#initModal .stone-modal-confirm').style.display = 'none';
+  document.querySelector('#initModal .stone-modal-cancel').style.display  = 'block';
+  // Anuluj zamknie modal bez akcji
+  document.getElementById('initModal').querySelector('.stone-modal-cancel').onclick = closeInitModal;
 }
 
 function confirmBioGive(char, success) {
   closeInitModal();
+  document.querySelector('#initModal .stone-modal-confirm').style.display = '';
+  document.querySelector('#initModal .stone-modal-cancel').style.display  = '';
   if (success) {
     socket.emit('updateBio', { char, action: 'oddaj' });
   } else {
-    // Zablokuj tylko na dziś bez dodawania do licznika
     socket.emit('updateBio', { char, action: 'oddaj_nie' });
   }
 }
@@ -1243,13 +1257,12 @@ function setReset() {
 function manualReset() { socket.emit('manualReset'); }
 
 /* TASKS FROM SERVER — renders task list from data.json on connect and after any change */
-socket.on('tasksUpdate', data => {
+function applyTasksData(data) {
   for (const char in data) {
     const body  = document.getElementById('body_' + char);
     const panel = document.getElementById('addpanel_' + char);
     if (!body || !panel) continue;
 
-    // Remove task rows that are no longer on the server
     body.querySelectorAll('.task-row').forEach(row => {
       const taskName = row.id.replace('task_' + char + '_', '');
       if (!data[char].includes(taskName)) {
@@ -1258,14 +1271,12 @@ socket.on('tasksUpdate', data => {
       }
     });
 
-    // Add task rows that are on server but not yet in DOM
     data[char].forEach(task => {
       if (!document.getElementById('task_' + char + '_' + task)) {
         body.insertBefore(createTaskRow(char, task), panel);
       }
     });
 
-    // Apply checkbox state immediately after building rows
     if (lastCharData[char]) {
       const charState = lastCharData[char];
       for (const task in charState) {
@@ -1273,15 +1284,17 @@ socket.on('tasksUpdate', data => {
         const row = document.getElementById('task_' + char + '_' + task);
         if (!row) continue;
         const cb = checkboxes[char + '_' + task];
-        if (cb) {
-          cb.checked = !!charState[task];
-          row.classList.toggle('done', !!charState[task]);
-        }
+        if (cb) { cb.checked = !!charState[task]; row.classList.toggle('done', !!charState[task]); }
       }
     }
   }
-  // Re-apply saved order after tasks rebuild
   if (window._savedCharOrder) applyCharOrder(window._savedCharOrder);
+}
+
+socket.on('tasksUpdate', data => {
+  const anyCard = document.querySelector('.char-card');
+  if (!anyCard) { window._pendingTasksData = data; return; }
+  applyTasksData(data);
 });
 
 /* CHECKBOXES + MEDAL TIMER STATE FROM SERVER */
@@ -1290,7 +1303,7 @@ const SKIP_KEYS = new Set(['horseTimer','spiritStoneTimer','hasStone','hasMedal'
 
 let lastCharData = {};
 
-socket.on('charactersUpdate', data => {
+function applyCharsData(data) {
   lastCharData = data;
   for (const char in data) {
     const tasks = data[char];
@@ -1363,7 +1376,11 @@ socket.on('charactersUpdate', data => {
       }
     }
     // Biolog panel sync
-    if (bioRow) bioRow.classList.toggle('done-today', tasks.bioDoneChecked === true);
+    if (bioRow) {
+      bioRow.classList.remove('done-ok','done-fail');
+      if (tasks.bioDoneChecked) bioRow.classList.add('done-ok');
+      else if (tasks.bioTriedToday) bioRow.classList.add('done-fail');
+    }
     const hasBioData = tasks.bioCurrent != null || (tasks.bioDoneTotal || 0) > 0;
     if (hasBioData && !bioRow) {
       const panel = document.getElementById('addpanel_' + char);
@@ -1392,6 +1409,12 @@ socket.on('charactersUpdate', data => {
       if (total) total.innerText = `Łącznie oddane: ${tasks.bioDoneTotal||0} szt.`;
     }
   }
+}
+
+socket.on('charactersUpdate', data => {
+  const anyCard = document.querySelector('.char-card');
+  if (!anyCard) { window._pendingCharsData = data; lastCharData = data; return; }
+  applyCharsData(data);
 });
 
 socket.on('charOrderUpdate', order => {
@@ -1415,6 +1438,12 @@ socket.on('charsListUpdate', data => {
     }
   });
   if (window._savedCharOrder) applyCharOrder(window._savedCharOrder);
+
+  // Po zbudowaniu kart — aplikuj zapisane dane tasks i characters
+  if (window._pendingTasksData)      applyTasksData(window._pendingTasksData);
+  if (window._pendingCharsData)      applyCharsData(window._pendingCharsData);
+  window._pendingTasksData = null;
+  window._pendingCharsData = null;
 });
 
 socket.on('resetTime', data => {
