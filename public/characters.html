@@ -842,7 +842,7 @@ function buildBioRow(char, data) {
   const bioChecked   = data.bioDoneChecked || false;
 
   const row = document.createElement('div');
-  row.className = 'bio-panel';
+  row.className = 'bio-panel' + (bioChecked ? ' done-today' : '');
   row.id = 'biorow_' + char;
 
   const opts = BIOLOG_ITEMS.map(i =>
@@ -1286,7 +1286,7 @@ socket.on('tasksUpdate', data => {
 
 /* CHECKBOXES + MEDAL TIMER STATE FROM SERVER */
 const SKIP_KEYS = new Set(['horseTimer','spiritStoneTimer','hasStone','hasMedal','bioCurrent',
-  'bioDoneToday','bioDoneTotal','bioDoneChecked','stones','horseLevel','medalGivenToday']);
+  'bioDoneToday','bioDoneTotal','bioDoneChecked','bioTriedToday','stones','horseLevel','medalGivenToday']);
 
 let lastCharData = {};
 
@@ -1363,7 +1363,7 @@ socket.on('charactersUpdate', data => {
       }
     }
     // Biolog panel sync
-    if (bioRow) bioRow.classList.toggle('done-today', !!tasks.bioDoneChecked);
+    if (bioRow) bioRow.classList.toggle('done-today', tasks.bioDoneChecked === true);
     const hasBioData = tasks.bioCurrent != null || (tasks.bioDoneTotal || 0) > 0;
     if (hasBioData && !bioRow) {
       const panel = document.getElementById('addpanel_' + char);
@@ -1381,11 +1381,13 @@ socket.on('charactersUpdate', data => {
       }
       const btn = document.getElementById('biobtn_' + char);
       if (btn) {
-        const checked = tasks.bioDoneChecked;
-        btn.disabled = !!checked;
-        btn.style.opacity = checked ? '0.4' : '1';
-        btn.style.cursor  = checked ? 'default' : 'pointer';
-        btn.innerText = checked ? '✔ Oddano dziś' : '+ Oddaj';
+        const checked  = tasks.bioDoneChecked;
+        const tried    = tasks.bioTriedToday;
+        const blocked  = checked || tried;
+        btn.disabled = blocked;
+        btn.style.opacity = blocked ? '0.4' : '1';
+        btn.style.cursor  = blocked ? 'default' : 'pointer';
+        btn.innerText = checked ? '✔ Oddano dziś' : (tried ? '✕ Próbowano dziś' : '+ Oddaj');
       }
       if (total) total.innerText = `Łącznie oddane: ${tasks.bioDoneTotal||0} szt.`;
     }
@@ -1398,16 +1400,14 @@ socket.on('charOrderUpdate', order => {
 });
 
 socket.on('charsListUpdate', data => {
-  // Dodaj nowe
+  // Buduj karty dla wszystkich z listy których nie ma w DOM
   for (const name in data) {
-    if (!chars[name]) {
-      chars[name] = data[name];
-      if (!document.querySelector('.char-card[data-char="' + name + '"]')) {
-        buildCharCard(name, data[name]);
-      }
+    chars[name] = data[name];
+    if (!document.querySelector('.char-card[data-char="' + name + '"]')) {
+      buildCharCard(name, data[name]);
     }
   }
-  // Usuń których już nie ma
+  // Usuń karty których już nie ma na liście
   document.querySelectorAll('.char-card').forEach(card => {
     if (!data[card.dataset.char]) {
       card.remove();

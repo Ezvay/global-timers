@@ -224,6 +224,7 @@ function checkReset(){
         bioCurrent:     old.bioCurrent     || null,
         bioDoneToday:   0,
         bioDoneChecked: false,
+        bioTriedToday:  false,
         medalGivenToday: false,
         bioDoneTotal:   old.bioDoneTotal   || 0
       }
@@ -357,8 +358,8 @@ io.on("connection",(socket)=>{
       characters[char].bioDoneChecked = true
     }
     if(action==='oddaj_nie'){
-      // Niepomyślne — zablokuj tylko przycisk bez licznika
-      characters[char].bioDoneChecked = true
+      // Niepomyślne — zablokuj przycisk ale NIE dodawaj do licznika ani nie zaznaczaj jako oddane
+      characters[char].bioTriedToday = true
     }
     saveData()
     io.emit("charactersUpdate",characters)
@@ -382,6 +383,7 @@ io.on("connection",(socket)=>{
         bioCurrent:     old.bioCurrent     || null,
         bioDoneToday:   0,
         bioDoneChecked: false,
+        bioTriedToday:  false,
         medalGivenToday: false,
         bioDoneTotal:   old.bioDoneTotal   || 0
       }
