@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Skarbiec Gildii</title>
 <script src="/socket.io/socket.io.js"></script>
+<script src="/metin2_items.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 :root{--gold:#c9a84c;--gold-light:#f0d080;--gold-dark:#7a5f1e;--bg:#090806;--border:#3a2e1a;--text:#d4c4a0;--text-dim:#7a6a50;--green-bright:#60e080;--red-bright:#ff6060;}
@@ -140,7 +141,7 @@ body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min
 <div class="summary">
   <div class="summary-inner">
     <div class="summary-item">
-      <div class="summary-label">Łączne wpłacono + zakupy</div>
+      <div class="summary-label">Łączne zainwestowane</div>
       <div class="summary-value" id="sumInw">0,00 zł</div>
     </div>
     <div class="summary-item">
@@ -162,7 +163,7 @@ body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min
 
   <!-- INWESTYCJE -->
   <div class="section-card">
-    <div class="section-header"><span class="section-title">💰 Inwestycje & Udziały</span></div>
+    <div class="section-header"><span class="section-title">💰 Gracze & Udziały</span></div>
     <div class="section-body" id="invList"></div>
     <div class="add-row">
       <input class="add-input wide" id="invNick" placeholder="Nick gracza..." maxlength="30">
@@ -175,7 +176,17 @@ body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min
     <div class="section-header"><span class="section-title">📦 Sprzedaż</span></div>
     <div class="section-body" id="spList"></div>
     <div class="add-row">
-      <input class="add-input wide" id="spOpis" placeholder="Co sprzedano..." maxlength="80">
+      <div class="item-search-wrap">
+        <input class="item-search-input" id="spOpis" placeholder="Wyszukaj przedmiot..." autocomplete="off"
+               oninput="openDropdown('sp')" onfocus="openDropdown('sp')" onblur="closeDropdownDelay('sp')">
+        <div class="item-dropdown" id="spDropdown"></div>
+      </div>
+      <select class="item-lvl-select" id="spLvl">
+        <option value="">bez +</option>
+        <option>+1</option><option>+2</option><option>+3</option>
+        <option>+4</option><option>+5</option><option>+6</option>
+        <option>+7</option><option>+8</option><option>+9</option>
+      </select>
       <input class="add-input num" id="spKwota" type="number" placeholder="zł" min="0" step="0.01">
       <button class="add-btn" onclick="addSprzedaz()">+ Dodaj</button>
     </div>
@@ -186,7 +197,17 @@ body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min
     <div class="section-header"><span class="section-title">🛒 Zakupy</span></div>
     <div class="section-body" id="buyList"></div>
     <div class="add-row" style="flex-wrap:wrap;">
-      <input class="add-input wide" id="buyOpis" placeholder="Co kupiono..." maxlength="80">
+      <div class="item-search-wrap">
+        <input class="item-search-input" id="buyOpis" placeholder="Wyszukaj przedmiot..." autocomplete="off"
+               oninput="openDropdown('buy')" onfocus="openDropdown('buy')" onblur="closeDropdownDelay('buy')">
+        <div class="item-dropdown" id="buyDropdown"></div>
+      </div>
+      <select class="item-lvl-select" id="buyLvl">
+        <option value="">bez +</option>
+        <option>+1</option><option>+2</option><option>+3</option>
+        <option>+4</option><option>+5</option><option>+6</option>
+        <option>+7</option><option>+8</option><option>+9</option>
+      </select>
       <input class="add-input num" id="buyKwota" type="number" placeholder="zł" min="0" step="0.01">
       <select class="add-select" id="buyKto"></select>
       <button class="add-btn" onclick="addZakup()">+ Dodaj</button>
@@ -259,16 +280,12 @@ function renderInwestycje() {
   const nicks = Object.keys(data.inwestycje);
   if (!nicks.length) { list.innerHTML = '<div class="empty-info">Brak graczy</div>'; return; }
   list.innerHTML = nicks.map(nick => {
-    const kwota  = data.inwestycje[nick] || 0;
     const udzial = data.udzialy?.[nick] ?? 1;
     const buyOwn = (data.zakupy||[]).filter(b=>b.kto===nick).reduce((s,b)=>s+b.kwota,0);
-    const total  = kwota + buyOwn;
     return `<div class="inv-row">
       ${avImg(nick,'inv-avatar')}
       <span class="inv-nick">${nick}</span>
-      <input class="inv-edit" id="inv_${nick}" type="number" value="${kwota}" min="0" step="0.01" placeholder="zł" title="Ręczna wpłata">
-      <button class="save-btn" onclick="saveInw('${nick}')">💾</button>
-      <span class="unit-label" style="color:var(--green-bright);font-family:'Cinzel',serif;font-size:11px;min-width:80px;text-align:right;" title="Wpłata + zakupy razem">= ${fmt(total)}</span>
+      <span style="font-family:'Cinzel',serif;font-size:13px;color:var(--green-bright);min-width:90px;text-align:right;">${fmt(buyOwn)}</span>
       <input class="inv-edit" id="udz_${nick}" type="number" value="${udzial}" min="0" max="100" step="1" style="width:48px" title="Udział %">
       <span class="unit-label">%</span>
       <button class="save-btn" onclick="saveUdz('${nick}')">💾</button>
@@ -311,12 +328,47 @@ function renderSprzedaz() {
       <button class="del-btn" onclick="delSp('${sp.id}')">✕</button>
     </div>`).join('');
 }
+/* ITEM SEARCH DROPDOWN */
+function buildItemName(prefix) {
+  const opis = document.getElementById(prefix+'Opis').value.trim();
+  const lvl  = document.getElementById(prefix+'Lvl').value;
+  return lvl ? opis + ' ' + lvl : opis;
+}
+
+function openDropdown(prefix) {
+  const input = document.getElementById(prefix+'Opis');
+  const dd    = document.getElementById(prefix+'Dropdown');
+  const q     = input.value.trim().toLowerCase();
+  const matches = q.length < 1
+    ? METIN2_ITEMS.slice(0, 30)
+    : METIN2_ITEMS.filter(i => i.name.toLowerCase().includes(q)).slice(0, 40);
+
+  dd.innerHTML = matches.map(i =>
+    `<div class="item-option" onmousedown="selectItem('${prefix}','${i.name.replace(/'/g,"\'")}')">
+      <span>${i.name}</span>
+      <span class="item-option-cat">${i.category}</span>
+    </div>`
+  ).join('') || '<div class="item-option" style="color:var(--text-dim)">Brak wyników</div>';
+  dd.classList.add('open');
+}
+
+function closeDropdownDelay(prefix) {
+  setTimeout(() => document.getElementById(prefix+'Dropdown').classList.remove('open'), 200);
+}
+
+function selectItem(prefix, name) {
+  document.getElementById(prefix+'Opis').value = name;
+  document.getElementById(prefix+'Dropdown').classList.remove('open');
+  document.getElementById(prefix+'Kwota').focus();
+}
+
 function addSprzedaz() {
-  const opis  = document.getElementById('spOpis').value.trim();
+  const opis  = buildItemName('sp');
   const kwota = parseFloat(document.getElementById('spKwota').value)||0;
   if (!opis||kwota<=0) return;
   socket.emit('skarbiecAddSprzedaz',{opis,kwota});
   document.getElementById('spOpis').value='';
+  document.getElementById('spLvl').value='';
   document.getElementById('spKwota').value='';
 }
 function delSp(id) {
@@ -346,12 +398,13 @@ function updateBuySelect() {
     nicks.map(n => `<option value="${n}">${n}</option>`).join('');
 }
 function addZakup() {
-  const opis  = document.getElementById('buyOpis').value.trim();
+  const opis  = buildItemName('buy');
   const kwota = parseFloat(document.getElementById('buyKwota').value)||0;
   const kto   = document.getElementById('buyKto').value;
   if (!opis||kwota<=0) return;
   socket.emit('skarbiecAddZakup',{opis,kwota,kto});
   document.getElementById('buyOpis').value='';
+  document.getElementById('buyLvl').value='';
   document.getElementById('buyKwota').value='';
 }
 function delBuy(id) {
@@ -365,12 +418,8 @@ function renderProfit() {
   const sumSp  = (data.sprzedaz||[]).reduce((s,sp)=>s+sp.kwota,0);
   const sumBuy = (data.zakupy||[]).reduce((s,b)=>s+b.kwota,0);
 
-  // Inwestycja każdego = wpłacone + własne zakupy
-  const invTotal = nick => {
-    const inv     = data.inwestycje[nick]||0;
-    const buyOwn  = (data.zakupy||[]).filter(b=>b.kto===nick).reduce((s,b)=>s+b.kwota,0);
-    return inv + buyOwn;
-  };
+  // Inwestycja każdego = suma jego zakupów
+  const invTotal = nick => (data.zakupy||[]).filter(b=>b.kto===nick).reduce((s,b)=>s+b.kwota,0);
   const sumInwAll = nicks.reduce((s,n)=>s+invTotal(n),0);
   const bilans    = sumSp - sumInwAll;
 
@@ -389,21 +438,17 @@ function renderProfit() {
   const totalPct  = nicks.reduce((s,n)=>s+getRawPct(n),0)||100;
 
   grid.innerHTML = nicks.map(nick => {
-    const inv     = data.inwestycje[nick]||0;
-    const buyOwn  = (data.zakupy||[]).filter(b=>b.kto===nick).reduce((s,b)=>s+b.kwota,0);
-    const invTot  = inv + buyOwn;
+    const buyOwn  = invTotal(nick);
     const rawPct  = getRawPct(nick);
-    const fraction= rawPct / totalPct;  // rzeczywisty udział
+    const fraction= rawPct / totalPct;
     const zysk    = sumSp * fraction;
-    const netto   = zysk - invTot;
+    const netto   = zysk - buyOwn;
     const pctDisp = rawPct.toFixed(1);
 
     return `<div class="profit-item">
       ${avImg(nick,'profit-avatar')}
       <div class="profit-nick">${nick}</div>
-      <div class="profit-line">Wpłacono: ${fmt(inv)}</div>
-      ${buyOwn>0?`<div class="profit-line">Zakupy: +${fmt(buyOwn)}</div>`:''}
-      <div class="profit-line">Razem wł.: ${fmt(invTot)}</div>
+      <div class="profit-line">Zainwestowano: ${fmt(buyOwn)}</div>
       <div class="profit-line">Udział: ${pctDisp}%</div>
       <div class="profit-line">Ze sprzedaży: ${fmt(zysk)}</div>
       <div class="profit-zysk ${netto>=0?'plus':'minus'}">${netto>=0?'+':''}${fmt(netto)}</div>
@@ -428,8 +473,8 @@ document.addEventListener('keydown', e => {
   if (e.key!=='Enter') return;
   const id = document.activeElement?.id;
   if (id==='invNick') addNick();
-  if (id==='spOpis'||id==='spKwota') addSprzedaz();
-  if (id==='buyOpis'||id==='buyKwota') addZakup();
+  if (id==='spOpis'||id==='spKwota'||id==='spLvl') addSprzedaz();
+  if (id==='buyOpis'||id==='buyKwota'||id==='buyLvl') addZakup();
 });
 </script>
 </body>
