@@ -176,9 +176,10 @@ body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min
     <div class="section-header"><span class="section-title">📦 Sprzedaż</span></div>
     <div class="section-body" id="spList"></div>
     <div class="add-row">
-      <select class="item-select" id="spOpis" onchange="onItemSelect('sp')">
-        <option value="">— wybierz przedmiot —</option>
-      </select>
+      <div class="item-input-wrap">
+        <span class="item-input-icon">⚔</span>
+        <input class="item-input" id="spOpis" type="text" placeholder="Nazwa przedmiotu..." autocomplete="off">
+      </div>
       <select class="item-lvl-select" id="spLvl">
         <option value="">bez +</option>
         <option>+1</option><option>+2</option><option>+3</option>
@@ -195,9 +196,10 @@ body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min
     <div class="section-header"><span class="section-title">🛒 Zakupy</span></div>
     <div class="section-body" id="buyList"></div>
     <div class="add-row" style="flex-wrap:wrap;">
-      <select class="item-select" id="buyOpis" onchange="onItemSelect('buy')">
-        <option value="">— wybierz przedmiot —</option>
-      </select>
+      <div class="item-input-wrap">
+        <span class="item-input-icon">⚔</span>
+        <input class="item-input" id="buyOpis" type="text" placeholder="Nazwa przedmiotu..." autocomplete="off">
+      </div>
       <select class="item-lvl-select" id="buyLvl">
         <option value="">bez +</option>
         <option>+1</option><option>+2</option><option>+3</option>
@@ -472,16 +474,14 @@ function render() {
 /* SOCKET */
 socket.on('skarbiecUpdate', d => { data = d; render(); });
 
-// Wypełnij selecty przedmiotów
-populateItemSelects();
 
 /* ENTER */
 document.addEventListener('keydown', e => {
   if (e.key!=='Enter') return;
   const id = document.activeElement?.id;
   if (id==='invNick') addNick();
-  if (id==='spOpis'||id==='spKwota'||id==='spLvl') addSprzedaz();
-  if (id==='buyOpis'||id==='buyKwota'||id==='buyLvl') addZakup();
+  if (['spOpis','spKwota','spLvl'].includes(id)) addSprzedaz();
+  if (['buyOpis','buyKwota','buyLvl'].includes(id)) addZakup();
 });
 </script>
 
