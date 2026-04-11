@@ -218,6 +218,61 @@
     padding: 6px 8px; border-radius: 2px; outline: none;
   }
 
+  /* KALKULATOR ELIKSIRÓW */
+  .elix-panel {
+    position: fixed; bottom: 20px; right: 20px; z-index: 200;
+    width: 320px;
+    background: linear-gradient(160deg, #1c1510, #0e0b07);
+    border: 1px solid var(--gold-dark); border-radius: 4px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8), 0 0 20px rgba(201,168,76,0.06);
+    transition: transform 0.3s, opacity 0.3s;
+  }
+  .elix-panel.collapsed .elix-body { display: none; }
+  .elix-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; cursor: pointer;
+    border-bottom: 1px solid rgba(58,46,26,0.6);
+    background: rgba(0,0,0,0.3); border-radius: 4px 4px 0 0;
+  }
+  .elix-header:hover { background: rgba(201,168,76,0.05); }
+  .elix-header-title {
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 3px;
+    color: var(--gold); text-transform: uppercase;
+  }
+  .elix-toggle { color: var(--gold-dark); font-size: 12px; transition: transform 0.3s; }
+  .elix-panel.collapsed .elix-toggle { transform: rotate(180deg); }
+  .elix-body { padding: 14px; }
+  .elix-section { margin-bottom: 14px; }
+  .elix-section:last-child { margin-bottom: 0; }
+  .elix-section-title {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 2px;
+    color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;
+    padding-bottom: 4px; border-bottom: 1px solid rgba(58,46,26,0.4);
+  }
+  .elix-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .elix-label { font-size: 12px; color: var(--text-dim); flex: 1; }
+  .elix-select, .elix-input {
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(201,168,76,0.2);
+    color: var(--text); font-family: 'Cinzel', serif; font-size: 12px;
+    padding: 5px 8px; border-radius: 2px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .elix-select { width: 85px; }
+  .elix-input  { width: 70px; text-align: center; }
+  .elix-select:focus, .elix-input:focus { border-color: rgba(201,168,76,0.5); }
+  .elix-result {
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(201,168,76,0.15);
+    border-radius: 2px; padding: 8px 10px; margin-top: 4px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .elix-result-label { font-size: 11px; color: var(--text-dim); }
+  .elix-result-val {
+    font-family: 'Cinzel', serif; font-size: 14px; font-weight: 600;
+    color: var(--gold-light); letter-spacing: 1px;
+  }
+  .elix-result-val.zero { color: var(--green-bright, #60e080); }
+  .elix-result-val.many { color: #ff9060; }
+
   /* DRAG & DROP */
   .char-grid {
     user-select: none;
@@ -1468,5 +1523,113 @@ socket.on('resetTime', data => {
   document.getElementById('resetMinute').value = data.minute;
 });
 </script>
+<!-- KALKULATOR ELIKSIRÓW -->
+<div class="elix-panel" id="elixPanel">
+  <div class="elix-header" onclick="toggleElix()">
+    <span class="elix-header-title">⚗ Kalkulator Eliksirów</span>
+    <span class="elix-toggle">▲</span>
+  </div>
+  <div class="elix-body">
+
+    <!-- ŻYCIE -->
+    <div class="elix-section">
+      <div class="elix-section-title">❤ Eliksir Życia</div>
+      <div class="elix-row">
+        <span class="elix-label">Poziom eliksiru</span>
+        <select class="elix-select" id="hpLevel" onchange="calcElix()">
+          <option value="5">+5</option>
+          <option value="6">+6</option>
+          <option value="7">+7</option>
+          <option value="8">+8</option>
+          <option value="9">+9</option>
+        </select>
+      </div>
+      <div class="elix-row">
+        <span class="elix-label">Aktualny % życia</span>
+        <input class="elix-input" id="hpPct" type="number" min="0" max="100" value="50" oninput="calcElix()">
+        <span style="font-size:12px;color:var(--text-dim)">%</span>
+      </div>
+      <div class="elix-result">
+        <span class="elix-result-label">Stacków do kupienia</span>
+        <span class="elix-result-val" id="hpResult">—</span>
+      </div>
+    </div>
+
+    <!-- MANA -->
+    <div class="elix-section">
+      <div class="elix-section-title">💧 Eliksir Many</div>
+      <div class="elix-row">
+        <span class="elix-label">Poziom eliksiru</span>
+        <select class="elix-select" id="mpLevel" onchange="calcElix()">
+          <option value="5">+5</option>
+          <option value="6">+6</option>
+          <option value="7">+7</option>
+          <option value="8">+8</option>
+          <option value="9">+9</option>
+        </select>
+      </div>
+      <div class="elix-row">
+        <span class="elix-label">Aktualny % many</span>
+        <input class="elix-input" id="mpPct" type="number" min="0" max="100" value="50" oninput="calcElix()">
+        <span style="font-size:12px;color:var(--text-dim)">%</span>
+      </div>
+      <div class="elix-result">
+        <span class="elix-result-label">Stacków do kupienia</span>
+        <span class="elix-result-val" id="mpResult">—</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* KALKULATOR ELIKSIRÓW */
+// HP eliksir na 100%: +5=6mln, +6=7mln, +7=9mln, +8=14mln, +9=18mln
+const HP_MAX = { 5: 6000000, 6: 7000000, 7: 9000000, 8: 14000000, 9: 18000000 };
+// MP eliksir na 100%: +5=700k, +6=800k, +7=900k, +8=1mln, +9=1.2mln
+const MP_MAX = { 5: 700000, 6: 800000, 7: 900000, 8: 1000000, 9: 1200000 };
+const HP_STACK = 240000;  // 1 stack mikstur życia daje 240k HP
+const MP_STACK = 80000;   // 1 stack mikstur many daje 80k MP
+
+function calcElix() {
+  const hpLv  = parseInt(document.getElementById('hpLevel').value);
+  const hpPct = Math.min(100, Math.max(0, parseFloat(document.getElementById('hpPct').value) || 0));
+  const mpLv  = parseInt(document.getElementById('mpLevel').value);
+  const mpPct = Math.min(100, Math.max(0, parseFloat(document.getElementById('mpPct').value) || 0));
+
+  const hpMax     = HP_MAX[hpLv];
+  const hpCurrent = hpMax * hpPct / 100;
+  const hpMissing = hpMax - hpCurrent;
+  const hpStacks  = Math.ceil(hpMissing / HP_STACK);
+
+  const mpMax     = MP_MAX[mpLv];
+  const mpCurrent = mpMax * mpPct / 100;
+  const mpMissing = mpMax - mpCurrent;
+  const mpStacks  = Math.ceil(mpMissing / MP_STACK);
+
+  const hpEl = document.getElementById('hpResult');
+  const mpEl = document.getElementById('mpResult');
+
+  hpEl.innerText = hpPct >= 100 ? '✓ Pełny' : hpStacks + ' szt.';
+  hpEl.className = 'elix-result-val' + (hpPct >= 100 ? ' zero' : hpStacks > 10 ? ' many' : '');
+
+  mpEl.innerText = mpPct >= 100 ? '✓ Pełny' : mpStacks + ' szt.';
+  mpEl.className = 'elix-result-val' + (mpPct >= 100 ? ' zero' : mpStacks > 10 ? ' many' : '');
+}
+
+function toggleElix() {
+  const panel = document.getElementById('elixPanel');
+  panel.classList.toggle('collapsed');
+  localStorage.setItem('elixCollapsed', panel.classList.contains('collapsed') ? '1' : '0');
+}
+
+// Wczytaj stan zwinięcia
+if (localStorage.getItem('elixCollapsed') === '1') {
+  document.getElementById('elixPanel').classList.add('collapsed');
+}
+
+calcElix();
+</script>
+
 </body>
 </html>
