@@ -261,13 +261,16 @@ function renderInwestycje() {
   list.innerHTML = nicks.map(nick => {
     const kwota  = data.inwestycje[nick] || 0;
     const udzial = data.udzialy?.[nick] ?? 1;
+    const buyOwn = (data.zakupy||[]).filter(b=>b.kto===nick).reduce((s,b)=>s+b.kwota,0);
+    const total  = kwota + buyOwn;
     return `<div class="inv-row">
       ${avImg(nick,'inv-avatar')}
       <span class="inv-nick">${nick}</span>
-      <input class="inv-edit" id="inv_${nick}" type="number" value="${kwota}" min="0" step="0.01" placeholder="zł">
+      <input class="inv-edit" id="inv_${nick}" type="number" value="${kwota}" min="0" step="0.01" placeholder="zł" title="Ręczna wpłata">
       <button class="save-btn" onclick="saveInw('${nick}')">💾</button>
-      <input class="inv-edit" id="udz_${nick}" type="number" value="${udzial}" min="0" max="100" step="1" style="width:52px" title="Udział procentowy">
-      <span class="unit-label" title="Udziały procentowe">%</span>
+      <span class="unit-label" style="color:var(--green-bright);font-family:'Cinzel',serif;font-size:11px;min-width:80px;text-align:right;" title="Wpłata + zakupy razem">= ${fmt(total)}</span>
+      <input class="inv-edit" id="udz_${nick}" type="number" value="${udzial}" min="0" max="100" step="1" style="width:48px" title="Udział %">
+      <span class="unit-label">%</span>
       <button class="save-btn" onclick="saveUdz('${nick}')">💾</button>
       <button class="del-btn" onclick="delNick('${nick}')">✕</button>
     </div>`;
