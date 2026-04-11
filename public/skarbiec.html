@@ -176,13 +176,9 @@ body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min
     <div class="section-header"><span class="section-title">📦 Sprzedaż</span></div>
     <div class="section-body" id="spList"></div>
     <div class="add-row">
-      <div class="item-picker-wrap">
-        <button class="item-picker-btn" id="spPickerBtn" onclick="openPicker('sp')">
-          <img id="spPickerImg" src="" style="display:none">
-          <span class="item-picker-btn-text" id="spOpis">Wybierz przedmiot...</span>
-          <span class="item-picker-btn-arrow">▼</span>
-        </button>
-      </div>
+      <select class="item-select" id="spOpis" onchange="onItemSelect('sp')">
+        <option value="">— wybierz przedmiot —</option>
+      </select>
       <select class="item-lvl-select" id="spLvl">
         <option value="">bez +</option>
         <option>+1</option><option>+2</option><option>+3</option>
@@ -199,13 +195,9 @@ body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min
     <div class="section-header"><span class="section-title">🛒 Zakupy</span></div>
     <div class="section-body" id="buyList"></div>
     <div class="add-row" style="flex-wrap:wrap;">
-      <div class="item-picker-wrap">
-        <button class="item-picker-btn" id="buyPickerBtn" onclick="openPicker('buy')">
-          <img id="buyPickerImg" src="" style="display:none">
-          <span class="item-picker-btn-text" id="buyOpis">Wybierz przedmiot...</span>
-          <span class="item-picker-btn-arrow">▼</span>
-        </button>
-      </div>
+      <select class="item-select" id="buyOpis" onchange="onItemSelect('buy')">
+        <option value="">— wybierz przedmiot —</option>
+      </select>
       <select class="item-lvl-select" id="buyLvl">
         <option value="">bez +</option>
         <option>+1</option><option>+2</option><option>+3</option>
@@ -335,10 +327,43 @@ function renderSprzedaz() {
 /* ITEM SEARCH DROPDOWN */
 function buildItemName(prefix) {
   const el   = document.getElementById(prefix+'Opis');
-  const opis = (el.innerText || el.value || '').trim();
+  const opis = (el.value || '').trim();
   const lvl  = document.getElementById(prefix+'Lvl').value;
-  if (!opis || opis === 'Wybierz przedmiot...') return '';
+  if (!opis) return '';
   return lvl ? opis + ' ' + lvl : opis;
+}
+
+function onItemSelect(prefix) {
+  // nic dodatkowego — select.value jest gotowe
+}
+
+const CAT_ICONS = {
+  'Broń Wojownika':'⚔️','Broń Ninji':'🏹','Broń Sury':'🗡️','Broń Szamana':'🪭',
+  'Tarcze':'🛡️','Hełmy':'🪖','Zbroje':'🥋','Buty':'👢',
+  'Naszyjniki':'📿','Bransolety':'💎','Kolczyki':'💠','Inne':'🪙',
+};
+
+function populateItemSelects() {
+  // Grupuj przedmioty po kategorii
+  const groups = {};
+  METIN2_ITEMS.forEach(i => { (groups[i.category] = groups[i.category]||[]).push(i); });
+  
+  ['sp','buy'].forEach(prefix => {
+    const sel = document.getElementById(prefix+'Opis');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— wybierz przedmiot —</option>';
+    for (const cat in groups) {
+      const grp = document.createElement('optgroup');
+      grp.label = (CAT_ICONS[cat]||'') + ' ' + cat;
+      groups[cat].forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.name;
+        opt.textContent = item.name;
+        grp.appendChild(opt);
+      });
+      sel.appendChild(grp);
+    }
+  });
 }
 
 
@@ -457,6 +482,9 @@ function render() {
 /* SOCKET */
 socket.on('skarbiecUpdate', d => { data = d; render(); });
 
+// Wypełnij selecty przedmiotów
+populateItemSelects();
+
 /* ENTER */
 document.addEventListener('keydown', e => {
   if (e.key!=='Enter') return;
@@ -464,135 +492,6 @@ document.addEventListener('keydown', e => {
   if (id==='invNick') addNick();
   if (id==='spOpis'||id==='spKwota'||id==='spLvl') addSprzedaz();
   if (id==='buyOpis'||id==='buyKwota'||id==='buyLvl') addZakup();
-});
-</script>
-<!-- ITEM PICKER MODAL -->
-<div class="item-modal hidden" id="itemModal">
-  <div class="item-modal-box">
-    <div class="item-modal-header">
-      <button class="item-modal-back" id="modalBackBtn" onclick="pickerBack()" style="display:none">◀ Wróć</button>
-      <div class="item-modal-title" id="modalTitle">Wybierz kategorię</div>
-      <button class="item-modal-close" onclick="closePicker()">✕</button>
-    </div>
-    <div class="item-modal-search" id="modalSearch" style="display:none">
-      <span class="item-modal-search-icon">🔍</span>
-      <input type="text" id="modalSearchInput" placeholder="Szukaj przedmiotu..." oninput="filterItems()">
-    </div>
-    <div class="item-modal-body" id="modalBody"></div>
-  </div>
-</div>
-
-<script>
-/* ITEM PICKER */
-const CATEGORIES = {};
-METIN2_ITEMS.forEach(i => { (CATEGORIES[i.category] = CATEGORIES[i.category]||[]).push(i); });
-
-const CAT_ICONS = {
-  'Broń Wojownika': '⚔️',
-  'Broń Ninji':     '🏹',
-  'Broń Sury':      '🗡️',
-  'Broń Szamana':   '🪭',
-  'Tarcze':         '🛡️',
-  'Hełmy':          '🪖',
-  'Zbroje':         '🥋',
-  'Buty':           '👢',
-  'Naszyjniki':     '📿',
-  'Bransolety':     '💎',
-  'Kolczyki':       '💠',
-  'Inne':           '🪙',
-};
-
-let pickerPrefix = null;
-let pickerCat    = null;
-
-function openPicker(prefix) {
-  pickerPrefix = prefix;
-  pickerCat    = null;
-  document.getElementById('modalTitle').innerText = 'Wybierz kategorię';
-  document.getElementById('modalBackBtn').style.display = 'none';
-  document.getElementById('modalSearch').style.display  = 'none';
-  document.getElementById('modalSearchInput').value = '';
-  renderCategories();
-  document.getElementById('itemModal').classList.remove('hidden');
-}
-
-function closePicker() {
-  document.getElementById('itemModal').classList.add('hidden');
-}
-
-function pickerBack() {
-  pickerCat = null;
-  document.getElementById('modalTitle').innerText = 'Wybierz kategorię';
-  document.getElementById('modalBackBtn').style.display = 'none';
-  document.getElementById('modalSearch').style.display  = 'none';
-  document.getElementById('modalSearchInput').value = '';
-  renderCategories();
-}
-
-function renderCategories() {
-  const body = document.getElementById('modalBody');
-  body.innerHTML = '<div class="cat-grid">' +
-    Object.keys(CATEGORIES).map(cat => `
-      <div class="cat-card" onclick="selectCategory('${cat}')">
-        <div class="cat-emoji">${CAT_ICONS[cat]||'📦'}</div>
-        <div class="cat-card-name">${cat}</div>
-      </div>`).join('') +
-    '</div>';
-}
-
-function selectCategory(cat) {
-  pickerCat = cat;
-  document.getElementById('modalTitle').innerText = cat;
-  document.getElementById('modalBackBtn').style.display = '';
-  document.getElementById('modalSearch').style.display  = '';
-  setTimeout(() => document.getElementById('modalSearchInput').focus(), 50);
-  renderItems(CATEGORIES[cat]);
-}
-
-function filterItems() {
-  const q = document.getElementById('modalSearchInput').value.trim().toLowerCase();
-  const list = q ? CATEGORIES[pickerCat].filter(i => i.name.toLowerCase().includes(q)) : CATEGORIES[pickerCat];
-  renderItems(list);
-}
-
-function renderItems(list) {
-  const body = document.getElementById('modalBody');
-  body.innerHTML = list.map(i => {
-    const safeName = i.name.replace(/'/g,"\'");
-    return `<div class="item-list-row" onclick="pickItem('${safeName}','')">
-      <div class="item-list-emoji">${CAT_ICONS[i.category]||'📦'}</div>
-      <span class="item-list-name">${i.name}</span>
-    </div>`;
-  }).join('') || '<div style="padding:20px;color:var(--text-dim);text-align:center">Brak wyników</div>';
-}
-
-function pickItem(name, imgUrl) {
-  const p = pickerPrefix;
-  // Znajdź kategorię przedmiotu
-  const item = METIN2_ITEMS.find(i => i.name === name);
-  const emoji = item ? (CAT_ICONS[item.category]||'📦') : '📦';
-  const txt  = document.getElementById(p+'Opis');
-  const img  = document.getElementById(p+'PickerImg');
-  txt.innerText = name;
-  img.src = ''; img.style.display='none';
-  // Pokaż emoji na przycisku
-  const btn = document.getElementById(p+'PickerBtn');
-  let emojiSpan = btn.querySelector('.picker-emoji');
-  if (!emojiSpan) { emojiSpan = document.createElement('span'); emojiSpan.className='picker-emoji'; btn.insertBefore(emojiSpan, txt); }
-  emojiSpan.innerText = emoji;
-  selectedItemImg[p] = '';
-  closePicker();
-  document.getElementById(p+'Lvl').focus();
-}
-
-// Zamknij modal klikając tło
-document.getElementById('itemModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('itemModal')) closePicker();
-});
-
-// Esc zamyka
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closePicker();
 });
 </script>
 
