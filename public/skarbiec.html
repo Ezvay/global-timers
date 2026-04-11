@@ -176,11 +176,12 @@ body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min
     <div class="section-header"><span class="section-title">📦 Sprzedaż</span></div>
     <div class="section-body" id="spList"></div>
     <div class="add-row">
-      <div class="item-search-wrap">
-        <span class="item-search-icon">🔍</span>
-        <input class="item-search-input" id="spOpis" placeholder="Wyszukaj przedmiot..." autocomplete="off"
-               oninput="openDropdown('sp')" onfocus="openDropdown('sp')" onblur="closeDropdownDelay('sp')">
-        <div class="item-dropdown" id="spDropdown"></div>
+      <div class="item-picker-wrap">
+        <button class="item-picker-btn" id="spPickerBtn" onclick="openPicker('sp')">
+          <img id="spPickerImg" src="" style="display:none">
+          <span class="item-picker-btn-text" id="spOpis">Wybierz przedmiot...</span>
+          <span class="item-picker-btn-arrow">▼</span>
+        </button>
       </div>
       <select class="item-lvl-select" id="spLvl">
         <option value="">bez +</option>
@@ -198,11 +199,12 @@ body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min
     <div class="section-header"><span class="section-title">🛒 Zakupy</span></div>
     <div class="section-body" id="buyList"></div>
     <div class="add-row" style="flex-wrap:wrap;">
-      <div class="item-search-wrap">
-        <span class="item-search-icon">🔍</span>
-        <input class="item-search-input" id="buyOpis" placeholder="Wyszukaj przedmiot..." autocomplete="off"
-               oninput="openDropdown('buy')" onfocus="openDropdown('buy')" onblur="closeDropdownDelay('buy')">
-        <div class="item-dropdown" id="buyDropdown"></div>
+      <div class="item-picker-wrap">
+        <button class="item-picker-btn" id="buyPickerBtn" onclick="openPicker('buy')">
+          <img id="buyPickerImg" src="" style="display:none">
+          <span class="item-picker-btn-text" id="buyOpis">Wybierz przedmiot...</span>
+          <span class="item-picker-btn-arrow">▼</span>
+        </button>
       </div>
       <select class="item-lvl-select" id="buyLvl">
         <option value="">bez +</option>
@@ -332,49 +334,14 @@ function renderSprzedaz() {
 }
 /* ITEM SEARCH DROPDOWN */
 function buildItemName(prefix) {
-  const opis = document.getElementById(prefix+'Opis').value.trim();
+  const el   = document.getElementById(prefix+'Opis');
+  const opis = (el.innerText || el.value || '').trim();
   const lvl  = document.getElementById(prefix+'Lvl').value;
+  if (!opis || opis === 'Wybierz przedmiot...') return '';
   return lvl ? opis + ' ' + lvl : opis;
 }
 
-function openDropdown(prefix) {
-  const input = document.getElementById(prefix+'Opis');
-  const dd    = document.getElementById(prefix+'Dropdown');
-  const q     = input.value.trim().toLowerCase();
-  const matches = q.length < 1
-    ? METIN2_ITEMS.slice(0, 50)
-    : METIN2_ITEMS.filter(i => i.name.toLowerCase().includes(q)).slice(0, 60);
 
-  if (!matches.length) {
-    dd.innerHTML = '<div class="item-option" style="color:var(--text-dim);padding:10px">Brak wyników</div>';
-    dd.classList.add('open');
-    return;
-  }
-
-  // Grupuj po kategorii
-  const groups = {};
-  matches.forEach(i => { (groups[i.category] = groups[i.category]||[]).push(i); });
-
-  let html = '';
-  for (const cat in groups) {
-    if (q.length === 0) html += `<div class="item-dropdown-cat">${cat}</div>`;
-    html += groups[cat].map(i => {
-      const safeName = i.name.replace(/'/g,"\'").replace(/"/g,'&quot;');
-      const safeImg  = i.img_url.replace(/'/g,"\'");
-      return `<div class="item-option" onmousedown="selectItem('${prefix}','${safeName}','${safeImg}')">
-        <img src="${i.img_url}" onerror="this.src='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'">
-        <span class="item-option-name">${i.name}</span>
-      </div>`;
-    }).join('');
-  }
-
-  dd.innerHTML = html;
-  dd.classList.add('open');
-}
-
-function closeDropdownDelay(prefix) {
-  setTimeout(() => document.getElementById(prefix+'Dropdown').classList.remove('open'), 200);
-}
 
 const selectedItemImg = {};
 function selectItem(prefix, name, imgUrl) {
@@ -499,5 +466,131 @@ document.addEventListener('keydown', e => {
   if (id==='buyOpis'||id==='buyKwota'||id==='buyLvl') addZakup();
 });
 </script>
+<!-- ITEM PICKER MODAL -->
+<div class="item-modal hidden" id="itemModal">
+  <div class="item-modal-box">
+    <div class="item-modal-header">
+      <button class="item-modal-back" id="modalBackBtn" onclick="pickerBack()" style="display:none">◀ Wróć</button>
+      <div class="item-modal-title" id="modalTitle">Wybierz kategorię</div>
+      <button class="item-modal-close" onclick="closePicker()">✕</button>
+    </div>
+    <div class="item-modal-search" id="modalSearch" style="display:none">
+      <span class="item-modal-search-icon">🔍</span>
+      <input type="text" id="modalSearchInput" placeholder="Szukaj przedmiotu..." oninput="filterItems()">
+    </div>
+    <div class="item-modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+/* ITEM PICKER */
+const CATEGORIES = {};
+METIN2_ITEMS.forEach(i => { (CATEGORIES[i.category] = CATEGORIES[i.category]||[]).push(i); });
+
+const CAT_ICONS = {
+  'Broń Wojownika': '/wiki-icon/Miecz.png',
+  'Broń Ninji':     '/wiki-icon/%C5%81uk.png',
+  'Broń Sury':      '/wiki-icon/Miecz_Czarnej_Magii.png',
+  'Broń Szamana':   '/wiki-icon/Wachlarz.png',
+  'Tarcze':         '/wiki-icon/Okr%C4%85g%C5%82a_Tarcza.png',
+  'Hełmy':          '/wiki-icon/Kask_Wojownika.png',
+  'Zbroje':         '/wiki-icon/Zbroja_Wojownika.png',
+  'Buty':           '/wiki-icon/Buty_Wojownika.png',
+  'Naszyjniki':     '/wiki-icon/Naszyjnik_z_Jaspisu.png',
+  'Bransolety':     '/wiki-icon/Bransoleta_z_Jaspisu.png',
+  'Kolczyki':       '/wiki-icon/Kolczyki_z_Jaspisu.png',
+  'Inne':           '/wiki-icon/Smocza_Moneta.png',
+};
+
+let pickerPrefix = null;
+let pickerCat    = null;
+
+function openPicker(prefix) {
+  pickerPrefix = prefix;
+  pickerCat    = null;
+  document.getElementById('modalTitle').innerText = 'Wybierz kategorię';
+  document.getElementById('modalBackBtn').style.display = 'none';
+  document.getElementById('modalSearch').style.display  = 'none';
+  document.getElementById('modalSearchInput').value = '';
+  renderCategories();
+  document.getElementById('itemModal').classList.remove('hidden');
+}
+
+function closePicker() {
+  document.getElementById('itemModal').classList.add('hidden');
+}
+
+function pickerBack() {
+  pickerCat = null;
+  document.getElementById('modalTitle').innerText = 'Wybierz kategorię';
+  document.getElementById('modalBackBtn').style.display = 'none';
+  document.getElementById('modalSearch').style.display  = 'none';
+  document.getElementById('modalSearchInput').value = '';
+  renderCategories();
+}
+
+function renderCategories() {
+  const body = document.getElementById('modalBody');
+  body.innerHTML = '<div class="cat-grid">' +
+    Object.keys(CATEGORIES).map(cat => `
+      <div class="cat-card" onclick="selectCategory('${cat}')">
+        <img src="${CAT_ICONS[cat]||''}" onerror="this.style.opacity='0.3'">
+        <div class="cat-card-name">${cat}</div>
+      </div>`).join('') +
+    '</div>';
+}
+
+function selectCategory(cat) {
+  pickerCat = cat;
+  document.getElementById('modalTitle').innerText = cat;
+  document.getElementById('modalBackBtn').style.display = '';
+  document.getElementById('modalSearch').style.display  = '';
+  setTimeout(() => document.getElementById('modalSearchInput').focus(), 50);
+  renderItems(CATEGORIES[cat]);
+}
+
+function filterItems() {
+  const q = document.getElementById('modalSearchInput').value.trim().toLowerCase();
+  const list = q ? CATEGORIES[pickerCat].filter(i => i.name.toLowerCase().includes(q)) : CATEGORIES[pickerCat];
+  renderItems(list);
+}
+
+function renderItems(list) {
+  const body = document.getElementById('modalBody');
+  body.innerHTML = list.map(i => {
+    const safeName = i.name.replace(/'/g,"\'");
+    const safeImg  = i.img_url.replace(/'/g,"\'");
+    return `<div class="item-list-row" onclick="pickItem('${safeName}','${safeImg}')">
+      <img src="${i.img_url}" onerror="this.style.opacity='0.2'">
+      <span class="item-list-name">${i.name}</span>
+    </div>`;
+  }).join('') || '<div style="padding:20px;color:var(--text-dim);text-align:center">Brak wyników</div>';
+}
+
+function pickItem(name, imgUrl) {
+  const p = pickerPrefix;
+  // Ustaw tekst i ikonkę na przycisku
+  const btn  = document.getElementById(p+'PickerBtn');
+  const txt  = document.getElementById(p+'Opis');
+  const img  = document.getElementById(p+'PickerImg');
+  txt.innerText  = name;
+  img.src        = imgUrl;
+  img.style.display = '';
+  selectedItemImg[p] = imgUrl;
+  closePicker();
+  document.getElementById(p+'Lvl').focus();
+}
+
+// Zamknij modal klikając tło
+document.getElementById('itemModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('itemModal')) closePicker();
+});
+
+// Esc zamyka
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePicker();
+});
+</script>
+
 </body>
 </html>
