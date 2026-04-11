@@ -25,7 +25,7 @@ app.use(express.static("public"))
 let timers        = {}
 let characters    = {}
 let charsList     = {}   // {name: iconPath}
-let skarbiec      = { inwestycje: {}, sprzedaz: [] }  // {inwestycje: {nick: zł}, sprzedaz: [{id,opis,kwota,ts}]}
+let skarbiec      = { inwestycje: {}, udzialy: {}, sprzedaz: [], zakupy: [] }
 let runningTimers       = new Set()  // które timery były uruchomione
 let runningCustomTimers = new Set()  // które custom timery były uruchomione
 let tasks         = {}
@@ -68,7 +68,9 @@ async function connectDB() {
     grotaSnapshots = doc.grotaSnapshots || []
     charOrder           = doc.charOrder           || []
   charsList           = doc.charsList           || {}
-  skarbiec            = doc.skarbiec            || { inwestycje: {}, sprzedaz: [] }
+  skarbiec            = doc.skarbiec            || { inwestycje: {}, udzialy: {}, sprzedaz: [], zakupy: [] }
+  if (!skarbiec.udzialy)  skarbiec.udzialy  = {}
+  if (!skarbiec.zakupy)   skarbiec.zakupy   = []
     runningTimers       = new Set(doc.runningTimers       || [])
     runningCustomTimers = new Set(doc.runningCustomTimers || [])
 
@@ -127,7 +129,7 @@ async function saveNow() {
       { _id: DOC_ID },
       { _id: DOC_ID, timers, characters, tasks, resetHour, resetMinute,
         customPlaces, customTimers, grotaPings, grotaHistory,
-        grotaGenerals, grotaSnapshots, charOrder,
+        grotaGenerals, grotaSnapshots, charOrder, charsList, skarbiec,
         runningTimers: [...runningTimers],
         runningCustomTimers: [...runningCustomTimers] },
       { upsert: true }
@@ -403,32 +405,46 @@ io.on("connection",(socket)=>{
   socket.on("skarbiecSetInwestycja",(data)=>{
     const {nick, kwota} = data
     if(!skarbiec.inwestycje) skarbiec.inwestycje = {}
-    skarbiec.inwestycje[nick] = parseFloat(kwota) || 0
-    saveNow()
-    io.emit("skarbiecUpdate", skarbiec)
+    skarbiec.inwestycje[nick] = parseFloat(kwota)||0
+    saveNow(); io.emit("skarbiecUpdate", skarbiec)
+  })
+  socket.on("skarbiecSetUdzial",(data)=>{
+    const {nick, udzial} = data
+    if(!skarbiec.udzialy) skarbiec.udzialy = {}
+    skarbiec.udzialy[nick] = parseFloat(udzial)||1
+    saveNow(); io.emit("skarbiecUpdate", skarbiec)
+  })
+  socket.on("skarbiecAddNick",(nick)=>{
+    if(!skarbiec.inwestycje) skarbiec.inwestycje = {}
+    if(skarbiec.inwestycje[nick]===undefined) skarbiec.inwestycje[nick] = 0
+    if(!skarbiec.udzialy) skarbiec.udzialy = {}
+    if(skarbiec.udzialy[nick]===undefined) skarbiec.udzialy[nick] = 1
+    saveNow(); io.emit("skarbiecUpdate", skarbiec)
+  })
+  socket.on("skarbiecRemoveNick",(nick)=>{
+    if(skarbiec.inwestycje) delete skarbiec.inwestycje[nick]
+    if(skarbiec.udzialy)    delete skarbiec.udzialy[nick]
+    saveNow(); io.emit("skarbiecUpdate", skarbiec)
   })
   socket.on("skarbiecAddSprzedaz",(data)=>{
     const {opis, kwota} = data
     if(!skarbiec.sprzedaz) skarbiec.sprzedaz = []
-    skarbiec.sprzedaz.unshift({ id: 'sp_'+Date.now(), opis, kwota: parseFloat(kwota)||0, ts: Date.now() })
-    saveNow()
-    io.emit("skarbiecUpdate", skarbiec)
+    skarbiec.sprzedaz.unshift({ id:'sp_'+Date.now(), opis, kwota:parseFloat(kwota)||0, ts:Date.now() })
+    saveNow(); io.emit("skarbiecUpdate", skarbiec)
   })
   socket.on("skarbiecRemoveSprzedaz",(id)=>{
     skarbiec.sprzedaz = (skarbiec.sprzedaz||[]).filter(s=>s.id!==id)
-    saveNow()
-    io.emit("skarbiecUpdate", skarbiec)
+    saveNow(); io.emit("skarbiecUpdate", skarbiec)
   })
-  socket.on("skarbiecAddNick",(nick)=>{
-    if(!skarbiec.inwestycje) skarbiec.inwestycje = {}
-    if(skarbiec.inwestycje[nick] === undefined) skarbiec.inwestycje[nick] = 0
-    saveNow()
-    io.emit("skarbiecUpdate", skarbiec)
+  socket.on("skarbiecAddZakup",(data)=>{
+    const {opis, kwota, kto} = data
+    if(!skarbiec.zakupy) skarbiec.zakupy = []
+    skarbiec.zakupy.unshift({ id:'buy_'+Date.now(), opis, kwota:parseFloat(kwota)||0, kto:kto||'', ts:Date.now() })
+    saveNow(); io.emit("skarbiecUpdate", skarbiec)
   })
-  socket.on("skarbiecRemoveNick",(nick)=>{
-    if(skarbiec.inwestycje) delete skarbiec.inwestycje[nick]
-    saveNow()
-    io.emit("skarbiecUpdate", skarbiec)
+  socket.on("skarbiecRemoveZakup",(id)=>{
+    skarbiec.zakupy = (skarbiec.zakupy||[]).filter(b=>b.id!==id)
+    saveNow(); io.emit("skarbiecUpdate", skarbiec)
   })
 
   socket.on("setCharOrder",(order)=>{
