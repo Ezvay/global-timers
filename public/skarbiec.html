@@ -140,7 +140,7 @@ body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min
 <div class="summary">
   <div class="summary-inner">
     <div class="summary-item">
-      <div class="summary-label">Łączne inwestycje</div>
+      <div class="summary-label">Łączne wpłacono + zakupy</div>
       <div class="summary-value" id="sumInw">0,00 zł</div>
     </div>
     <div class="summary-item">
@@ -266,8 +266,8 @@ function renderInwestycje() {
       <span class="inv-nick">${nick}</span>
       <input class="inv-edit" id="inv_${nick}" type="number" value="${kwota}" min="0" step="0.01" placeholder="zł">
       <button class="save-btn" onclick="saveInw('${nick}')">💾</button>
-      <input class="inv-edit" id="udz_${nick}" type="number" value="${udzial}" min="0" step="0.5" style="width:52px" title="Udziały">
-      <span class="unit-label" title="Udziały">ud.</span>
+      <input class="inv-edit" id="udz_${nick}" type="number" value="${udzial}" min="0" max="100" step="1" style="width:52px" title="Udział procentowy">
+      <span class="unit-label" title="Udziały procentowe">%</span>
       <button class="save-btn" onclick="saveUdz('${nick}')">💾</button>
       <button class="del-btn" onclick="delNick('${nick}')">✕</button>
     </div>`;
@@ -358,15 +358,22 @@ function delBuy(id) {
 
 /* RENDER PODZIAŁ */
 function renderProfit() {
-  const nicks   = Object.keys(data.inwestycje);
-  const sumInw  = nicks.reduce((s,n)=>s+(data.inwestycje[n]||0),0);
-  const sumSp   = (data.sprzedaz||[]).reduce((s,sp)=>s+sp.kwota,0);
-  const sumBuy  = (data.zakupy||[]).reduce((s,b)=>s+b.kwota,0);
-  const bilans  = sumSp - sumBuy - sumInw;
+  const nicks  = Object.keys(data.inwestycje);
+  const sumSp  = (data.sprzedaz||[]).reduce((s,sp)=>s+sp.kwota,0);
+  const sumBuy = (data.zakupy||[]).reduce((s,b)=>s+b.kwota,0);
 
-  document.getElementById('sumInw').innerText   = fmt(sumInw);
-  document.getElementById('sumSp').innerText    = fmt(sumSp);
-  document.getElementById('sumBuy').innerText   = fmt(sumBuy);
+  // Inwestycja każdego = wpłacone + własne zakupy
+  const invTotal = nick => {
+    const inv     = data.inwestycje[nick]||0;
+    const buyOwn  = (data.zakupy||[]).filter(b=>b.kto===nick).reduce((s,b)=>s+b.kwota,0);
+    return inv + buyOwn;
+  };
+  const sumInwAll = nicks.reduce((s,n)=>s+invTotal(n),0);
+  const bilans    = sumSp - sumInwAll;
+
+  document.getElementById('sumInw').innerText  = fmt(sumInwAll);
+  document.getElementById('sumSp').innerText   = fmt(sumSp);
+  document.getElementById('sumBuy').innerText  = fmt(sumBuy);
   const bil = document.getElementById('sumBilans');
   bil.innerText = fmt(bilans);
   bil.className = 'summary-value '+(bilans>=0?'green':'red');
@@ -374,29 +381,28 @@ function renderProfit() {
   const grid = document.getElementById('profitGrid');
   if (!nicks.length) { grid.innerHTML='<div class="empty-info" style="grid-column:1/-1">Dodaj graczy</div>'; return; }
 
-  // Suma udziałów
-  const totalUdz = nicks.reduce((s,n)=>s+(data.udzialy?.[n]??1),0)||1;
-  const pula = sumSp - sumBuy; // do podziału
+  // Udziały w % — jeśli suma != 100 to normalizuj proporcjonalnie
+  const getRawPct = n => parseFloat(data.udzialy?.[n] ?? (100/nicks.length));
+  const totalPct  = nicks.reduce((s,n)=>s+getRawPct(n),0)||100;
 
   grid.innerHTML = nicks.map(nick => {
-    const inv    = data.inwestycje[nick]||0;
-    const udzial = data.udzialy?.[nick]??1;
-    const pct    = totalUdz>0 ? udzial/totalUdz : 1/nicks.length;
-
-    // Zakupy tego gracza
-    const buyOwn = (data.zakupy||[]).filter(b=>b.kto===nick).reduce((s,b)=>s+b.kwota,0);
-
-    const zyskBrutto = pula * pct;
-    const netto      = zyskBrutto - inv;
-    const pctStr     = (pct*100).toFixed(1);
+    const inv     = data.inwestycje[nick]||0;
+    const buyOwn  = (data.zakupy||[]).filter(b=>b.kto===nick).reduce((s,b)=>s+b.kwota,0);
+    const invTot  = inv + buyOwn;
+    const rawPct  = getRawPct(nick);
+    const fraction= rawPct / totalPct;  // rzeczywisty udział
+    const zysk    = sumSp * fraction;
+    const netto   = zysk - invTot;
+    const pctDisp = rawPct.toFixed(1);
 
     return `<div class="profit-item">
       ${avImg(nick,'profit-avatar')}
       <div class="profit-nick">${nick}</div>
-      <div class="profit-line">Inwestycja: ${fmt(inv)}</div>
-      <div class="profit-line">Udział: ${udzial} (${pctStr}%)</div>
-      ${buyOwn>0?`<div class="profit-line">Zakupy: -${fmt(buyOwn)}</div>`:''}
-      <div class="profit-line">Ze sprzedaży: ${fmt(zyskBrutto)}</div>
+      <div class="profit-line">Wpłacono: ${fmt(inv)}</div>
+      ${buyOwn>0?`<div class="profit-line">Zakupy: +${fmt(buyOwn)}</div>`:''}
+      <div class="profit-line">Razem wł.: ${fmt(invTot)}</div>
+      <div class="profit-line">Udział: ${pctDisp}%</div>
+      <div class="profit-line">Ze sprzedaży: ${fmt(zysk)}</div>
       <div class="profit-zysk ${netto>=0?'plus':'minus'}">${netto>=0?'+':''}${fmt(netto)}</div>
       <div class="profit-udz">netto</div>
     </div>`;
