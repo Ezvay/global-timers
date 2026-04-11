@@ -18,6 +18,36 @@ const DOC_ID    = "main"
 
 app.use(express.static("public"))
 
+// Proxy ikonek z wiki Metin2
+const https = require("https")
+app.get("/wiki-icon/:filename", (req, res) => {
+  const filename = req.params.filename
+  const url = `https://pl-wiki.metin2.gameforge.com/index.php/Specjalna:Redirect/file/${filename}`
+  const request = https.get(url, {
+    headers: { "User-Agent": "Mozilla/5.0" },
+    timeout: 5000
+  }, response => {
+    if (response.statusCode === 302 || response.statusCode === 301) {
+      // Podąża za redirectem
+      const redirectUrl = response.headers.location
+      if (!redirectUrl) return res.status(404).end()
+      https.get(redirectUrl, { headers: { "User-Agent": "Mozilla/5.0" } }, r2 => {
+        res.setHeader("Content-Type", r2.headers["content-type"] || "image/png")
+        res.setHeader("Cache-Control", "public, max-age=86400")
+        r2.pipe(res)
+      }).on("error", () => res.status(404).end())
+    } else if (response.statusCode === 200) {
+      res.setHeader("Content-Type", response.headers["content-type"] || "image/png")
+      res.setHeader("Cache-Control", "public, max-age=86400")
+      response.pipe(res)
+    } else {
+      res.status(404).end()
+    }
+  })
+  request.on("error", () => res.status(404).end())
+  request.on("timeout", () => { request.destroy(); res.status(504).end() })
+})
+
 /* ======================
    STAN W PAMIĘCI
 ====================== */

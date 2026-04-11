@@ -177,6 +177,7 @@ body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min
     <div class="section-body" id="spList"></div>
     <div class="add-row">
       <div class="item-search-wrap">
+        <span class="item-search-icon">🔍</span>
         <input class="item-search-input" id="spOpis" placeholder="Wyszukaj przedmiot..." autocomplete="off"
                oninput="openDropdown('sp')" onfocus="openDropdown('sp')" onblur="closeDropdownDelay('sp')">
         <div class="item-dropdown" id="spDropdown"></div>
@@ -198,6 +199,7 @@ body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min
     <div class="section-body" id="buyList"></div>
     <div class="add-row" style="flex-wrap:wrap;">
       <div class="item-search-wrap">
+        <span class="item-search-icon">🔍</span>
         <input class="item-search-input" id="buyOpis" placeholder="Wyszukaj przedmiot..." autocomplete="off"
                oninput="openDropdown('buy')" onfocus="openDropdown('buy')" onblur="closeDropdownDelay('buy')">
         <div class="item-dropdown" id="buyDropdown"></div>
@@ -340,17 +342,33 @@ function openDropdown(prefix) {
   const dd    = document.getElementById(prefix+'Dropdown');
   const q     = input.value.trim().toLowerCase();
   const matches = q.length < 1
-    ? METIN2_ITEMS.slice(0, 30)
-    : METIN2_ITEMS.filter(i => i.name.toLowerCase().includes(q)).slice(0, 40);
+    ? METIN2_ITEMS.slice(0, 50)
+    : METIN2_ITEMS.filter(i => i.name.toLowerCase().includes(q)).slice(0, 60);
 
-  dd.innerHTML = matches.map(i =>
-    `<div class="item-option" onmousedown="selectItem('${prefix}','${i.name.replace(/'/g,"\'")}','${i.img_url}')">
-      <img src="${i.img_url}" style="width:26px;height:26px;object-fit:contain;image-rendering:pixelated;flex-shrink:0;"
-           onerror="this.style.display='none'">
-      <span style="flex:1">${i.name}</span>
-      <span class="item-option-cat">${i.category}</span>
-    </div>`
-  ).join('') || '<div class="item-option" style="color:var(--text-dim)">Brak wyników</div>';
+  if (!matches.length) {
+    dd.innerHTML = '<div class="item-option" style="color:var(--text-dim);padding:10px">Brak wyników</div>';
+    dd.classList.add('open');
+    return;
+  }
+
+  // Grupuj po kategorii
+  const groups = {};
+  matches.forEach(i => { (groups[i.category] = groups[i.category]||[]).push(i); });
+
+  let html = '';
+  for (const cat in groups) {
+    if (q.length === 0) html += `<div class="item-dropdown-cat">${cat}</div>`;
+    html += groups[cat].map(i => {
+      const safeName = i.name.replace(/'/g,"\'").replace(/"/g,'&quot;');
+      const safeImg  = i.img_url.replace(/'/g,"\'");
+      return `<div class="item-option" onmousedown="selectItem('${prefix}','${safeName}','${safeImg}')">
+        <img src="${i.img_url}" onerror="this.src='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'">
+        <span class="item-option-name">${i.name}</span>
+      </div>`;
+    }).join('');
+  }
+
+  dd.innerHTML = html;
   dd.classList.add('open');
 }
 
