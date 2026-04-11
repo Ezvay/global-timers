@@ -344,8 +344,10 @@ function openDropdown(prefix) {
     : METIN2_ITEMS.filter(i => i.name.toLowerCase().includes(q)).slice(0, 40);
 
   dd.innerHTML = matches.map(i =>
-    `<div class="item-option" onmousedown="selectItem('${prefix}','${i.name.replace(/'/g,"\'")}')">
-      <span>${i.name}</span>
+    `<div class="item-option" onmousedown="selectItem('${prefix}','${i.name.replace(/'/g,"\'")}','${i.img_url}')">
+      <img src="${i.img_url}" style="width:26px;height:26px;object-fit:contain;image-rendering:pixelated;flex-shrink:0;"
+           onerror="this.style.display='none'">
+      <span style="flex:1">${i.name}</span>
       <span class="item-option-cat">${i.category}</span>
     </div>`
   ).join('') || '<div class="item-option" style="color:var(--text-dim)">Brak wyników</div>';
@@ -356,8 +358,10 @@ function closeDropdownDelay(prefix) {
   setTimeout(() => document.getElementById(prefix+'Dropdown').classList.remove('open'), 200);
 }
 
-function selectItem(prefix, name) {
+const selectedItemImg = {};
+function selectItem(prefix, name, imgUrl) {
   document.getElementById(prefix+'Opis').value = name;
+  selectedItemImg[prefix] = imgUrl || '';
   document.getElementById(prefix+'Dropdown').classList.remove('open');
   document.getElementById(prefix+'Kwota').focus();
 }
@@ -366,7 +370,7 @@ function addSprzedaz() {
   const opis  = buildItemName('sp');
   const kwota = parseFloat(document.getElementById('spKwota').value)||0;
   if (!opis||kwota<=0) return;
-  socket.emit('skarbiecAddSprzedaz',{opis,kwota});
+  socket.emit('skarbiecAddSprzedaz',{opis,kwota,imgUrl:selectedItemImg['sp']||''});
   document.getElementById('spOpis').value='';
   document.getElementById('spLvl').value='';
   document.getElementById('spKwota').value='';
@@ -402,7 +406,7 @@ function addZakup() {
   const kwota = parseFloat(document.getElementById('buyKwota').value)||0;
   const kto   = document.getElementById('buyKto').value;
   if (!opis||kwota<=0) return;
-  socket.emit('skarbiecAddZakup',{opis,kwota,kto});
+  socket.emit('skarbiecAddZakup',{opis,kwota,kto,imgUrl:selectedItemImg['buy']||''});
   document.getElementById('buyOpis').value='';
   document.getElementById('buyLvl').value='';
   document.getElementById('buyKwota').value='';

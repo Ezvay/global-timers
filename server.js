@@ -427,9 +427,9 @@ io.on("connection",(socket)=>{
     saveNow(); io.emit("skarbiecUpdate", skarbiec)
   })
   socket.on("skarbiecAddSprzedaz",(data)=>{
-    const {opis, kwota} = data
+    const {opis, kwota, imgUrl} = data
     if(!skarbiec.sprzedaz) skarbiec.sprzedaz = []
-    skarbiec.sprzedaz.unshift({ id:'sp_'+Date.now(), opis, kwota:parseFloat(kwota)||0, ts:Date.now() })
+    skarbiec.sprzedaz.unshift({ id:'sp_'+Date.now(), opis, kwota:parseFloat(kwota)||0, imgUrl:imgUrl||'', ts:Date.now() })
     saveNow(); io.emit("skarbiecUpdate", skarbiec)
   })
   socket.on("skarbiecRemoveSprzedaz",(id)=>{
@@ -437,9 +437,9 @@ io.on("connection",(socket)=>{
     saveNow(); io.emit("skarbiecUpdate", skarbiec)
   })
   socket.on("skarbiecAddZakup",(data)=>{
-    const {opis, kwota, kto} = data
+    const {opis, kwota, kto, imgUrl} = data
     if(!skarbiec.zakupy) skarbiec.zakupy = []
-    skarbiec.zakupy.unshift({ id:'buy_'+Date.now(), opis, kwota:parseFloat(kwota)||0, kto:kto||'', ts:Date.now() })
+    skarbiec.zakupy.unshift({ id:'buy_'+Date.now(), opis, kwota:parseFloat(kwota)||0, kto:kto||'', imgUrl:imgUrl||'', ts:Date.now() })
     saveNow(); io.emit("skarbiecUpdate", skarbiec)
   })
   socket.on("skarbiecRemoveZakup",(id)=>{
