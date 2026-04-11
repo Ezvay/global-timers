@@ -337,28 +337,18 @@ function onItemSelect(prefix) {
   // nic dodatkowego — select.value jest gotowe
 }
 
-const CAT_ICONS = {
-  'Broń Wojownika':'⚔️','Broń Ninji':'🏹','Broń Sury':'🗡️','Broń Szamana':'🪭',
-  'Tarcze':'🛡️','Hełmy':'🪖','Zbroje':'🥋','Buty':'👢',
-  'Naszyjniki':'📿','Bransolety':'💎','Kolczyki':'💠','Inne':'🪙',
-};
-
 function populateItemSelects() {
-  // Grupuj przedmioty po kategorii
-  const groups = {};
-  METIN2_ITEMS.forEach(i => { (groups[i.category] = groups[i.category]||[]).push(i); });
-  
   ['sp','buy'].forEach(prefix => {
     const sel = document.getElementById(prefix+'Opis');
     if (!sel) return;
     sel.innerHTML = '<option value="">— wybierz przedmiot —</option>';
-    for (const cat in groups) {
+    for (const grpName in METIN2_GROUPS) {
       const grp = document.createElement('optgroup');
-      grp.label = (CAT_ICONS[cat]||'') + ' ' + cat;
-      groups[cat].forEach(item => {
+      grp.label = grpName;
+      METIN2_GROUPS[grpName].forEach(name => {
         const opt = document.createElement('option');
-        opt.value = item.name;
-        opt.textContent = item.name;
+        opt.value = name;
+        opt.textContent = name;
         grp.appendChild(opt);
       });
       sel.appendChild(grp);
