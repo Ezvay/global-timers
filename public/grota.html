@@ -265,19 +265,17 @@
   }
   .popup-cancel:hover{color:var(--text);border-color:rgba(255,255,255,0.2);}
   /* WŁASNE TRASY */
-  .crt-item{padding:8px 12px;border-bottom:1px solid rgba(58,46,26,0.3);display:flex;align-items:center;gap:8px;}
+  .crt-item{padding:9px 12px;border-bottom:1px solid rgba(58,46,26,0.3);display:flex;align-items:center;gap:8px;transition:background 0.15s;}
+  .crt-item:hover{background:rgba(201,168,76,0.04);}
+  .crt-item.active{background:rgba(201,168,76,0.08);border-left:2px solid rgba(201,168,76,0.5);}
   .crt-name{flex:1;font-family:'Crimson Text',serif;font-size:14px;color:var(--text);cursor:pointer;}
   .crt-name:hover{color:var(--gold);}
-  .crt-btn{font-size:10px;padding:2px 7px;border-radius:2px;cursor:pointer;border:1px solid rgba(58,46,26,0.5);background:none;color:var(--text-dim);}
+  .crt-btn{font-size:10px;padding:3px 8px;border-radius:2px;cursor:pointer;border:1px solid rgba(58,46,26,0.5);background:none;color:var(--text-dim);font-family:'Cinzel',serif;transition:all 0.15s;}
   .crt-btn:hover{color:var(--gold);border-color:rgba(201,168,76,0.4);}
+  .crt-btn.danger:hover{color:#e06060;border-color:rgba(180,50,50,0.5);}
   /* Tryb rysowania */
   .draw-active #mapContainer{cursor:crosshair!important;}
-  .draw-hint{
-    position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
-    background:rgba(10,8,5,0.92);border:1px solid rgba(201,168,76,0.4);border-radius:4px;
-    padding:8px 18px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;
-    color:var(--gold);text-transform:uppercase;pointer-events:none;z-index:200;display:none;
-  }
+  #drawPanel kbd{font-family:monospace;}
   /* LICZNIKI CH + HISTORIA ZBITYCH */
   .ch-ctr{display:flex;flex-direction:column;align-items:center;padding:7px 4px;border-radius:3px;border:1px solid rgba(58,46,26,0.4);background:rgba(0,0,0,0.25);}
   .ch-ctr-num{font-family:'Cinzel',serif;font-size:9px;color:var(--text-dim);letter-spacing:1px;}
@@ -327,11 +325,7 @@
       <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);min-width:24px;text-align:right;" id="pingSizeVal">14</span>
     </div>
     <button class="heat-btn" id="heatBtn" onclick="toggleHeat()">🔥 Heatmapa OFF</button>
-    <div style="display:flex;align-items:center;gap:4px;">
-      <button class="heat-btn" id="routeBtn" onclick="toggleRoute()" style="color:#80b0ff;border-color:rgba(80,140,255,0.4);">🗺 Trasa OFF</button>
-      <button id="routeRegenBtn" onclick="regenRoute()" title="Losuj nową trasę" style="display:none;background:#0e0b07;border:1px solid rgba(80,140,255,0.4);color:#80b0ff;font-family:'Cinzel',serif;font-size:14px;padding:3px 10px;border-radius:2px;cursor:pointer;" title="Generuj nową trasę">↺</button>
-      <button class="heat-btn" id="customRouteBtn" onclick="toggleCustomRoute()" style="color:#c8a84c;border-color:rgba(201,168,76,0.4);">✏️ Własna trasa</button>
-    </div>
+    <button class="heat-btn" id="customRouteBtn" onclick="toggleCustomRoute()" style="color:#c8a84c;border-color:rgba(201,168,76,0.4);">✏️ Rysuj trasę</button>
   </div>
 </div>
 
@@ -345,6 +339,43 @@
       <div id="pingLayer"></div>
       <div id="generalLayer"></div>
       <div class="map-hint" id="mapHint">Kliknij na mapę aby pingować metina</div>
+      <!-- Panel rysowania trasy — pojawia się podczas rysowania -->
+      <div id="drawPanel" style="
+        display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);
+        background:rgba(10,8,5,0.92);border:1px solid rgba(201,168,76,0.5);
+        border-radius:4px;padding:10px 16px;z-index:20;
+        display:none;flex-direction:column;gap:8px;align-items:center;min-width:260px;
+        box-shadow:0 4px 20px rgba(0,0,0,0.8);
+      ">
+        <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;">
+          ✏️ Rysowanie trasy
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);text-align:center;">
+          Klikaj punkty na mapie &nbsp;·&nbsp; <kbd style="background:#222;padding:1px 5px;border-radius:2px;color:#aaa;">Backspace</kbd> cofnij
+        </div>
+        <div style="display:flex;gap:8px;width:100%;">
+          <input id="drawRouteName" placeholder="Nazwa trasy..." style="
+            flex:1;background:#0e0b07;border:1px solid rgba(201,168,76,0.3);
+            color:var(--text);font-family:'Crimson Text',serif;font-size:13px;
+            padding:5px 8px;border-radius:2px;outline:none;
+          ">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="saveDrawing()" style="
+            font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+            padding:6px 16px;border-radius:2px;cursor:pointer;
+            background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.5);
+            color:var(--gold);
+          ">💾 Zapisz trasę</button>
+          <button onclick="cancelDrawing()" style="
+            font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+            padding:6px 16px;border-radius:2px;cursor:pointer;
+            background:rgba(100,40,40,0.2);border:1px solid rgba(180,60,60,0.3);
+            color:#c07070;
+          ">✕ Anuluj</button>
+        </div>
+        <div id="drawPointCount" style="font-size:10px;color:var(--text-dim);">Punkty: 0</div>
+      </div>
     </div>
   </div>
 
@@ -379,7 +410,7 @@
     </div>
 
     <!-- WŁASNE TRASY -->
-    <div class="sidebar-section-title" style="color:#c8a84c;border-color:rgba(201,168,76,0.3);">✏️ Własne trasy</div>
+    <div class="sidebar-section-title" style="color:#c8a84c;border-color:rgba(201,168,76,0.3);">🗺 Moje trasy</div>
     <div id="customRoutesList"></div>
   </div>
 
@@ -991,203 +1022,188 @@ function bfsPath(start, end) {
 
 // Temperatura heatmapy w węźle
 
-// Temperatura heatmapy w węźle
-function nodeHeat(ni) {
-  if (!history || !history.length) return 0;
-  const [px, py] = GRAPH_NODES[ni];
-  const r = 0.16;
-  let sum = 0;
-  history.forEach(h => {
-    const d = Math.hypot(h.x - px, h.y - py);
-    if (d < r) sum += (1 - d / r);
-  });
-  return Math.min(1, sum / 3);
-}
+// ══════════════════════════════════════════════════════
+// WŁASNE TRASY — rysowanie, zapis, LED playback
+// ══════════════════════════════════════════════════════
 
-// ═══ TRASA AUTO (nigdy nie wraca po tej samej krawędzi) ═══
-// Używamy zmodyfikowanego algorytmu Eulera/Fleury'ego:
-// buduj ścieżkę po grafie tak żeby każda krawędź była użyta max raz
-// a jeśli brakuje krawędzi — przeskocz przez BFS (to jest nieuniknione
-// bo graf nie jest Eulerowski), ale unikaj powtarzania ostatnio użytej krawędzi
-
-let routeOn = false;
+let customRoutes = [];        // [{name, points:[{x,y}]}]
+let drawingMode = false;
+let drawingPoints = [];       // [{x,y}] w procentach mapy
+let activeRouteIdx = -1;      // która trasa jest aktualnie wyświetlana
 let routeAnimId = null;
-let routeProgress = 0;
-let routePoints = [];
 let routePulse = 0;
-let currentAutoRoute = []; // [{x,y}] punkty aktualnej trasy
+let routePixelPts = [];       // punkty w px dla animacji
 
-function buildGraph() {
-  const g = {};
-  GRAPH_NODES.forEach((_, i) => g[i] = []);
-  GRAPH_EDGES.forEach(([a, b]) => { g[a].push(b); g[b].push(a); });
-  return g;
+// ── Zapis/odczyt localStorage ──
+function loadCustomRoutes() {
+  try { customRoutes = JSON.parse(localStorage.getItem('crt_grota') || '[]'); } catch(e) { customRoutes = []; }
+  renderRoutesList();
 }
 
-function bfsPath(start, end) {
-  if (start === end) return [start];
-  const visited = { [start]: null };
-  const q = [start];
-  while (q.length) {
-    const n = q.shift();
-    for (const nb of (buildGraph()[n] || [])) {
-      if (!(nb in visited)) {
-        visited[nb] = n;
-        if (nb === end) {
-          const path = []; let cur = end;
-          while (cur !== null) { path.push(cur); cur = visited[cur]; }
-          return path.reverse();
-        }
-        q.push(nb);
-      }
-    }
+function saveRoutesStorage() {
+  localStorage.setItem('crt_grota', JSON.stringify(customRoutes));
+}
+
+// ── Render listy w sidebarze ──
+function renderRoutesList() {
+  const list = document.getElementById('customRoutesList');
+  if (!list) return;
+  if (!customRoutes.length) {
+    list.innerHTML = '<div class="sidebar-empty" style="font-size:12px;">Brak tras<br><span style="font-size:10px;color:var(--text-dim);">Kliknij ✏️ Rysuj trasę</span></div>';
+    return;
   }
-  return null;
+  list.innerHTML = customRoutes.map((r, i) => `
+    <div class="crt-item${activeRouteIdx===i?' active':''}" id="crt_${i}">
+      <span class="crt-name" onclick="playRoute(${i})">🗺 ${r.name}</span>
+      <button class="crt-btn" onclick="playRoute(${i})" title="Wyświetl">▶</button>
+      <button class="crt-btn danger" onclick="deleteRoute(${i})" title="Usuń">✕</button>
+    </div>`).join('');
 }
 
-function computeAutoRoute() {
-  const heats = GRAPH_NODES.map((_, i) => ({ i, h: nodeHeat(i) }));
-  const hasHeat = heats.some(x => x.h > 0.01);
-
-  // Wybierz target węzły — gorące + losowość żeby każda trasa była inna
-  let targets;
-  if (hasHeat) {
-    const sorted = heats.filter(x => x.h > 0).sort((a, b) => b.h - a.h);
-    // Top gorące + losowy shuffle dolnej połowy żeby różnicować trasy
-    const top = sorted.slice(0, Math.ceil(sorted.length * 0.4)).map(x => x.i);
-    const rest = sorted.slice(Math.ceil(sorted.length * 0.4)).map(x => x.i);
-    // Shuffle rest
-    for (let i = rest.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [rest[i], rest[j]] = [rest[j], rest[i]];
-    }
-    targets = [0, ...top, ...rest.slice(0, Math.ceil(rest.length * 0.5))];
-    // Deduplikuj
-    targets = [...new Set(targets)];
+// ── Rysowanie trasy ──
+function toggleCustomRoute() {
+  if (drawingMode) {
+    cancelDrawing();
   } else {
-    // Brak heatmapy: losowy podzbiór ~60% węzłów, start zawsze 0
-    const all = GRAPH_NODES.map((_, i) => i).filter(i => i !== 0);
-    for (let i = all.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [all[i], all[j]] = [all[j], all[i]];
-    }
-    targets = [0, ...all.slice(0, Math.round(all.length * 0.6))];
-  }
-
-  // Buduj ścieżkę — używane krawędzie śledź żeby nie wracać po tej samej
-  const usedEdges = new Set(); // "a-b" (posortowane)
-  const edgeKey = (a, b) => a < b ? `${a}-${b}` : `${b}-${a}`;
-
-  const g = buildGraph();
-  let current = 0;
-  const path = [0];
-  const toVisit = new Set(targets.slice(1));
-
-  while (toVisit.size > 0) {
-    // Znajdź najbliższy nieodwiedzony target
-    let bestTarget = null, bestPath = null;
-    for (const t of toVisit) {
-      // BFS unikający użytych krawędzi jeśli możliwe
-      const p = bfsAvoidUsed(current, t, usedEdges);
-      if (p && (!bestPath || p.length < bestPath.length)) {
-        bestTarget = t; bestPath = p;
-      }
-    }
-    if (!bestTarget) break;
-
-    // Dodaj ścieżkę
-    for (let i = 1; i < bestPath.length; i++) {
-      const key = edgeKey(bestPath[i-1], bestPath[i]);
-      usedEdges.add(key);
-      path.push(bestPath[i]);
-    }
-    toVisit.delete(bestTarget);
-    // Usuń też węzły pośrednie z toVisit
-    bestPath.forEach(n => toVisit.delete(n));
-    current = bestTarget;
-  }
-
-  return path.map(i => GRAPH_NODES[i]);
-}
-
-// BFS preferujący nieużyte krawędzie
-function bfsAvoidUsed(start, end, usedEdges) {
-  const edgeKey = (a, b) => a < b ? `${a}-${b}` : `${b}-${a}`;
-  const g = buildGraph();
-
-  // Najpierw spróbuj tylko przez nieużyte krawędzie
-  const visited = { [start]: null };
-  const q = [start];
-  while (q.length) {
-    const n = q.shift();
-    const neighbors = (g[n] || []).filter(nb => !usedEdges.has(edgeKey(n, nb)));
-    for (const nb of neighbors) {
-      if (!(nb in visited)) {
-        visited[nb] = n;
-        if (nb === end) {
-          const path = []; let cur = end;
-          while (cur !== null) { path.push(cur); cur = visited[cur]; }
-          return path.reverse();
-        }
-        q.push(nb);
-      }
-    }
-  }
-
-  // Fallback — normalny BFS przez wszystkie krawędzie
-  return bfsPath(start, end);
-}
-
-function regenRoute() {
-  currentAutoRoute = computeAutoRoute();
-  if (routeOn) startRouteAnim();
-}
-
-// ─── ANIMACJA LED ───
-function toggleRoute() {
-  routeOn = !routeOn;
-  const btn = document.getElementById('routeBtn');
-  const reb = document.getElementById('routeRegenBtn');
-  if (routeOn) {
-    btn.innerText = '🗺 Trasa ON';
-    btn.style.color = '#00eeff';
-    btn.style.borderColor = 'rgba(0,220,255,0.8)';
-    btn.style.background = 'rgba(0,100,150,0.2)';
-    reb.style.display = '';
-    regenRoute();
-  } else {
-    btn.innerText = '🗺 Trasa OFF';
-    btn.style.color = '#80b0ff';
-    btn.style.borderColor = 'rgba(80,140,255,0.4)';
-    btn.style.background = '';
-    reb.style.display = 'none';
-    stopRouteAnim();
-    clearRouteCanvas();
+    startDrawing();
   }
 }
 
-function startRouteAnim() {
-  routeProgress = 0; routePulse = 0;
-  routePoints = buildPixelPoints(currentAutoRoute);
-  if (routeAnimId) cancelAnimationFrame(routeAnimId);
-  animRoute();
+function startDrawing() {
+  drawingMode = true;
+  drawingPoints = [];
+  document.getElementById('customRouteBtn').innerText = '✏️ Rysowanie...';
+  document.getElementById('customRouteBtn').style.color = '#ff9040';
+  document.getElementById('customRouteBtn').style.borderColor = 'rgba(255,140,40,0.7)';
+  document.body.classList.add('draw-active');
+
+  const panel = document.getElementById('drawPanel');
+  panel.style.display = 'flex';
+  document.getElementById('drawRouteName').value = '';
+  document.getElementById('drawPointCount').textContent = 'Punkty: 0';
+  document.getElementById('mapHint').textContent = 'Tryb rysowania — klikaj punkty trasy';
+
+  // Wyczyść canvas
+  clearRouteCanvas();
 }
 
-function stopRouteAnim() {
-  if (routeAnimId) cancelAnimationFrame(routeAnimId);
-  routeAnimId = null;
+function cancelDrawing() {
+  drawingMode = false;
+  drawingPoints = [];
+  document.getElementById('customRouteBtn').innerText = '✏️ Rysuj trasę';
+  document.getElementById('customRouteBtn').style.color = '#c8a84c';
+  document.getElementById('customRouteBtn').style.borderColor = 'rgba(201,168,76,0.4)';
+  document.body.classList.remove('draw-active');
+  document.getElementById('drawPanel').style.display = 'none';
+  document.getElementById('mapHint').textContent = 'Kliknij na mapę aby pingować metina';
+  clearRouteCanvas();
+  // Przywróć aktywną trasę jeśli była
+  if (activeRouteIdx >= 0) playRoute(activeRouteIdx);
 }
 
-function buildPixelPoints(route) {
-  if (!route || !route.length) return [];
+function saveDrawing() {
+  if (drawingPoints.length < 2) {
+    document.getElementById('drawPointCount').textContent = '⚠ Dodaj co najmniej 2 punkty!';
+    document.getElementById('drawPointCount').style.color = '#e07070';
+    return;
+  }
+  const nameEl = document.getElementById('drawRouteName');
+  const name = nameEl.value.trim() || ('Trasa ' + (customRoutes.length + 1));
+
+  customRoutes.push({ name, points: [...drawingPoints] });
+  saveRoutesStorage();
+
+  const newIdx = customRoutes.length - 1;
+  drawingMode = false;
+  drawingPoints = [];
+  document.getElementById('customRouteBtn').innerText = '✏️ Rysuj trasę';
+  document.getElementById('customRouteBtn').style.color = '#c8a84c';
+  document.getElementById('customRouteBtn').style.borderColor = 'rgba(201,168,76,0.4)';
+  document.body.classList.remove('draw-active');
+  document.getElementById('drawPanel').style.display = 'none';
+  document.getElementById('mapHint').textContent = 'Kliknij na mapę aby pingować metina';
+
+  renderRoutesList();
+  playRoute(newIdx);
+}
+
+function deleteRoute(idx) {
+  customRoutes.splice(idx, 1);
+  saveRoutesStorage();
+  if (activeRouteIdx === idx) { stopRouteAnim(); clearRouteCanvas(); activeRouteIdx = -1; }
+  else if (activeRouteIdx > idx) activeRouteIdx--;
+  renderRoutesList();
+}
+
+// ── Kliknięcia na mapę w trybie rysowania ──
+mapContainer.addEventListener('click', function(e) {
+  if (!drawingMode) return;
+  e.stopImmediatePropagation();
+  const rect = mapImg.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top)  / rect.height;
+  if (x < 0 || x > 1 || y < 0 || y > 1) return;
+  drawingPoints.push({ x, y });
+  document.getElementById('drawPointCount').textContent = `Punkty: ${drawingPoints.length}`;
+  document.getElementById('drawPointCount').style.color = 'var(--text-dim)';
+  drawInProgress();
+}, true);
+
+// Backspace — cofnij punkt
+document.addEventListener('keydown', e => {
+  if (!drawingMode) return;
+  if (e.key === 'Backspace' || (e.key === 'z' && e.ctrlKey)) {
+    e.preventDefault();
+    drawingPoints.pop();
+    document.getElementById('drawPointCount').textContent = `Punkty: ${drawingPoints.length}`;
+    drawInProgress();
+  }
+  if (e.key === 'Escape') cancelDrawing();
+  if (e.key === 'Enter') saveDrawing();
+});
+
+function drawInProgress() {
+  const cv = document.getElementById('routeCanvas');
+  if (!cv) return;
+  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const pts = drawingPoints.map(p => ({ x: p.x*W, y: p.y*H }));
+  if (!pts.length) return;
+
+  // Linia przerywana w trakcie rysowania
+  ctx.setLineDash([8, 5]);
+  ctx.strokeStyle = 'rgba(255,160,50,0.85)';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Punkty
+  pts.forEach((p, i) => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, i === 0 ? 8 : 5, 0, Math.PI * 2);
+    ctx.fillStyle = i === 0 ? 'rgba(255,140,40,0.9)' : 'rgba(255,180,80,0.8)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 1.5; ctx.stroke();
+  });
+}
+
+// ── LED animacja zapisanej trasy ──
+function buildPixelPts(points) {
   const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
   const result = [];
-  for (let i = 1; i < route.length; i++) {
-    const ax = route[i-1][0]*W, ay = route[i-1][1]*H;
-    const bx = route[i][0]*W,   by = route[i][1]*H;
+  for (let i = 1; i < points.length; i++) {
+    const ax = points[i-1].x*W, ay = points[i-1].y*H;
+    const bx = points[i].x*W,   by = points[i].y*H;
     const dist = Math.hypot(bx-ax, by-ay);
     const steps = Math.max(2, Math.ceil(dist / 3));
-    for (let s = (i===1?0:1); s <= steps; s++) {
+    for (let s = (i===1?0:1); s<=steps; s++) {
       const t = s/steps;
       result.push({ x: ax+(bx-ax)*t, y: ay+(by-ay)*t });
     }
@@ -1195,278 +1211,107 @@ function buildPixelPoints(route) {
   return result;
 }
 
-function animRoute() {
-  if (!routeOn) return;
-  routeProgress = Math.min(1, routeProgress + 0.004);
-  routePulse += 0.05;
-  drawAutoRoute();
-  routeAnimId = requestAnimationFrame(routeProgress < 1 ? animRoute : pulseRoute);
+function playRoute(idx) {
+  activeRouteIdx = idx;
+  renderRoutesList(); // odśwież aktywną
+  stopRouteAnim();
+  routePixelPts = buildPixelPts(customRoutes[idx].points);
+  routePulse = 0;
+  animLED();
 }
 
-function pulseRoute() {
-  if (!routeOn) return;
-  routePulse += 0.05;
-  drawAutoRoute();
-  routeAnimId = requestAnimationFrame(pulseRoute);
+function stopRouteAnim() {
+  if (routeAnimId) cancelAnimationFrame(routeAnimId);
+  routeAnimId = null;
 }
 
 function clearRouteCanvas() {
   const cv = document.getElementById('routeCanvas');
-  if (cv) cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+  if (cv) { const ctx = cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height); }
 }
 
-function drawAutoRoute() {
+function animLED() {
+  routePulse += 0.055;
+  drawLED();
+  routeAnimId = requestAnimationFrame(animLED);
+}
+
+function drawLED() {
   const cv = document.getElementById('routeCanvas');
   if (!cv) return;
   const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
-  if (!W || !H || !routePoints.length) return;
+  if (!W || !H) return;
   cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, W, H);
 
-  // Rysuj własne trasy w tle (jeśli aktywna)
-  if (activeCustomRoutePoints.length) drawCustomRouteOnCanvas(ctx, activeCustomRoutePoints, false);
+  if (!routePixelPts.length) return;
+  const n = routePixelPts.length;
 
-  const endIdx = Math.floor(routeProgress * (routePoints.length - 1));
-  for (let i = 1; i <= endIdx; i++) {
-    const p1 = routePoints[i-1], p2 = routePoints[i];
-    const t = i / routePoints.length;
-    const wave = Math.sin(routePulse * 2 - t * 20) * 0.5 + 0.5;
-    const glow = 0.55 + wave * 0.45;
-    // Glow
-    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
-    ctx.strokeStyle = `rgba(0,${Math.round(160*glow)},${Math.round(255*glow)},${0.25+wave*0.2})`;
-    ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
-    // Linia
-    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
-    ctx.strokeStyle = `rgba(${Math.round(40*glow)},${Math.round(210*glow)},255,${0.7+wave*0.3})`;
-    ctx.lineWidth = 3; ctx.stroke();
-    // Rdzeń
-    if (wave > 0.6) {
-      ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
-      ctx.strokeStyle = `rgba(255,255,255,${(wave-0.6)*1.5})`; ctx.lineWidth = 1; ctx.stroke();
-    }
-  }
-  // Czoło
-  if (routeProgress < 1 && endIdx < routePoints.length) {
-    const tip = routePoints[Math.min(endIdx, routePoints.length-1)];
-    const g = ctx.createRadialGradient(tip.x,tip.y,0,tip.x,tip.y,16);
-    g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.3,'rgba(80,230,255,0.9)');
-    g.addColorStop(1,'rgba(0,100,200,0)');
-    ctx.beginPath(); ctx.arc(tip.x,tip.y,16,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
-  }
-}
+  for (let i = 1; i < n; i++) {
+    const p1 = routePixelPts[i-1], p2 = routePixelPts[i];
+    const t = i / n;
+    // Fala biegnąca wzdłuż trasy — różne fazy w różnych miejscach
+    const wave = Math.sin(routePulse * 2.5 - t * 22) * 0.5 + 0.5; // 0..1
+    const bright = 0.5 + wave * 0.5;
 
-window.addEventListener('resize', () => { if (routeOn) startRouteAnim(); });
-
-// ══════════════════════════════════════════
-// WŁASNE TRASY
-// ══════════════════════════════════════════
-let customRoutes = [];       // [{name, points:[{x,y}]}] — zapisane
-let activeCustomRoutePoints = []; // [{x,y}] aktualnie wyświetlana
-let drawingCustomRoute = false;
-let drawingPoints = [];      // punkty rysowane przez użytkownika
-let customRouteAnimId = null;
-let customPulse = 0;
-
-// Załaduj z localStorage
-function loadCustomRoutes() {
-  try { customRoutes = JSON.parse(localStorage.getItem('customRoutes_grota') || '[]'); } catch(e) { customRoutes = []; }
-  renderCustomRoutesList();
-}
-
-function saveCustomRoutesLocal() {
-  localStorage.setItem('customRoutes_grota', JSON.stringify(customRoutes));
-}
-
-function renderCustomRoutesList() {
-  const list = document.getElementById('customRoutesList');
-  if (!list) return;
-  if (!customRoutes.length) {
-    list.innerHTML = '<div class="sidebar-empty">Brak zapisanych tras<br><small style="color:var(--text-dim);font-size:10px;">Kliknij ✏️ Własna trasa</small></div>';
-    return;
-  }
-  list.innerHTML = customRoutes.map((r, i) => `
-    <div class="crt-item">
-      <span class="crt-name" onclick="showCustomRoute(${i})" title="Pokaż trasę">🗺 ${r.name}</span>
-      <button class="crt-btn" onclick="showCustomRoute(${i})">▶</button>
-      <button class="crt-btn" onclick="deleteCustomRoute(${i})" style="color:#804040;">✕</button>
-    </div>`).join('');
-}
-
-function showCustomRoute(idx) {
-  activeCustomRoutePoints = buildPixelPoints(customRoutes[idx].points.map(p => [p.x, p.y]));
-  customPulse = 0;
-  animCustomRoute();
-}
-
-function animCustomRoute() {
-  if (customRouteAnimId) cancelAnimationFrame(customRouteAnimId);
-  customPulse += 0.05;
-  // Rysuj na canvasie
-  const cv = document.getElementById('routeCanvas');
-  if (!cv) return;
-  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
-  cv.width = W; cv.height = H;
-  const ctx = cv.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
-  if (routeOn) drawAutoRoute();
-  drawCustomRouteOnCanvas(ctx, activeCustomRoutePoints, true);
-  customRouteAnimId = requestAnimationFrame(animCustomRoute);
-}
-
-function drawCustomRouteOnCanvas(ctx, pts, pulse) {
-  if (!pts.length) return;
-  const p = pulse ? (Math.sin(customPulse * 2) * 0.5 + 0.5) : 0.7;
-  for (let i = 1; i < pts.length; i++) {
-    const p1 = pts[i-1], p2 = pts[i];
-    const t = i / pts.length;
-    const wave = pulse ? (Math.sin(customPulse*2 - t*20)*0.5+0.5) : 0.7;
-    const g = 0.5 + wave*0.5;
-    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
-    ctx.strokeStyle = `rgba(255,${Math.round(180*g)},0,${0.2+wave*0.15})`;
-    ctx.lineWidth = 10; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
-    ctx.strokeStyle = `rgba(255,${Math.round(200*g)},50,${0.75+wave*0.25})`;
-    ctx.lineWidth = 2.5; ctx.stroke();
-    if (wave > 0.6) {
-      ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
-      ctx.strokeStyle = `rgba(255,255,255,${(wave-0.6)*1.2})`; ctx.lineWidth=1; ctx.stroke();
-    }
-  }
-}
-
-function hideCustomRoute() {
-  if (customRouteAnimId) cancelAnimationFrame(customRouteAnimId);
-  activeCustomRoutePoints = [];
-  if (!routeOn) clearRouteCanvas();
-}
-
-function deleteCustomRoute(idx) {
-  customRoutes.splice(idx, 1);
-  saveCustomRoutesLocal();
-  renderCustomRoutesList();
-  hideCustomRoute();
-}
-
-// ── TRYB RYSOWANIA ──
-let drawHint = null;
-function toggleCustomRoute() {
-  if (drawingCustomRoute) {
-    stopDrawing(false);
-  } else {
-    startDrawing();
-  }
-}
-
-function startDrawing() {
-  drawingCustomRoute = true;
-  drawingPoints = [];
-  document.getElementById('customRouteBtn').innerText = '✏️ Zakończ rysowanie';
-  document.getElementById('customRouteBtn').style.color = '#ff9040';
-  document.getElementById('customRouteBtn').style.borderColor = 'rgba(255,140,40,0.6)';
-  document.body.classList.add('draw-active');
-  // Hint
-  if (!drawHint) {
-    drawHint = document.createElement('div');
-    drawHint.className = 'draw-hint';
-    drawHint.innerHTML = 'Klikaj punkty trasy &nbsp;|&nbsp; <b>ENTER</b> = zapisz &nbsp;|&nbsp; <b>ESC</b> = anuluj';
-    document.body.appendChild(drawHint);
-  }
-  drawHint.style.display = '';
-  document.getElementById('mapHint').textContent = 'Tryb rysowania — klikaj punkty trasy';
-}
-
-function stopDrawing(save) {
-  drawingCustomRoute = false;
-  document.getElementById('customRouteBtn').innerText = '✏️ Własna trasa';
-  document.getElementById('customRouteBtn').style.color = '#c8a84c';
-  document.getElementById('customRouteBtn').style.borderColor = 'rgba(201,168,76,0.4)';
-  document.body.classList.remove('draw-active');
-  if (drawHint) drawHint.style.display = 'none';
-  document.getElementById('mapHint').textContent = 'Kliknij na mapę aby pingować metina';
-  clearDrawingCanvas();
-
-  if (save && drawingPoints.length >= 2) {
-    const name = prompt('Nazwa trasy:', 'Moja trasa ' + (customRoutes.length + 1));
-    if (name) {
-      customRoutes.push({ name, points: drawingPoints.map(p => ({x: p[0], y: p[1]})) });
-      saveCustomRoutesLocal();
-      renderCustomRoutesList();
-      // Pokaż od razu
-      showCustomRoute(customRoutes.length - 1);
-    }
-  }
-  drawingPoints = [];
-}
-
-function clearDrawingCanvas() {
-  const cv = document.getElementById('routeCanvas');
-  if (!cv) return;
-  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
-  const ctx = cv.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
-}
-
-function drawCustomInProgress() {
-  const cv = document.getElementById('routeCanvas');
-  if (!cv) return;
-  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
-  cv.width = W; cv.height = H;
-  const ctx = cv.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
-
-  const pts = drawingPoints.map(p => ({ x: p[0]*W, y: p[1]*H }));
-  if (pts.length < 1) return;
-
-  // Narysuj dotychczasowe punkty i linie
-  ctx.strokeStyle = 'rgba(255,160,40,0.9)';
-  ctx.lineWidth = 2.5;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.setLineDash([6, 4]);
-  ctx.beginPath();
-  pts.forEach((p, i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  pts.forEach((p, i) => {
+    // Warstwa 1 — szerokie zewnętrzne glow
     ctx.beginPath();
-    ctx.arc(p.x, p.y, i===0?8:5, 0, Math.PI*2);
-    ctx.fillStyle = i===0 ? '#ff9040' : 'rgba(255,160,40,0.8)';
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1.5;
+    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = `rgba(255, ${Math.round(120*bright)}, 0, ${0.18 + wave*0.22})`;
+    ctx.lineWidth = 14;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.stroke();
+
+    // Warstwa 2 — średni glow
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = `rgba(255, ${Math.round(160*bright)}, 20, ${0.45 + wave*0.35})`;
+    ctx.lineWidth = 6;
+    ctx.stroke();
+
+    // Warstwa 3 — linia rdzeniowa
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = `rgba(255, ${Math.round(220*bright)}, 80, ${0.8 + wave*0.2})`;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Warstwa 4 — biały rdzeń przy szczycie fali
+    if (wave > 0.65) {
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${(wave-0.65)*2.2})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  // Pulsujące kółka na początku i końcu trasy
+  const start = routePixelPts[0];
+  const end   = routePixelPts[n-1];
+  const pulse = Math.sin(routePulse * 3) * 0.5 + 0.5;
+
+  [start, end].forEach((pt, isEnd) => {
+    const g = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, 14 + pulse*4);
+    g.addColorStop(0,   `rgba(255,255,255,${0.9+pulse*0.1})`);
+    g.addColorStop(0.3, `rgba(255,180,40,${0.8+pulse*0.15})`);
+    g.addColorStop(0.7, `rgba(255,100,0,${0.4+pulse*0.2})`);
+    g.addColorStop(1,    'rgba(255,60,0,0)');
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 14+pulse*4, 0, Math.PI*2);
+    ctx.fillStyle = g;
+    ctx.fill();
   });
 }
 
-// Przechwyć kliknięcia mapy w trybie rysowania
-const _origMapClick = mapContainer.onclick;
-mapContainer.addEventListener('click', function(e) {
-  if (!drawingCustomRoute) return;
-  e.stopPropagation();
-  const rect = mapImg.getBoundingClientRect();
-  const x = (e.clientX - rect.left) / rect.width;
-  const y = (e.clientY - rect.top)  / rect.height;
-  if (x < 0 || x > 1 || y < 0 || y > 1) return;
-  drawingPoints.push([x, y]);
-  drawCustomInProgress();
-}, true);
-
-// Klawisze
-document.addEventListener('keydown', e => {
-  if (!drawingCustomRoute) return;
-  if (e.key === 'Enter') { e.preventDefault(); stopDrawing(true); }
-  if (e.key === 'Escape') { e.preventDefault(); stopDrawing(false); }
-  if (e.key === 'Backspace' || e.key === 'z' && e.ctrlKey) {
-    e.preventDefault();
-    drawingPoints.pop();
-    drawCustomInProgress();
+window.addEventListener('resize', () => {
+  if (drawingMode) drawInProgress();
+  else if (activeRouteIdx >= 0 && routeAnimId) {
+    routePixelPts = buildPixelPts(customRoutes[activeRouteIdx].points);
   }
 });
 
-// Init
 loadCustomRoutes();
 
 </script>
