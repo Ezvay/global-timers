@@ -621,31 +621,25 @@ const YELLOW_MS = 20 * 60 * 1000;
 const GREEN_MS  = 30 * 60 * 1000;
 const EXPIRE_MS = 35 * 60 * 1000;
 
-let deadHistory = []; // [{id, ch, killedAt, x, y}]
-let deadIntervals = {};
-let undoStack = []; // ostatnie usunięte pingi (max 3)
+let deadHistory = []; // synchronizowane z serwerem
+let undoStack = []; // tylko lokalnie — do cofania
 
 function removePing(id) {
-  // Zapisz do historii przed usunięciem
   const p = pings[id];
   if (p) {
     const dead = { id: 'dead_'+Date.now()+'_'+id, ch: p.ch, killedAt: Date.now(), x: p.x, y: p.y };
-    deadHistory.push(dead);
     undoStack.push({ ping: {...p}, dead });
     if (undoStack.length > 3) undoStack.shift();
+    socket.emit('grotaAddDead', dead); // zapisz na serwerze
   }
   socket.emit('grotaRemovePing', id);
-  renderDeadList();
 }
 
 function undoLastKill() {
   if (!undoStack.length) return;
   const last = undoStack.pop();
-  // Usuń z historii
-  deadHistory = deadHistory.filter(d => d.id !== last.dead.id);
-  // Przywróć ping — dodaj go z powrotem
+  socket.emit('grotaRemoveDead', last.dead.id); // usuń z serwera
   socket.emit('grotaAddPing', { x: last.ping.x, y: last.ping.y, ch: last.ping.ch });
-  renderDeadList();
 }
 
 function renderChCounters() {
@@ -655,8 +649,8 @@ function renderChCounters() {
   const now = Date.now();
   const deadPerCh = {};
   for (let i = 1; i <= MAX_CH; i++) deadPerCh[i] = 0;
-  deadHistory.forEach(d => {
-    if (now - d.killedAt < EXPIRE_MS && d.ch >= 1 && d.ch <= MAX_CH)
+  deadHistory.filter(d => now - d.killedAt < EXPIRE_MS).forEach(d => {
+    if (d.ch >= 1 && d.ch <= MAX_CH)
       deadPerCh[d.ch]++;
   });
 
@@ -680,10 +674,10 @@ function renderDeadList() {
   if (!wrap) return;
   const now  = Date.now();
 
-  // Usuń wygasłe
-  deadHistory = deadHistory.filter(d => now - d.killedAt < EXPIRE_MS);
+  // Wygasłe są czyszczone po stronie serwera przy połączeniu
+  const activeHistory = deadHistory.filter(d => now - d.killedAt < EXPIRE_MS);
 
-  if (!deadHistory.length) {
+  if (!activeHistory.length) {
     wrap.innerHTML = '<div class="sidebar-empty" style="padding:20px 14px">Brak zbitych metinów</div>';
     renderChCounters();
     return;
@@ -691,7 +685,7 @@ function renderDeadList() {
 
   // Grupuj po ch
   const byCh = {};
-  deadHistory.forEach(d => { (byCh[d.ch] = byCh[d.ch]||[]).push(d); });
+  activeHistory.forEach(d => { (byCh[d.ch] = byCh[d.ch]||[]).push(d); });
 
   wrap.innerHTML = '';
   Object.keys(byCh).sort((a,b)=>a-b).forEach(ch => {
@@ -967,6 +961,13 @@ socket.on('grotaPingsUpdate', data => {
 socket.on('grotaHistoryUpdate', data => {
   history = data;
   if (heatOn) syncCanvas();
+  if (routeOn) drawRoute();
+});
+
+socket.on('deadHistoryUpdate', data => {
+  deadHistory = data;
+  renderDeadList();
+});
 
 /* ═══ SUGEROWANA TRASA ═══ */
 let routeOn = false;
@@ -1084,7 +1085,6 @@ function getHeatAt(px,py) {
 window.addEventListener('resize', () => { if (routeOn) drawRoute(); });
 mapImg.addEventListener('load', () => { if (routeOn) drawRoute(); });
 
-});
 </script>
 </body>
 </html>
