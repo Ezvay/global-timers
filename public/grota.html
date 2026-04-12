@@ -325,7 +325,7 @@
       <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);min-width:24px;text-align:right;" id="pingSizeVal">14</span>
     </div>
     <button class="heat-btn" id="heatBtn" onclick="toggleHeat()">🔥 Heatmapa OFF</button>
-    <button class="heat-btn" id="customRouteBtn" onclick="toggleCustomRoute()" style="color:#c8a84c;border-color:rgba(201,168,76,0.4);">✏️ Rysuj trasę</button>
+
   </div>
 </div>
 
@@ -373,7 +373,39 @@
     </div>
 
     <!-- WŁASNE TRASY -->
-    <div class="sidebar-section-title" style="color:#c8a84c;border-color:rgba(201,168,76,0.3);">🗺 Moje trasy</div>
+    <div class="sidebar-section-title" style="color:#c8a84c;border-color:rgba(201,168,76,0.3);flex-direction:column;gap:6px;padding:10px 12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+        <span>🗺 Moje trasy</span>
+      </div>
+      <button onclick="toggleCustomRoute()" id="customRouteBtn" style="
+        width:100%;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+        padding:7px;border-radius:2px;cursor:pointer;
+        background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.35);
+        color:var(--gold-light);transition:all 0.2s;
+      ">✏️ Rysuj nową trasę</button>
+    </div>
+    <!-- Panel rysowania — schowany w sidebarze -->
+    <div id="drawPanel" style="display:none;flex-direction:column;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);">
+      <div style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--gold-dark);text-transform:uppercase;">Nazwa trasy</div>
+      <input id="drawRouteName" placeholder="np. Trasa przez centrum..." style="
+        background:#0e0b07;border:1px solid rgba(201,168,76,0.3);
+        color:var(--text);font-family:'Crimson Text',serif;font-size:14px;
+        padding:7px 10px;border-radius:2px;outline:none;width:100%;
+      ">
+      <div id="drawPointCount" style="font-size:11px;color:var(--text-dim);">Klikaj punkty na mapie… (0 punktów)</div>
+      <div style="display:flex;gap:6px;">
+        <button onmousedown="event.preventDefault();event.stopPropagation();saveDrawing();" style="
+          flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;
+          padding:7px;border-radius:2px;cursor:pointer;
+          background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.5);color:var(--gold);
+        ">💾 Zapisz</button>
+        <button onmousedown="event.preventDefault();event.stopPropagation();cancelDrawing();" style="
+          flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;
+          padding:7px;border-radius:2px;cursor:pointer;
+          background:rgba(100,40,40,0.15);border:1px solid rgba(180,60,60,0.3);color:#c07070;
+        ">✕ Anuluj</button>
+      </div>
+    </div>
     <div id="customRoutesList"></div>
   </div>
 
@@ -986,84 +1018,224 @@ function bfsPath(start, end) {
 // Temperatura heatmapy w węźle
 
 // ══════════════════════════════════════════════════════
-// WŁASNE TRASY — rysowanie, zapis, LED playback
+// WŁASNE TRASY — kolory, ON/OFF, rysowanie w sidebarze
 // ══════════════════════════════════════════════════════
 
-let customRoutes = [];        // [{name, points:[{x,y}]}]
-let drawingMode = false;
-let drawingPoints = [];       // [{x,y}] w procentach mapy
-let activeRouteIdx = -1;      // która trasa jest aktualnie wyświetlana
-let routeAnimId = null;
-let routePulse = 0;
-let routePixelPts = [];       // punkty w px dla animacji
+// Paleta kolorów dla tras
+const ROUTE_COLORS = [
+  { name: 'Złota',    main: '#f0c040', glow: '240,192,64',  r:240,g:192,b:64  },
+  { name: 'Cyjan',    main: '#00e5ff', glow: '0,229,255',   r:0,  g:229,b:255 },
+  { name: 'Zielona',  main: '#50e080', glow: '80,224,128',  r:80, g:224,b:128 },
+  { name: 'Różowa',   main: '#ff60b0', glow: '255,96,176',  r:255,g:96, b:176 },
+  { name: 'Fioletowa',main: '#c060ff', glow: '192,96,255',  r:192,g:96, b:255 },
+  { name: 'Pomarań.', main: '#ff8030', glow: '255,128,48',  r:255,g:128,b:48  },
+  { name: 'Biała',    main: '#e0e0ff', glow: '220,220,255', r:220,g:220,b:255 },
+  { name: 'Czerwona', main: '#ff4040', glow: '255,64,64',   r:255,g:64, b:64  },
+];
 
-// ── Zapis/odczyt localStorage ──
+let customRoutes = [];     // [{name, points:[{x,y}], colorIdx, visible}]
+let drawingMode   = false;
+let drawingPoints = [];
+let activeAnims   = {};    // idx -> animId
+let routePulses   = {};    // idx -> pulse value
+
 function loadCustomRoutes() {
-  try { customRoutes = JSON.parse(localStorage.getItem('crt_grota') || '[]'); } catch(e) { customRoutes = []; }
+  try { customRoutes = JSON.parse(localStorage.getItem('crt_grota2') || '[]'); } catch(e) { customRoutes = []; }
+  // Ensure colorIdx and visible
+  customRoutes.forEach((r, i) => {
+    if (r.colorIdx === undefined) r.colorIdx = i % ROUTE_COLORS.length;
+    if (r.visible === undefined) r.visible = false;
+  });
   renderRoutesList();
 }
 
 function saveRoutesStorage() {
-  localStorage.setItem('crt_grota', JSON.stringify(customRoutes));
+  localStorage.setItem('crt_grota2', JSON.stringify(customRoutes));
 }
 
-// ── Render listy w sidebarze ──
+// ── Render listy tras w sidebarze ──
 function renderRoutesList() {
   const list = document.getElementById('customRoutesList');
   if (!list) return;
   if (!customRoutes.length) {
-    list.innerHTML = '<div class="sidebar-empty" style="font-size:12px;">Brak tras<br><span style="font-size:10px;color:var(--text-dim);">Kliknij ✏️ Rysuj trasę</span></div>';
+    list.innerHTML = '<div class="sidebar-empty" style="font-size:12px;padding:16px;">Brak zapisanych tras.<br><span style="font-size:10px;color:var(--text-dim);">Kliknij "Rysuj nową trasę"</span></div>';
     return;
   }
-  list.innerHTML = customRoutes.map((r, i) => `
-    <div class="crt-item${activeRouteIdx===i?' active':''}" id="crt_${i}">
-      <span class="crt-name" onclick="playRoute(${i})">🗺 ${r.name}</span>
-      <button class="crt-btn" onclick="playRoute(${i})" title="Wyświetl">▶</button>
-      <button class="crt-btn danger" onclick="deleteRoute(${i})" title="Usuń">✕</button>
-    </div>`).join('');
+  list.innerHTML = customRoutes.map((r, i) => {
+    const col = ROUTE_COLORS[r.colorIdx % ROUTE_COLORS.length];
+    const isOn = r.visible;
+    return `
+    <div class="crt-item" style="border-left:3px solid ${col.main};">
+      <div style="display:flex;flex-direction:column;flex:1;gap:3px;min-width:0;">
+        <div class="crt-name" style="color:${col.main};font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.name}">
+          ${r.name}
+        </div>
+        <div style="font-size:9px;color:var(--text-dim);font-family:'Cinzel',serif;letter-spacing:1px;">
+          ● ${col.name} &nbsp;·&nbsp; ${r.points.length} pkt
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+        <button class="crt-btn${isOn?' crt-on':''}" onclick="toggleRouteVisible(${i})" style="
+          font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;
+          padding:4px 8px;border-radius:2px;cursor:pointer;border:1px solid;
+          ${isOn
+            ? `background:rgba(${col.glow},0.2);border-color:${col.main};color:${col.main};`
+            : 'background:none;border-color:rgba(100,80,40,0.4);color:var(--text-dim);'
+          }
+          transition:all 0.2s;white-space:nowrap;
+        ">${isOn ? '◉ ON' : '○ OFF'}</button>
+        <button class="crt-btn danger" onclick="deleteRoute(${i})" style="
+          font-size:9px;padding:3px 8px;border-radius:2px;cursor:pointer;
+          border:1px solid rgba(150,50,50,0.3);background:none;color:#906060;
+          font-family:'Cinzel',serif;letter-spacing:1px;
+        ">✕</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
-// ── Rysowanie trasy ──
-function toggleCustomRoute() {
-  if (drawingMode) {
-    cancelDrawing();
+// ── Toggle widoczności trasy ──
+function toggleRouteVisible(idx) {
+  customRoutes[idx].visible = !customRoutes[idx].visible;
+  saveRoutesStorage();
+  renderRoutesList();
+  if (customRoutes[idx].visible) {
+    startRouteAnim(idx);
   } else {
-    startDrawing();
+    stopRouteAnim(idx);
+    redrawAllRoutes();
   }
+}
+
+function startRouteAnim(idx) {
+  if (activeAnims[idx]) cancelAnimationFrame(activeAnims[idx]);
+  routePulses[idx] = 0;
+  const route = customRoutes[idx];
+  const pts = buildPixelPts(route.points);
+  const col = ROUTE_COLORS[route.colorIdx % ROUTE_COLORS.length];
+
+  function frame() {
+    if (!customRoutes[idx] || !customRoutes[idx].visible) return;
+    routePulses[idx] = (routePulses[idx] || 0) + 0.055;
+    redrawAllRoutes();
+    activeAnims[idx] = requestAnimationFrame(frame);
+  }
+  activeAnims[idx] = requestAnimationFrame(frame);
+}
+
+function stopRouteAnim(idx) {
+  if (activeAnims[idx]) cancelAnimationFrame(activeAnims[idx]);
+  delete activeAnims[idx];
+}
+
+function clearRouteCanvas() {
+  const cv = document.getElementById('routeCanvas');
+  if (cv) { const ctx = cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height); }
+}
+
+function redrawAllRoutes() {
+  const cv = document.getElementById('routeCanvas');
+  if (!cv) return;
+  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
+  if (!W || !H) return;
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  customRoutes.forEach((route, idx) => {
+    if (!route.visible) return;
+    const pts = buildPixelPts(route.points);
+    if (pts.length < 2) return;
+    const col = ROUTE_COLORS[route.colorIdx % ROUTE_COLORS.length];
+    const pulse = routePulses[idx] || 0;
+    drawLEDRoute(ctx, pts, col, pulse);
+  });
+
+  // Rysowanie w toku — przerywana linia
+  if (drawingMode && drawingPoints.length > 0) {
+    drawInProgressOnCtx(ctx, W, H);
+  }
+}
+
+function drawLEDRoute(ctx, pts, col, pulse) {
+  const n = pts.length;
+  const {r, g, b} = col;
+
+  for (let i = 1; i < n; i++) {
+    const p1 = pts[i-1], p2 = pts[i];
+    const t = i / n;
+    const wave = Math.sin(pulse * 2.5 - t * 22) * 0.5 + 0.5;
+    const bright = 0.5 + wave * 0.5;
+
+    // Glow zewnętrzny
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+    ctx.strokeStyle = `rgba(${r},${g},${b},${0.15 + wave*0.2})`;
+    ctx.lineWidth = 16; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+
+    // Glow środkowy
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+    ctx.strokeStyle = `rgba(${r},${g},${b},${0.4 + wave*0.35})`;
+    ctx.lineWidth = 6; ctx.stroke();
+
+    // Linia rdzeniowa
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+    ctx.strokeStyle = `rgba(${Math.min(255,r+40)},${Math.min(255,g+40)},${Math.min(255,b+40)},${0.85 + wave*0.15})`;
+    ctx.lineWidth = 2.5; ctx.stroke();
+
+    // Biały błysk przy szczycie fali
+    if (wave > 0.65) {
+      ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+      ctx.strokeStyle = `rgba(255,255,255,${(wave-0.65)*2.0})`;
+      ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+
+  // Pulsujące kółka na start/end
+  const pulse3 = Math.sin(pulse * 3) * 0.5 + 0.5;
+  [pts[0], pts[n-1]].forEach(pt => {
+    const rad = 10 + pulse3 * 5;
+    const grd = ctx.createRadialGradient(pt.x,pt.y,0, pt.x,pt.y,rad);
+    grd.addColorStop(0,   `rgba(255,255,255,${0.9+pulse3*0.1})`);
+    grd.addColorStop(0.35,`rgba(${r},${g},${b},${0.85+pulse3*0.1})`);
+    grd.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+    ctx.beginPath(); ctx.arc(pt.x,pt.y,rad,0,Math.PI*2);
+    ctx.fillStyle = grd; ctx.fill();
+  });
+}
+
+// ── Rysowanie nowej trasy ──
+function toggleCustomRoute() {
+  if (drawingMode) cancelDrawing();
+  else startDrawing();
 }
 
 function startDrawing() {
   drawingMode = true;
   drawingPoints = [];
-  document.getElementById('customRouteBtn').innerText = '✏️ Rysowanie...';
-  document.getElementById('customRouteBtn').style.color = '#ff9040';
-  document.getElementById('customRouteBtn').style.borderColor = 'rgba(255,140,40,0.7)';
-  document.body.classList.add('draw-active');
-
-  const panel = document.getElementById('drawPanel');
-  panel.style.display = 'flex';
-  // Dodaj padding-bottom do layout żeby panel nie zasłaniał dolnej części mapy
-  document.querySelector('.layout').style.paddingBottom = '60px';
+  const btn = document.getElementById('customRouteBtn');
+  btn.innerText = '✏️ Zakończ rysowanie';
+  btn.style.background = 'rgba(255,140,40,0.15)';
+  btn.style.borderColor = 'rgba(255,140,40,0.5)';
+  btn.style.color = '#ff9040';
+  document.getElementById('drawPanel').style.display = 'flex';
   document.getElementById('drawRouteName').value = '';
-  document.getElementById('drawPointCount').textContent = 'Punkty: 0';
+  document.getElementById('drawPointCount').textContent = 'Klikaj punkty na mapie… (0 punktów)';
   document.getElementById('mapHint').textContent = 'Tryb rysowania — klikaj punkty trasy';
-
-  // Wyczyść canvas
-  clearRouteCanvas();
+  document.body.classList.add('draw-active');
 }
 
 function cancelDrawing() {
   drawingMode = false;
   drawingPoints = [];
-  document.getElementById('customRouteBtn').innerText = '✏️ Rysuj trasę';
-  document.getElementById('customRouteBtn').style.color = '#c8a84c';
-  document.getElementById('customRouteBtn').style.borderColor = 'rgba(201,168,76,0.4)';
-  document.body.classList.remove('draw-active');
+  const btn = document.getElementById('customRouteBtn');
+  btn.innerText = '✏️ Rysuj nową trasę';
+  btn.style.background = 'rgba(201,168,76,0.1)';
+  btn.style.borderColor = 'rgba(201,168,76,0.35)';
+  btn.style.color = 'var(--gold-light)';
   document.getElementById('drawPanel').style.display = 'none';
-  document.querySelector('.layout').style.paddingBottom = '';
   document.getElementById('mapHint').textContent = 'Kliknij na mapę aby pingować metina';
-  clearRouteCanvas();
-  if (activeRouteIdx >= 0) playRoute(activeRouteIdx);
+  document.body.classList.remove('draw-active');
+  redrawAllRoutes();
 }
 
 function saveDrawing() {
@@ -1074,37 +1246,47 @@ function saveDrawing() {
   }
   const nameEl = document.getElementById('drawRouteName');
   const name = nameEl.value.trim() || ('Trasa ' + (customRoutes.length + 1));
+  const colorIdx = customRoutes.length % ROUTE_COLORS.length;
 
-  customRoutes.push({ name, points: [...drawingPoints] });
+  customRoutes.push({ name, points: [...drawingPoints], colorIdx, visible: true });
   saveRoutesStorage();
 
   const newIdx = customRoutes.length - 1;
   drawingMode = false;
   drawingPoints = [];
-  document.getElementById('customRouteBtn').innerText = '✏️ Rysuj trasę';
-  document.getElementById('customRouteBtn').style.color = '#c8a84c';
-  document.getElementById('customRouteBtn').style.borderColor = 'rgba(201,168,76,0.4)';
-  document.body.classList.remove('draw-active');
+  const btn = document.getElementById('customRouteBtn');
+  btn.innerText = '✏️ Rysuj nową trasę';
+  btn.style.background = 'rgba(201,168,76,0.1)';
+  btn.style.borderColor = 'rgba(201,168,76,0.35)';
+  btn.style.color = 'var(--gold-light)';
   document.getElementById('drawPanel').style.display = 'none';
-  document.querySelector('.layout').style.paddingBottom = '';
   document.getElementById('mapHint').textContent = 'Kliknij na mapę aby pingować metina';
+  document.body.classList.remove('draw-active');
 
   renderRoutesList();
-  playRoute(newIdx);
+  startRouteAnim(newIdx);
 }
 
 function deleteRoute(idx) {
+  stopRouteAnim(idx);
   customRoutes.splice(idx, 1);
   saveRoutesStorage();
-  if (activeRouteIdx === idx) { stopRouteAnim(); clearRouteCanvas(); activeRouteIdx = -1; }
-  else if (activeRouteIdx > idx) activeRouteIdx--;
+  // Przebuduj activeAnims z nowymi indeksami
+  const newAnims = {}, newPulses = {};
+  Object.keys(activeAnims).forEach(k => {
+    const ki = parseInt(k);
+    if (ki < idx) { newAnims[ki] = activeAnims[ki]; newPulses[ki] = routePulses[ki]; }
+    else if (ki > idx) { newAnims[ki-1] = activeAnims[ki]; newPulses[ki-1] = routePulses[ki]; }
+  });
+  Object.assign(activeAnims, newAnims);
+  Object.assign(routePulses, newPulses);
   renderRoutesList();
+  redrawAllRoutes();
 }
 
-// ── Kliknięcia na mapę w trybie rysowania ──
+// ── Kliknięcia mapy w trybie rysowania ──
 mapContainer.addEventListener('click', function(e) {
   if (!drawingMode) return;
-  // Nie rysuj jeśli kliknięto w panel lub jego potomków
   if (e.target.closest('#drawPanel')) return;
   e.stopImmediatePropagation();
   const rect = mapImg.getBoundingClientRect();
@@ -1112,210 +1294,73 @@ mapContainer.addEventListener('click', function(e) {
   const y = (e.clientY - rect.top)  / rect.height;
   if (x < 0 || x > 1 || y < 0 || y > 1) return;
   drawingPoints.push({ x, y });
-  document.getElementById('drawPointCount').textContent = `Punkty: ${drawingPoints.length}`;
-  document.getElementById('drawPointCount').style.color = 'var(--text-dim)';
-  drawInProgress();
+  const cnt = drawingPoints.length;
+  document.getElementById('drawPointCount').textContent = `${cnt} punkt${cnt===1?'':'ów'} — klikaj dalej lub Zapisz`;
+  document.getElementById('drawPointCount').style.color = cnt >= 2 ? '#80c080' : 'var(--text-dim)';
+  redrawAllRoutes();
 }, true);
 
-// Backspace — cofnij punkt
 document.addEventListener('keydown', e => {
   if (!drawingMode) return;
-  if (e.key === 'Backspace' || (e.key === 'z' && e.ctrlKey)) {
+  if (e.key === 'Backspace' || (e.key==='z' && e.ctrlKey)) {
     e.preventDefault();
     drawingPoints.pop();
-    document.getElementById('drawPointCount').textContent = `Punkty: ${drawingPoints.length}`;
-    drawInProgress();
+    const cnt = drawingPoints.length;
+    document.getElementById('drawPointCount').textContent = cnt > 0
+      ? `${cnt} punkt${cnt===1?'':'ów'} — klikaj dalej lub Zapisz`
+      : 'Klikaj punkty na mapie… (0 punktów)';
+    document.getElementById('drawPointCount').style.color = cnt >= 2 ? '#80c080' : 'var(--text-dim)';
+    redrawAllRoutes();
   }
   if (e.key === 'Escape') cancelDrawing();
   if (e.key === 'Enter') saveDrawing();
 });
 
-function drawInProgress() {
-  const cv = document.getElementById('routeCanvas');
-  if (!cv) return;
-  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
-  cv.width = W; cv.height = H;
-  const ctx = cv.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
-
+function drawInProgressOnCtx(ctx, W, H) {
   const pts = drawingPoints.map(p => ({ x: p.x*W, y: p.y*H }));
   if (!pts.length) return;
-
-  // Linia przerywana w trakcie rysowania
+  ctx.save();
   ctx.setLineDash([8, 5]);
-  ctx.strokeStyle = 'rgba(255,160,50,0.85)';
+  ctx.strokeStyle = 'rgba(255,160,50,0.8)';
   ctx.lineWidth = 2.5;
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.beginPath();
-  pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+  pts.forEach((p, i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
   ctx.stroke();
   ctx.setLineDash([]);
-
-  // Punkty
   pts.forEach((p, i) => {
     ctx.beginPath();
-    ctx.arc(p.x, p.y, i === 0 ? 8 : 5, 0, Math.PI * 2);
-    ctx.fillStyle = i === 0 ? 'rgba(255,140,40,0.9)' : 'rgba(255,180,80,0.8)';
+    ctx.arc(p.x, p.y, i===0 ? 8 : 5, 0, Math.PI*2);
+    ctx.fillStyle = i===0 ? 'rgba(255,140,40,0.95)' : 'rgba(255,180,80,0.85)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,0.7)';
     ctx.lineWidth = 1.5; ctx.stroke();
   });
+  ctx.restore();
 }
 
-// ── LED animacja zapisanej trasy ──
 function buildPixelPts(points) {
   const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
   const result = [];
   for (let i = 1; i < points.length; i++) {
-    const ax = points[i-1].x*W, ay = points[i-1].y*H;
-    const bx = points[i].x*W,   by = points[i].y*H;
+    const ax=points[i-1].x*W, ay=points[i-1].y*H;
+    const bx=points[i].x*W,   by=points[i].y*H;
     const dist = Math.hypot(bx-ax, by-ay);
-    const steps = Math.max(2, Math.ceil(dist / 3));
-    for (let s = (i===1?0:1); s<=steps; s++) {
-      const t = s/steps;
+    const steps = Math.max(2, Math.ceil(dist/3));
+    for (let s=(i===1?0:1); s<=steps; s++) {
+      const t=s/steps;
       result.push({ x: ax+(bx-ax)*t, y: ay+(by-ay)*t });
     }
   }
   return result;
 }
 
-function playRoute(idx) {
-  activeRouteIdx = idx;
-  renderRoutesList(); // odśwież aktywną
-  stopRouteAnim();
-  routePixelPts = buildPixelPts(customRoutes[idx].points);
-  routePulse = 0;
-  animLED();
-}
-
-function stopRouteAnim() {
-  if (routeAnimId) cancelAnimationFrame(routeAnimId);
-  routeAnimId = null;
-}
-
-function clearRouteCanvas() {
-  const cv = document.getElementById('routeCanvas');
-  if (cv) { const ctx = cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height); }
-}
-
-function animLED() {
-  routePulse += 0.055;
-  drawLED();
-  routeAnimId = requestAnimationFrame(animLED);
-}
-
-function drawLED() {
-  const cv = document.getElementById('routeCanvas');
-  if (!cv) return;
-  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
-  if (!W || !H) return;
-  cv.width = W; cv.height = H;
-  const ctx = cv.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
-
-  if (!routePixelPts.length) return;
-  const n = routePixelPts.length;
-
-  for (let i = 1; i < n; i++) {
-    const p1 = routePixelPts[i-1], p2 = routePixelPts[i];
-    const t = i / n;
-    // Fala biegnąca wzdłuż trasy — różne fazy w różnych miejscach
-    const wave = Math.sin(routePulse * 2.5 - t * 22) * 0.5 + 0.5; // 0..1
-    const bright = 0.5 + wave * 0.5;
-
-    // Warstwa 1 — szerokie zewnętrzne glow
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
-    ctx.strokeStyle = `rgba(255, ${Math.round(120*bright)}, 0, ${0.18 + wave*0.22})`;
-    ctx.lineWidth = 14;
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.stroke();
-
-    // Warstwa 2 — średni glow
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
-    ctx.strokeStyle = `rgba(255, ${Math.round(160*bright)}, 20, ${0.45 + wave*0.35})`;
-    ctx.lineWidth = 6;
-    ctx.stroke();
-
-    // Warstwa 3 — linia rdzeniowa
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
-    ctx.strokeStyle = `rgba(255, ${Math.round(220*bright)}, 80, ${0.8 + wave*0.2})`;
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-
-    // Warstwa 4 — biały rdzeń przy szczycie fali
-    if (wave > 0.65) {
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${(wave-0.65)*2.2})`;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-  }
-
-  // Pulsujące kółka na początku i końcu trasy
-  const start = routePixelPts[0];
-  const end   = routePixelPts[n-1];
-  const pulse = Math.sin(routePulse * 3) * 0.5 + 0.5;
-
-  [start, end].forEach((pt, isEnd) => {
-    const g = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, 14 + pulse*4);
-    g.addColorStop(0,   `rgba(255,255,255,${0.9+pulse*0.1})`);
-    g.addColorStop(0.3, `rgba(255,180,40,${0.8+pulse*0.15})`);
-    g.addColorStop(0.7, `rgba(255,100,0,${0.4+pulse*0.2})`);
-    g.addColorStop(1,    'rgba(255,60,0,0)');
-    ctx.beginPath();
-    ctx.arc(pt.x, pt.y, 14+pulse*4, 0, Math.PI*2);
-    ctx.fillStyle = g;
-    ctx.fill();
-  });
-}
-
-window.addEventListener('resize', () => {
-  if (drawingMode) drawInProgress();
-  else if (activeRouteIdx >= 0 && routeAnimId) {
-    routePixelPts = buildPixelPts(customRoutes[activeRouteIdx].points);
-  }
-});
+window.addEventListener('resize', () => redrawAllRoutes());
 
 loadCustomRoutes();
+// Uruchom animacje tras które były włączone
+customRoutes.forEach((r, i) => { if (r.visible) startRouteAnim(i); });
 
 </script>
-<!-- Panel rysowania — fixed na dole, poza mapą -->
-<div id="drawPanel" style="
-  display:none;
-  position:fixed;bottom:0;left:0;right:0;z-index:500;
-  background:rgba(8,6,4,0.97);border-top:1px solid rgba(201,168,76,0.4);
-  padding:10px 20px;
-  flex-direction:row;align-items:center;gap:16px;flex-wrap:wrap;
-  box-shadow:0 -4px 20px rgba(0,0,0,0.7);
-">
-  <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;white-space:nowrap;">
-    ✏️ Rysowanie trasy
-  </div>
-  <div style="font-size:11px;color:var(--text-dim);white-space:nowrap;">
-    Klikaj punkty · <kbd style="background:#222;padding:1px 5px;border-radius:2px;color:#aaa;font-size:10px;">Backspace</kbd> cofnij
-  </div>
-  <input id="drawRouteName" placeholder="Nazwa trasy..." style="
-    flex:1;min-width:140px;max-width:240px;
-    background:#0e0b07;border:1px solid rgba(201,168,76,0.3);
-    color:var(--text);font-family:'Crimson Text',serif;font-size:14px;
-    padding:6px 10px;border-radius:2px;outline:none;
-  ">
-  <button onmousedown="event.preventDefault();event.stopPropagation();saveDrawing();" style="
-    font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
-    padding:7px 18px;border-radius:2px;cursor:pointer;white-space:nowrap;
-    background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.5);color:var(--gold);
-  ">💾 Zapisz trasę</button>
-  <button onmousedown="event.preventDefault();event.stopPropagation();cancelDrawing();" style="
-    font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
-    padding:7px 18px;border-radius:2px;cursor:pointer;white-space:nowrap;
-    background:rgba(100,40,40,0.2);border:1px solid rgba(180,60,60,0.3);color:#c07070;
-  ">✕ Anuluj</button>
-  <div id="drawPointCount" style="font-size:11px;color:var(--text-dim);white-space:nowrap;">Punkty: 0</div>
-</div>
-
 </body>
 </html>
