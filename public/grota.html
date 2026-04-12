@@ -364,6 +364,32 @@
   </div>
 
   <div class="sidebar">
+    <!-- PANEL RYSOWANIA — wewnątrz sidebara, nie zasłania mapy -->
+    <div id="drawPanel" style="display:none;flex-direction:column;gap:8px;padding:12px 14px;border-bottom:2px solid rgba(201,168,76,0.25);background:rgba(0,0,0,0.25);">
+      <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;">✏️ Rysowanie trasy</div>
+      <div style="font-size:11px;color:var(--text-dim);">
+        Klikaj punkty na mapie<br>
+        <span style="font-size:10px;"><kbd style="background:#1a1410;padding:1px 5px;border-radius:2px;border:1px solid #333;">Backspace</kbd> cofa punkt &nbsp;·&nbsp; <kbd style="background:#1a1410;padding:1px 5px;border-radius:2px;border:1px solid #333;">Enter</kbd> zapisuje</span>
+      </div>
+      <input id="drawRouteName" placeholder="Nazwa trasy..." style="
+        background:#0e0b07;border:1px solid rgba(201,168,76,0.3);
+        color:var(--text);font-family:'Crimson Text',serif;font-size:14px;
+        padding:7px 10px;border-radius:2px;outline:none;width:100%;
+      ">
+      <div id="drawPointCount" style="font-size:11px;color:var(--text-dim);">Klikaj punkty na mapie… (0 punktów)</div>
+      <div style="display:flex;gap:6px;">
+        <button onmousedown="event.preventDefault();event.stopPropagation();saveDrawing();" style="
+          flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;
+          padding:8px;border-radius:2px;cursor:pointer;
+          background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.5);color:var(--gold);
+        ">💾 Zapisz</button>
+        <button onmousedown="event.preventDefault();event.stopPropagation();cancelDrawing();" style="
+          flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;
+          padding:8px;border-radius:2px;cursor:pointer;
+          background:rgba(100,40,40,0.15);border:1px solid rgba(180,60,60,0.3);color:#c07070;
+        ">✕ Anuluj</button>
+      </div>
+    </div>
     <!-- SNAPSHOTS -->
     <div class="snap-panel">
       <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--gold-dark);text-transform:uppercase;margin-bottom:8px;">📸 Snapshoty</div>
@@ -398,7 +424,50 @@
 
 </div>
 
-<script>
+<!-- DROPDOWN TRAS — fixed position żeby nie był clipowany -->
+<div id="routesMenuDropdown" style="
+  display:none;position:fixed;z-index:9999;
+  background:linear-gradient(160deg,#1a1208,#0c0906);
+  border:1px solid rgba(60,180,255,0.4);border-radius:4px;
+  min-width:260px;max-width:320px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.9),0 0 0 1px rgba(60,180,255,0.1);
+  overflow:hidden;
+">
+  <div style="padding:8px 12px 6px;border-bottom:1px solid rgba(40,80,120,0.4);">
+    <button onclick="startDrawingFromMenu()" style="
+      width:100%;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+      padding:8px;border-radius:2px;cursor:pointer;
+      background:rgba(60,180,255,0.08);border:1px solid rgba(60,180,255,0.3);color:#80d0ff;
+    ">✏️ Rysuj nową trasę</button>
+  </div>
+  <div id="routesMenuList" style="max-height:340px;overflow-y:auto;"></div>
+</div>
+
+<!-- RESET MODAL -->
+<div id="resetOverlay" style="
+  display:none;position:fixed;inset:0;z-index:10000;
+  background:rgba(0,0,0,0.75);backdrop-filter:blur(3px);
+  align-items:center;justify-content:center;
+" onclick="if(event.target===this)closeResetModal()">
+  <div style="
+    background:linear-gradient(160deg,#1e1810,#100d08);
+    border:1px solid rgba(200,80,80,0.4);border-radius:4px;
+    padding:24px 28px;min-width:320px;max-width:420px;
+    position:relative;box-shadow:0 0 60px rgba(0,0,0,0.9);
+  ">
+    <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e07070;text-align:center;margin-bottom:16px;">⟳ Reset groty wygnańców</div>
+    <div id="resetOptions"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button onclick="closeResetModal()" style="flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:2px;cursor:pointer;background:none;border:1px solid rgba(58,46,26,0.4);color:var(--text-dim);">Anuluj</button>
+      <button onclick="doReset()" style="flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:2px;cursor:pointer;background:rgba(200,60,60,0.15);border:1px solid rgba(200,80,80,0.5);color:#e07070;">⟳ Resetuj zaznaczone</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
+
+<script>>
 const socket = io();
 
 /* PING SIZE */
@@ -1394,81 +1463,12 @@ function doReset() {
 }
 
 // ── INIT ──
-rtLoad();
-rtRoutes.forEach((r,i) => { if (r.visible) rtStartAnim(i); });
+document.addEventListener('DOMContentLoaded', () => {
+  rtLoad();
+  rtRoutes.forEach((r,i) => { if (r.visible) rtStartAnim(i); });
+});
 
 </script>
-
-<!-- DROPDOWN TRAS — fixed position żeby nie był clipowany -->
-<div id="routesMenuDropdown" style="
-  display:none;position:fixed;z-index:9999;
-  background:linear-gradient(160deg,#1a1208,#0c0906);
-  border:1px solid rgba(60,180,255,0.4);border-radius:4px;
-  min-width:260px;max-width:320px;
-  box-shadow:0 8px 32px rgba(0,0,0,0.9),0 0 0 1px rgba(60,180,255,0.1);
-  overflow:hidden;
-">
-  <div style="padding:8px 12px 6px;border-bottom:1px solid rgba(40,80,120,0.4);">
-    <button onclick="startDrawingFromMenu()" style="
-      width:100%;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
-      padding:8px;border-radius:2px;cursor:pointer;
-      background:rgba(60,180,255,0.08);border:1px solid rgba(60,180,255,0.3);color:#80d0ff;
-    ">✏️ Rysuj nową trasę</button>
-  </div>
-  <div id="routesMenuList" style="max-height:340px;overflow-y:auto;"></div>
-</div>
-
-<!-- PANEL RYSOWANIA — modal -->
-<div id="drawPanel" style="
-  display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-  z-index:10001;background:linear-gradient(160deg,#1e1810,#100d08);
-  border:1px solid rgba(201,168,76,0.5);border-radius:4px;
-  padding:20px 22px;min-width:300px;
-  box-shadow:0 0 60px rgba(0,0,0,0.95);
-  flex-direction:column;gap:10px;
-">
-  <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;text-align:center;">✏️ Rysowanie trasy</div>
-  <div style="font-size:11px;color:var(--text-dim);text-align:center;">Klikaj punkty na mapie &nbsp;·&nbsp; <kbd style="background:#1a1410;padding:1px 5px;border-radius:2px;font-size:10px;border:1px solid #333;">Backspace</kbd> cofnij</div>
-  <input id="drawRouteName" placeholder="Nazwa trasy..." style="
-    background:#0e0b07;border:1px solid rgba(201,168,76,0.3);
-    color:var(--text);font-family:'Crimson Text',serif;font-size:14px;
-    padding:7px 10px;border-radius:2px;outline:none;
-  ">
-  <div id="drawPointCount" style="font-size:11px;color:var(--text-dim);text-align:center;">Klikaj punkty na mapie… (0 punktów)</div>
-  <div style="display:flex;gap:8px;">
-    <button onmousedown="event.preventDefault();event.stopPropagation();saveDrawing();" style="
-      flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
-      padding:8px;border-radius:2px;cursor:pointer;
-      background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.5);color:var(--gold);
-    ">💾 Zapisz trasę</button>
-    <button onmousedown="event.preventDefault();event.stopPropagation();cancelDrawing();" style="
-      flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
-      padding:8px;border-radius:2px;cursor:pointer;
-      background:rgba(100,40,40,0.15);border:1px solid rgba(180,60,60,0.3);color:#c07070;
-    ">✕ Anuluj</button>
-  </div>
-</div>
-
-<!-- RESET MODAL -->
-<div id="resetOverlay" style="
-  display:none;position:fixed;inset:0;z-index:10000;
-  background:rgba(0,0,0,0.75);backdrop-filter:blur(3px);
-  align-items:center;justify-content:center;
-" onclick="if(event.target===this)closeResetModal()">
-  <div style="
-    background:linear-gradient(160deg,#1e1810,#100d08);
-    border:1px solid rgba(200,80,80,0.4);border-radius:4px;
-    padding:24px 28px;min-width:320px;max-width:420px;
-    position:relative;box-shadow:0 0 60px rgba(0,0,0,0.9);
-  ">
-    <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e07070;text-align:center;margin-bottom:16px;">⟳ Reset groty wygnańców</div>
-    <div id="resetOptions"></div>
-    <div style="display:flex;gap:8px;margin-top:16px;">
-      <button onclick="closeResetModal()" style="flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:2px;cursor:pointer;background:none;border:1px solid rgba(58,46,26,0.4);color:var(--text-dim);">Anuluj</button>
-      <button onclick="doReset()" style="flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:2px;cursor:pointer;background:rgba(200,60,60,0.15);border:1px solid rgba(200,80,80,0.5);color:#e07070;">⟳ Resetuj zaznaczone</button>
-    </div>
-  </div>
-</div>
 
 </body>
 </html>
