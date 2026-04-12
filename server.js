@@ -67,6 +67,7 @@ let grotaPings    = {}
 let grotaHistory  = []
 let grotaGenerals = {}
 let grotaSnapshots= []
+let grotaDeadHistory = []  // historia zbitych metinów z timerami
 let charOrder     = []
 
 /* ======================
@@ -96,6 +97,8 @@ async function connectDB() {
     grotaHistory   = doc.grotaHistory   || []
     grotaGenerals  = doc.grotaGenerals  || {}
     grotaSnapshots = doc.grotaSnapshots || []
+    // Wczytaj dead history, odfiltruj wygasłe (>35min)
+    grotaDeadHistory = (doc.grotaDeadHistory || []).filter(d => Date.now() - d.killedAt < 35*60*1000)
     charOrder           = doc.charOrder           || []
   charsList           = doc.charsList           || {}
   skarbiec            = doc.skarbiec            || { inwestycje: {}, udzialy: {}, sprzedaz: [], zakupy: [] }
@@ -159,7 +162,7 @@ async function saveNow() {
       { _id: DOC_ID },
       { _id: DOC_ID, timers, characters, tasks, resetHour, resetMinute,
         customPlaces, customTimers, grotaPings, grotaHistory,
-        grotaGenerals, grotaSnapshots, charOrder, charsList, skarbiec,
+        grotaGenerals, grotaSnapshots, grotaDeadHistory, charOrder, charsList, skarbiec,
         runningTimers: [...runningTimers],
         runningCustomTimers: [...runningCustomTimers] },
       { upsert: true }
@@ -562,6 +565,22 @@ io.on("connection",(socket)=>{
     io.emit("grotaPingsUpdate",grotaPings)
     io.emit("grotaHistoryUpdate",grotaHistory)
   })
+  // Dead history handlers
+  socket.on("grotaAddDead", (dead) => {
+    if (!dead || !dead.id) return
+    grotaDeadHistory.push(dead)
+    // Usuń wygasłe
+    grotaDeadHistory = grotaDeadHistory.filter(d => Date.now() - d.killedAt < 35*60*1000)
+    io.emit("grotaDeadHistoryUpdate", grotaDeadHistory)
+    saveData()
+  })
+
+  socket.on("grotaRemoveDead", (id) => {
+    grotaDeadHistory = grotaDeadHistory.filter(d => d.id !== id)
+    io.emit("grotaDeadHistoryUpdate", grotaDeadHistory)
+    saveData()
+  })
+
   socket.on("grotaRemovePing",(id)=>{
     delete grotaPings[id]
     saveData()
@@ -625,6 +644,9 @@ io.on("connection",(socket)=>{
   socket.emit("grotaHistoryUpdate",  grotaHistory)
   socket.emit("grotaGeneralsUpdate", grotaGenerals)
   socket.emit("grotaSnapshotsUpdate",grotaSnapshots)
+  // Wyślij dead history (odfiltruj wygasłe)
+  grotaDeadHistory = grotaDeadHistory.filter(d => Date.now() - d.killedAt < 35*60*1000)
+  socket.emit("grotaDeadHistoryUpdate", grotaDeadHistory)
 })
 
 /* ======================

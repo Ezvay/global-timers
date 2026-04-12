@@ -320,7 +320,12 @@
         <option value="2">Trasa 3</option><option value="3">Trasa 4</option>
         <option value="4">Trasa 5</option>
       </select>
-      <button id="routeRegenBtn" onclick="regenRoutes()" title="Generuj nowe trasy" style="display:none;background:#0e0b07;border:1px solid rgba(80,140,255,0.4);color:#80b0ff;font-family:'Cinzel',serif;font-size:13px;padding:3px 10px;border-radius:2px;cursor:pointer;">↺</button>
+      <div id="routeCovWrap" style="display:none;align-items:center;gap:3px;">
+        <span style="font-family:'Cinzel',serif;font-size:9px;color:#80b0ff;letter-spacing:1px;">ZASIĘG</span>
+        <input type="range" id="routeCovSlider" min="20" max="100" value="60" step="10" style="width:60px;" oninput="updateCovLabel();regenRoutes()">
+        <span id="routeCovVal" style="font-family:'Cinzel',serif;font-size:9px;color:#80b0ff;min-width:28px;">60%</span>
+      </div>
+      <button id="routeRegenBtn" onclick="regenRoutes()" title="Nowe trasy" style="display:none;background:#0e0b07;border:1px solid rgba(80,140,255,0.4);color:#80b0ff;font-family:'Cinzel',serif;font-size:13px;padding:3px 10px;border-radius:2px;cursor:pointer;">↺</button>
     </div>
   </div>
 </div>
@@ -810,6 +815,12 @@ socket.on('grotaHistoryUpdate', data => {
   if (heatOn) syncCanvas();
 });
 
+// Dead history — przeżywa refresh
+socket.on('grotaDeadHistoryUpdate', data => {
+  deadHistory = Array.isArray(data) ? data : [];
+  renderDead();
+});
+
 /* ═══ HISTORIA ZBITYCH METINÓW ═══ */
 const METIN_PER_CH = 6;
 const YELLOW_MS    = 20 * 60 * 1000;
@@ -819,16 +830,15 @@ const EXPIRE_MS    = 35 * 60 * 1000;
 let deadHistory = []; // [{id, ch, killedAt}]
 let undoStack   = []; // max 3 ostatnich
 
-// Nadpisz removePing żeby zapisywał historię
+// Nadpisz removePing żeby zapisywał historię NA SERWERZE
 const _origRemovePing = removePing;
 window.removePing = function(id) {
   const p = pings[id];
   if (p) {
     const dead = { id: 'dead_' + Date.now() + '_' + id, ch: p.ch, killedAt: Date.now(), px: p.x, py: p.y };
-    deadHistory.push(dead);
     undoStack.push({ pingData: { x: p.x, y: p.y, ch: p.ch }, dead });
     if (undoStack.length > 3) undoStack.shift();
-    renderDead();
+    socket.emit('grotaAddDead', dead); // zapisz na serwerze — przyjdzie z powrotem przez grotaDeadHistoryUpdate
   }
   socket.emit('grotaRemovePing', id);
 };
@@ -836,21 +846,21 @@ window.removePing = function(id) {
 function undoLastKill() {
   if (!undoStack.length) return;
   const last = undoStack.pop();
-  deadHistory = deadHistory.filter(d => d.id !== last.dead.id);
+  socket.emit('grotaRemoveDead', last.dead.id); // usuń z serwera
   socket.emit('grotaAddPing', { x: last.pingData.x, y: last.pingData.y, ch: last.pingData.ch });
-  renderDead();
 }
 
 function renderDead() {
   const now = Date.now();
-  deadHistory = deadHistory.filter(d => now - d.killedAt < EXPIRE_MS);
+  // Odfiltruj lokalnie wygasłe (serwer też to robi przy połączeniu)
+  const active = deadHistory.filter(d => now - d.killedAt < EXPIRE_MS);
 
   // Liczniki
   const wrap = document.getElementById('chCounters');
   if (wrap) {
     const deadPer = {};
     for (let i = 1; i <= 8; i++) deadPer[i] = 0;
-    deadHistory.forEach(d => { if (d.ch >= 1 && d.ch <= 8) deadPer[d.ch]++; });
+    active.forEach(d => { if (d.ch >= 1 && d.ch <= 8) deadPer[d.ch]++; });
     wrap.innerHTML = '';
     for (let ch = 1; ch <= 8; ch++) {
       const avail = Math.max(0, METIN_PER_CH - deadPer[ch]);
@@ -866,12 +876,12 @@ function renderDead() {
   // Historia
   const list = document.getElementById('deadList');
   if (!list) return;
-  if (!deadHistory.length) {
+  if (!active.length) {
     list.innerHTML = '<div class="sidebar-empty">Brak zbitych</div>';
     return;
   }
   const byCh = {};
-  deadHistory.forEach(d => { (byCh[d.ch] = byCh[d.ch] || []).push(d); });
+  active.forEach(d => { (byCh[d.ch] = byCh[d.ch] || []).push(d); });
   list.innerHTML = '';
   Object.keys(byCh).sort((a,b) => a-b).forEach(ch => {
     const grp = document.createElement('div');
@@ -976,7 +986,7 @@ function bfsPath(start, end) {
 function nodeHeat(ni) {
   if (!history || !history.length) return 0;
   const [px, py] = GRAPH_NODES[ni];
-  const r = 0.14;
+  const r = 0.16;
   let sum = 0;
   history.forEach(h => {
     const d = Math.hypot(h.x - px, h.y - py);
@@ -985,42 +995,57 @@ function nodeHeat(ni) {
   return Math.min(1, sum / 3);
 }
 
-// Oblicz jedną trasę: startuj od najgorętszego węzła,
-// idź greedy do następnego najgorętszego sąsiedniego
-function computeOneRoute(usedStarts) {
-  const heats = GRAPH_NODES.map((_, i) => ({ i, h: nodeHeat(i) }));
-  const hasHeat = heats.some(x => x.h > 0);
+function updateCovLabel() {
+  const v = document.getElementById('routeCovSlider').value;
+  document.getElementById('routeCovVal').textContent = v + '%';
+}
+
+// Oblicz jedną trasę — zawsze startuje z węzła 0 (lewa górna)
+// Pokrycie % określa ile gorących węzłów odwiedza
+function computeOneRoute(routeVariant) {
+  const covPct = parseInt(document.getElementById('routeCovSlider')?.value || 60) / 100;
+  const heats  = GRAPH_NODES.map((_, i) => ({ i, h: nodeHeat(i) }));
+  const hasHeat = heats.some(x => x.h > 0.01);
+
+  // Zawsze startujemy od węzła 0 (lewa górna komnata)
+  const START = 0;
 
   let targets;
   if (hasHeat) {
-    // Sortuj węzły malejąco po temperaturze
+    // Posortuj malejąco po temperaturze
     const sorted = heats.filter(x => x.h > 0).sort((a, b) => b.h - a.h);
-    // Wybierz startowy — najgorętszy który nie był jeszcze używany jako start
-    const startObj = sorted.find(x => !usedStarts.has(x.i)) || sorted[0];
-    const startIdx = startObj.i;
-    usedStarts.add(startIdx);
-
-    // Wybierz top 8-10 gorących węzłów do odwiedzenia
-    targets = sorted.slice(0, Math.min(10, sorted.length)).map(x => x.i);
-    // Upewnij się że start jest w targets
-    if (!targets.includes(startIdx)) targets.unshift(startIdx);
-    // Przenieś start na początek
-    targets = [startIdx, ...targets.filter(x => x !== startIdx)];
+    // Ile węzłów wybrać zależy od % pokrycia
+    const maxNodes = Math.max(3, Math.round(sorted.length * covPct));
+    // Różnorodność: każda trasa bierze trochę inny podzbiór
+    // Variant 0: top N; variant 1: top N ze skokiem co 2; itd.
+    const step = routeVariant + 1;
+    const selected = [];
+    for (let i = routeVariant % 3; i < sorted.length && selected.length < maxNodes; i += step) {
+      selected.push(sorted[i].i);
+    }
+    // Uzupełnij z top jeśli za mało
+    for (const s of sorted) {
+      if (selected.length >= maxNodes) break;
+      if (!selected.includes(s.i)) selected.push(s.i);
+    }
+    // Start 0 na początku
+    targets = [START, ...selected.filter(x => x !== START)];
   } else {
-    // Brak heatmapy — losowa trasa przez ~12 węzłów
+    // Brak heatmapy — każda trasa bierze co N-ty węzeł
     const all = GRAPH_NODES.map((_, i) => i);
-    // Fisher-Yates shuffle z seeded random żeby każda trasa była inna
-    const seed = usedStarts.size;
-    const shuffled = [...all].sort(() => Math.sin(seed * 9301 + all.indexOf(all[0])) - 0.5);
-    targets = shuffled.slice(0, 12);
-    usedStarts.add(targets[0]);
+    const step = routeVariant + 1;
+    const maxN = Math.round(all.length * covPct);
+    targets = [START];
+    for (let i = routeVariant; i < all.length && targets.length < maxN; i += step) {
+      if (i !== START) targets.push(i);
+    }
   }
 
-  // Nearest-neighbor greedy przez wybrane węzły — po grafie BFS
-  const visited = new Set([targets[0]]);
-  let current = targets[0];
-  const fullPath = [current];
-  const remaining = targets.slice(1);
+  // Greedy nearest-neighbor BFS
+  const visited = new Set([START]);
+  let current = START;
+  const fullPath = [START];
+  const remaining = targets.filter(x => x !== START);
 
   while (remaining.length) {
     let best = null, bestPath = null;
@@ -1046,10 +1071,9 @@ let allRoutes = [];
 let currentRouteIdx = 0;
 
 function regenRoutes() {
-  const usedStarts = new Set();
   allRoutes = [];
   for (let i = 0; i < 5; i++) {
-    allRoutes.push(computeOneRoute(usedStarts));
+    allRoutes.push(computeOneRoute(i));
   }
   currentRouteIdx = parseInt(document.getElementById('routeSelect').value) || 0;
   if (routeOn) startRoute();
@@ -1079,6 +1103,7 @@ function toggleRoute() {
     btn.style.background = 'rgba(0,100,150,0.2)';
     sel.style.display = '';
     reb.style.display = '';
+    document.getElementById('routeCovWrap').style.display = 'flex';
     regenRoutes();
   } else {
     btn.innerText = '🗺 Trasa OFF';
@@ -1087,6 +1112,7 @@ function toggleRoute() {
     btn.style.background = '';
     sel.style.display = 'none';
     reb.style.display = 'none';
+    document.getElementById('routeCovWrap').style.display = 'none';
     stopRoute();
     clearRouteCanvas();
   }
