@@ -1477,37 +1477,35 @@ function closeResetModal() { document.getElementById('resetOverlay').style.displ
 function doReset() {
   // Odtwórz dźwięk
   try { new Audio('/reset.mp3').play(); } catch(e) {}
-  const dead     = document.getElementById('r_dead').checked;
-  const pings    = document.getElementById('r_pings').checked;
-  const generals = document.getElementById('r_generals').checked;
-  const heat     = document.getElementById('r_heat').checked;
-  const routes   = document.getElementById('r_routes').checked;
-  const snaps    = document.getElementById('r_snaps').checked;
+  const doDead     = document.getElementById('r_dead').checked;
+  const doPings    = document.getElementById('r_pings').checked;
+  const doGenerals = document.getElementById('r_generals').checked;
+  const doHeat     = document.getElementById('r_heat').checked;
+  const doRoutes   = document.getElementById('r_routes').checked;
+  const doSnaps    = document.getElementById('r_snaps').checked;
 
-  if (dead) {
-    // Wyczyść historię zbitych na serwerze
+  if (doDead) {
     deadHistory.forEach(d => socket.emit('grotaRemoveDead', d.id));
     deadHistory = [];
     renderDead();
   }
-  if (pings) {
+  if (doPings) {
     Object.keys(pings).forEach(id => socket.emit('grotaRemovePing', id));
   }
-  if (generals) {
-    Object.keys(generals_data || {}).forEach(id => socket.emit('grotaRemoveGeneral', id));
+  if (doGenerals) {
+    Object.keys(generals || {}).forEach(id => socket.emit('grotaRemoveGeneral', id));
   }
-  if (heat) {
+  if (doHeat) {
     socket.emit('grotaResetHistory');
   }
-  if (routes) {
-    // Zatrzymaj wszystkie animacje
+  if (doRoutes) {
     customRoutes.forEach((_, i) => stopRouteAnim(i));
     customRoutes = [];
     saveRoutesStorage();
     renderRoutesMenu();
     clearRouteCanvas();
   }
-  if (snaps) {
+  if (doSnaps) {
     socket.emit('grotaClearSnapshots');
   }
 
