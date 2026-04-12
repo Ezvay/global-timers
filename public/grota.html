@@ -264,6 +264,20 @@
     border-radius:2px;padding:7px 20px;cursor:pointer;transition:all 0.2s;width:100%;
   }
   .popup-cancel:hover{color:var(--text);border-color:rgba(255,255,255,0.2);}
+  /* WŁASNE TRASY */
+  .crt-item{padding:8px 12px;border-bottom:1px solid rgba(58,46,26,0.3);display:flex;align-items:center;gap:8px;}
+  .crt-name{flex:1;font-family:'Crimson Text',serif;font-size:14px;color:var(--text);cursor:pointer;}
+  .crt-name:hover{color:var(--gold);}
+  .crt-btn{font-size:10px;padding:2px 7px;border-radius:2px;cursor:pointer;border:1px solid rgba(58,46,26,0.5);background:none;color:var(--text-dim);}
+  .crt-btn:hover{color:var(--gold);border-color:rgba(201,168,76,0.4);}
+  /* Tryb rysowania */
+  .draw-active #mapContainer{cursor:crosshair!important;}
+  .draw-hint{
+    position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+    background:rgba(10,8,5,0.92);border:1px solid rgba(201,168,76,0.4);border-radius:4px;
+    padding:8px 18px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;
+    color:var(--gold);text-transform:uppercase;pointer-events:none;z-index:200;display:none;
+  }
   /* LICZNIKI CH + HISTORIA ZBITYCH */
   .ch-ctr{display:flex;flex-direction:column;align-items:center;padding:7px 4px;border-radius:3px;border:1px solid rgba(58,46,26,0.4);background:rgba(0,0,0,0.25);}
   .ch-ctr-num{font-family:'Cinzel',serif;font-size:9px;color:var(--text-dim);letter-spacing:1px;}
@@ -315,17 +329,8 @@
     <button class="heat-btn" id="heatBtn" onclick="toggleHeat()">🔥 Heatmapa OFF</button>
     <div style="display:flex;align-items:center;gap:4px;">
       <button class="heat-btn" id="routeBtn" onclick="toggleRoute()" style="color:#80b0ff;border-color:rgba(80,140,255,0.4);">🗺 Trasa OFF</button>
-      <select id="routeSelect" style="display:none;background:#0e0b07;border:1px solid rgba(80,140,255,0.4);color:#80b0ff;font-family:'Cinzel',serif;font-size:10px;padding:5px 6px;border-radius:2px;cursor:pointer;outline:none;" onchange="changeRoute(this.value)">
-        <option value="0">Trasa 1</option><option value="1">Trasa 2</option>
-        <option value="2">Trasa 3</option><option value="3">Trasa 4</option>
-        <option value="4">Trasa 5</option>
-      </select>
-      <div id="routeCovWrap" style="display:none;align-items:center;gap:3px;">
-        <span style="font-family:'Cinzel',serif;font-size:9px;color:#80b0ff;letter-spacing:1px;">ZASIĘG</span>
-        <input type="range" id="routeCovSlider" min="20" max="100" value="60" step="10" style="width:60px;" oninput="updateCovLabel();regenRoutes()">
-        <span id="routeCovVal" style="font-family:'Cinzel',serif;font-size:9px;color:#80b0ff;min-width:28px;">60%</span>
-      </div>
-      <button id="routeRegenBtn" onclick="regenRoutes()" title="Nowe trasy" style="display:none;background:#0e0b07;border:1px solid rgba(80,140,255,0.4);color:#80b0ff;font-family:'Cinzel',serif;font-size:13px;padding:3px 10px;border-radius:2px;cursor:pointer;">↺</button>
+      <button id="routeRegenBtn" onclick="regenRoute()" title="Losuj nową trasę" style="display:none;background:#0e0b07;border:1px solid rgba(80,140,255,0.4);color:#80b0ff;font-family:'Cinzel',serif;font-size:14px;padding:3px 10px;border-radius:2px;cursor:pointer;" title="Generuj nową trasę">↺</button>
+      <button class="heat-btn" id="customRouteBtn" onclick="toggleCustomRoute()" style="color:#c8a84c;border-color:rgba(201,168,76,0.4);">✏️ Własna trasa</button>
     </div>
   </div>
 </div>
@@ -372,6 +377,10 @@
       <div class="hotspot-title">🔥 Gorące miejsca</div>
       <div id="hotspotList"></div>
     </div>
+
+    <!-- WŁASNE TRASY -->
+    <div class="sidebar-section-title" style="color:#c8a84c;border-color:rgba(201,168,76,0.3);">✏️ Własne trasy</div>
+    <div id="customRoutesList"></div>
   </div>
 
 </div>
@@ -995,144 +1004,182 @@ function nodeHeat(ni) {
   return Math.min(1, sum / 3);
 }
 
-function updateCovLabel() {
-  const v = document.getElementById('routeCovSlider').value;
-  document.getElementById('routeCovVal').textContent = v + '%';
-}
+// ═══ TRASA AUTO (nigdy nie wraca po tej samej krawędzi) ═══
+// Używamy zmodyfikowanego algorytmu Eulera/Fleury'ego:
+// buduj ścieżkę po grafie tak żeby każda krawędź była użyta max raz
+// a jeśli brakuje krawędzi — przeskocz przez BFS (to jest nieuniknione
+// bo graf nie jest Eulerowski), ale unikaj powtarzania ostatnio użytej krawędzi
 
-// Oblicz jedną trasę — zawsze startuje z węzła 0 (lewa górna)
-// Pokrycie % określa ile gorących węzłów odwiedza
-function computeOneRoute(routeVariant) {
-  const covPct = parseInt(document.getElementById('routeCovSlider')?.value || 60) / 100;
-  const heats  = GRAPH_NODES.map((_, i) => ({ i, h: nodeHeat(i) }));
-  const hasHeat = heats.some(x => x.h > 0.01);
-
-  // Zawsze startujemy od węzła 0 (lewa górna komnata)
-  const START = 0;
-
-  let targets;
-  if (hasHeat) {
-    // Posortuj malejąco po temperaturze
-    const sorted = heats.filter(x => x.h > 0).sort((a, b) => b.h - a.h);
-    // Ile węzłów wybrać zależy od % pokrycia
-    const maxNodes = Math.max(3, Math.round(sorted.length * covPct));
-    // Różnorodność: każda trasa bierze trochę inny podzbiór
-    // Variant 0: top N; variant 1: top N ze skokiem co 2; itd.
-    const step = routeVariant + 1;
-    const selected = [];
-    for (let i = routeVariant % 3; i < sorted.length && selected.length < maxNodes; i += step) {
-      selected.push(sorted[i].i);
-    }
-    // Uzupełnij z top jeśli za mało
-    for (const s of sorted) {
-      if (selected.length >= maxNodes) break;
-      if (!selected.includes(s.i)) selected.push(s.i);
-    }
-    // Start 0 na początku
-    targets = [START, ...selected.filter(x => x !== START)];
-  } else {
-    // Brak heatmapy — każda trasa bierze co N-ty węzeł
-    const all = GRAPH_NODES.map((_, i) => i);
-    const step = routeVariant + 1;
-    const maxN = Math.round(all.length * covPct);
-    targets = [START];
-    for (let i = routeVariant; i < all.length && targets.length < maxN; i += step) {
-      if (i !== START) targets.push(i);
-    }
-  }
-
-  // Greedy nearest-neighbor BFS
-  const visited = new Set([START]);
-  let current = START;
-  const fullPath = [START];
-  const remaining = targets.filter(x => x !== START);
-
-  while (remaining.length) {
-    let best = null, bestPath = null;
-    for (const t of remaining) {
-      if (visited.has(t)) continue;
-      const p = bfsPath(current, t);
-      if (p && (!bestPath || p.length < bestPath.length)) {
-        best = t; bestPath = p;
-      }
-    }
-    if (!best || !bestPath) break;
-    fullPath.push(...bestPath.slice(1));
-    bestPath.forEach(n => visited.add(n));
-    remaining.splice(remaining.indexOf(best), 1);
-    current = best;
-  }
-
-  return fullPath.map(i => GRAPH_NODES[i]);
-}
-
-// 5 tras przechowywanych
-let allRoutes = [];
-let currentRouteIdx = 0;
-
-function regenRoutes() {
-  allRoutes = [];
-  for (let i = 0; i < 5; i++) {
-    allRoutes.push(computeOneRoute(i));
-  }
-  currentRouteIdx = parseInt(document.getElementById('routeSelect').value) || 0;
-  if (routeOn) startRoute();
-}
-
-function changeRoute(idx) {
-  currentRouteIdx = parseInt(idx);
-  if (routeOn) startRoute();
-}
-
-// ── ANIMACJA ──
 let routeOn = false;
 let routeAnimId = null;
 let routeProgress = 0;
 let routePoints = [];
 let routePulse = 0;
+let currentAutoRoute = []; // [{x,y}] punkty aktualnej trasy
 
+function buildGraph() {
+  const g = {};
+  GRAPH_NODES.forEach((_, i) => g[i] = []);
+  GRAPH_EDGES.forEach(([a, b]) => { g[a].push(b); g[b].push(a); });
+  return g;
+}
+
+function bfsPath(start, end) {
+  if (start === end) return [start];
+  const visited = { [start]: null };
+  const q = [start];
+  while (q.length) {
+    const n = q.shift();
+    for (const nb of (buildGraph()[n] || [])) {
+      if (!(nb in visited)) {
+        visited[nb] = n;
+        if (nb === end) {
+          const path = []; let cur = end;
+          while (cur !== null) { path.push(cur); cur = visited[cur]; }
+          return path.reverse();
+        }
+        q.push(nb);
+      }
+    }
+  }
+  return null;
+}
+
+function computeAutoRoute() {
+  const heats = GRAPH_NODES.map((_, i) => ({ i, h: nodeHeat(i) }));
+  const hasHeat = heats.some(x => x.h > 0.01);
+
+  // Wybierz target węzły — gorące + losowość żeby każda trasa była inna
+  let targets;
+  if (hasHeat) {
+    const sorted = heats.filter(x => x.h > 0).sort((a, b) => b.h - a.h);
+    // Top gorące + losowy shuffle dolnej połowy żeby różnicować trasy
+    const top = sorted.slice(0, Math.ceil(sorted.length * 0.4)).map(x => x.i);
+    const rest = sorted.slice(Math.ceil(sorted.length * 0.4)).map(x => x.i);
+    // Shuffle rest
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [rest[i], rest[j]] = [rest[j], rest[i]];
+    }
+    targets = [0, ...top, ...rest.slice(0, Math.ceil(rest.length * 0.5))];
+    // Deduplikuj
+    targets = [...new Set(targets)];
+  } else {
+    // Brak heatmapy: losowy podzbiór ~60% węzłów, start zawsze 0
+    const all = GRAPH_NODES.map((_, i) => i).filter(i => i !== 0);
+    for (let i = all.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [all[i], all[j]] = [all[j], all[i]];
+    }
+    targets = [0, ...all.slice(0, Math.round(all.length * 0.6))];
+  }
+
+  // Buduj ścieżkę — używane krawędzie śledź żeby nie wracać po tej samej
+  const usedEdges = new Set(); // "a-b" (posortowane)
+  const edgeKey = (a, b) => a < b ? `${a}-${b}` : `${b}-${a}`;
+
+  const g = buildGraph();
+  let current = 0;
+  const path = [0];
+  const toVisit = new Set(targets.slice(1));
+
+  while (toVisit.size > 0) {
+    // Znajdź najbliższy nieodwiedzony target
+    let bestTarget = null, bestPath = null;
+    for (const t of toVisit) {
+      // BFS unikający użytych krawędzi jeśli możliwe
+      const p = bfsAvoidUsed(current, t, usedEdges);
+      if (p && (!bestPath || p.length < bestPath.length)) {
+        bestTarget = t; bestPath = p;
+      }
+    }
+    if (!bestTarget) break;
+
+    // Dodaj ścieżkę
+    for (let i = 1; i < bestPath.length; i++) {
+      const key = edgeKey(bestPath[i-1], bestPath[i]);
+      usedEdges.add(key);
+      path.push(bestPath[i]);
+    }
+    toVisit.delete(bestTarget);
+    // Usuń też węzły pośrednie z toVisit
+    bestPath.forEach(n => toVisit.delete(n));
+    current = bestTarget;
+  }
+
+  return path.map(i => GRAPH_NODES[i]);
+}
+
+// BFS preferujący nieużyte krawędzie
+function bfsAvoidUsed(start, end, usedEdges) {
+  const edgeKey = (a, b) => a < b ? `${a}-${b}` : `${b}-${a}`;
+  const g = buildGraph();
+
+  // Najpierw spróbuj tylko przez nieużyte krawędzie
+  const visited = { [start]: null };
+  const q = [start];
+  while (q.length) {
+    const n = q.shift();
+    const neighbors = (g[n] || []).filter(nb => !usedEdges.has(edgeKey(n, nb)));
+    for (const nb of neighbors) {
+      if (!(nb in visited)) {
+        visited[nb] = n;
+        if (nb === end) {
+          const path = []; let cur = end;
+          while (cur !== null) { path.push(cur); cur = visited[cur]; }
+          return path.reverse();
+        }
+        q.push(nb);
+      }
+    }
+  }
+
+  // Fallback — normalny BFS przez wszystkie krawędzie
+  return bfsPath(start, end);
+}
+
+function regenRoute() {
+  currentAutoRoute = computeAutoRoute();
+  if (routeOn) startRouteAnim();
+}
+
+// ─── ANIMACJA LED ───
 function toggleRoute() {
   routeOn = !routeOn;
   const btn = document.getElementById('routeBtn');
-  const sel = document.getElementById('routeSelect');
   const reb = document.getElementById('routeRegenBtn');
   if (routeOn) {
     btn.innerText = '🗺 Trasa ON';
     btn.style.color = '#00eeff';
     btn.style.borderColor = 'rgba(0,220,255,0.8)';
     btn.style.background = 'rgba(0,100,150,0.2)';
-    sel.style.display = '';
     reb.style.display = '';
-    document.getElementById('routeCovWrap').style.display = 'flex';
-    regenRoutes();
+    regenRoute();
   } else {
     btn.innerText = '🗺 Trasa OFF';
     btn.style.color = '#80b0ff';
     btn.style.borderColor = 'rgba(80,140,255,0.4)';
     btn.style.background = '';
-    sel.style.display = 'none';
     reb.style.display = 'none';
-    document.getElementById('routeCovWrap').style.display = 'none';
-    stopRoute();
+    stopRouteAnim();
     clearRouteCanvas();
   }
 }
 
-function startRoute() {
-  routeProgress = 0;
-  routePulse = 0;
-  routePoints = buildPixelPoints();
+function startRouteAnim() {
+  routeProgress = 0; routePulse = 0;
+  routePoints = buildPixelPoints(currentAutoRoute);
   if (routeAnimId) cancelAnimationFrame(routeAnimId);
   animRoute();
 }
 
-function stopRoute() {
+function stopRouteAnim() {
   if (routeAnimId) cancelAnimationFrame(routeAnimId);
   routeAnimId = null;
 }
 
-function buildPixelPoints() {
-  const route = allRoutes[currentRouteIdx] || allRoutes[0] || [];
+function buildPixelPoints(route) {
+  if (!route || !route.length) return [];
   const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
   const result = [];
   for (let i = 1; i < route.length; i++) {
@@ -1141,7 +1188,7 @@ function buildPixelPoints() {
     const dist = Math.hypot(bx-ax, by-ay);
     const steps = Math.max(2, Math.ceil(dist / 3));
     for (let s = (i===1?0:1); s <= steps; s++) {
-      const t = s / steps;
+      const t = s/steps;
       result.push({ x: ax+(bx-ax)*t, y: ay+(by-ay)*t });
     }
   }
@@ -1152,14 +1199,14 @@ function animRoute() {
   if (!routeOn) return;
   routeProgress = Math.min(1, routeProgress + 0.004);
   routePulse += 0.05;
-  drawRoute();
+  drawAutoRoute();
   routeAnimId = requestAnimationFrame(routeProgress < 1 ? animRoute : pulseRoute);
 }
 
 function pulseRoute() {
   if (!routeOn) return;
   routePulse += 0.05;
-  drawRoute();
+  drawAutoRoute();
   routeAnimId = requestAnimationFrame(pulseRoute);
 }
 
@@ -1168,7 +1215,7 @@ function clearRouteCanvas() {
   if (cv) cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
 }
 
-function drawRoute() {
+function drawAutoRoute() {
   const cv = document.getElementById('routeCanvas');
   if (!cv) return;
   const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
@@ -1177,61 +1224,250 @@ function drawRoute() {
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, W, H);
 
-  const endIdx = Math.floor(routeProgress * (routePoints.length - 1));
+  // Rysuj własne trasy w tle (jeśli aktywna)
+  if (activeCustomRoutePoints.length) drawCustomRouteOnCanvas(ctx, activeCustomRoutePoints, false);
 
-  // Rysuj segmenty od tyłu do przodu żeby gradient działał
+  const endIdx = Math.floor(routeProgress * (routePoints.length - 1));
   for (let i = 1; i <= endIdx; i++) {
     const p1 = routePoints[i-1], p2 = routePoints[i];
     const t = i / routePoints.length;
-    // Fala LED pulsująca wzdłuż trasy
     const wave = Math.sin(routePulse * 2 - t * 20) * 0.5 + 0.5;
     const glow = 0.55 + wave * 0.45;
-
-    // Warstwa 1: szerokie glow
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.strokeStyle = `rgba(0,${Math.round(160*glow)},${Math.round(255*glow)},${0.25 + wave*0.2})`;
-    ctx.lineWidth = 12;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-
-    // Warstwa 2: średnia linia
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.strokeStyle = `rgba(${Math.round(40*glow)},${Math.round(210*glow)},255,${0.7 + wave*0.3})`;
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    // Warstwa 3: biały rdzeń (błysk)
+    // Glow
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+    ctx.strokeStyle = `rgba(0,${Math.round(160*glow)},${Math.round(255*glow)},${0.25+wave*0.2})`;
+    ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+    // Linia
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+    ctx.strokeStyle = `rgba(${Math.round(40*glow)},${Math.round(210*glow)},255,${0.7+wave*0.3})`;
+    ctx.lineWidth = 3; ctx.stroke();
+    // Rdzeń
     if (wave > 0.6) {
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.strokeStyle = `rgba(255,255,255,${(wave-0.6)*1.5})`;
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+      ctx.strokeStyle = `rgba(255,255,255,${(wave-0.6)*1.5})`; ctx.lineWidth = 1; ctx.stroke();
     }
   }
-
-  // Świecący punkt czoła
+  // Czoło
   if (routeProgress < 1 && endIdx < routePoints.length) {
     const tip = routePoints[Math.min(endIdx, routePoints.length-1)];
-    const g = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, 16);
-    g.addColorStop(0,   'rgba(255,255,255,1)');
-    g.addColorStop(0.25,'rgba(80,230,255,0.9)');
-    g.addColorStop(0.6, 'rgba(0,160,255,0.4)');
-    g.addColorStop(1,   'rgba(0,100,200,0)');
-    ctx.beginPath();
-    ctx.arc(tip.x, tip.y, 16, 0, Math.PI*2);
-    ctx.fillStyle = g;
-    ctx.fill();
+    const g = ctx.createRadialGradient(tip.x,tip.y,0,tip.x,tip.y,16);
+    g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.3,'rgba(80,230,255,0.9)');
+    g.addColorStop(1,'rgba(0,100,200,0)');
+    ctx.beginPath(); ctx.arc(tip.x,tip.y,16,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
   }
 }
 
-window.addEventListener('resize', () => { if (routeOn) startRoute(); });
+window.addEventListener('resize', () => { if (routeOn) startRouteAnim(); });
+
+// ══════════════════════════════════════════
+// WŁASNE TRASY
+// ══════════════════════════════════════════
+let customRoutes = [];       // [{name, points:[{x,y}]}] — zapisane
+let activeCustomRoutePoints = []; // [{x,y}] aktualnie wyświetlana
+let drawingCustomRoute = false;
+let drawingPoints = [];      // punkty rysowane przez użytkownika
+let customRouteAnimId = null;
+let customPulse = 0;
+
+// Załaduj z localStorage
+function loadCustomRoutes() {
+  try { customRoutes = JSON.parse(localStorage.getItem('customRoutes_grota') || '[]'); } catch(e) { customRoutes = []; }
+  renderCustomRoutesList();
+}
+
+function saveCustomRoutesLocal() {
+  localStorage.setItem('customRoutes_grota', JSON.stringify(customRoutes));
+}
+
+function renderCustomRoutesList() {
+  const list = document.getElementById('customRoutesList');
+  if (!list) return;
+  if (!customRoutes.length) {
+    list.innerHTML = '<div class="sidebar-empty">Brak zapisanych tras<br><small style="color:var(--text-dim);font-size:10px;">Kliknij ✏️ Własna trasa</small></div>';
+    return;
+  }
+  list.innerHTML = customRoutes.map((r, i) => `
+    <div class="crt-item">
+      <span class="crt-name" onclick="showCustomRoute(${i})" title="Pokaż trasę">🗺 ${r.name}</span>
+      <button class="crt-btn" onclick="showCustomRoute(${i})">▶</button>
+      <button class="crt-btn" onclick="deleteCustomRoute(${i})" style="color:#804040;">✕</button>
+    </div>`).join('');
+}
+
+function showCustomRoute(idx) {
+  activeCustomRoutePoints = buildPixelPoints(customRoutes[idx].points.map(p => [p.x, p.y]));
+  customPulse = 0;
+  animCustomRoute();
+}
+
+function animCustomRoute() {
+  if (customRouteAnimId) cancelAnimationFrame(customRouteAnimId);
+  customPulse += 0.05;
+  // Rysuj na canvasie
+  const cv = document.getElementById('routeCanvas');
+  if (!cv) return;
+  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  if (routeOn) drawAutoRoute();
+  drawCustomRouteOnCanvas(ctx, activeCustomRoutePoints, true);
+  customRouteAnimId = requestAnimationFrame(animCustomRoute);
+}
+
+function drawCustomRouteOnCanvas(ctx, pts, pulse) {
+  if (!pts.length) return;
+  const p = pulse ? (Math.sin(customPulse * 2) * 0.5 + 0.5) : 0.7;
+  for (let i = 1; i < pts.length; i++) {
+    const p1 = pts[i-1], p2 = pts[i];
+    const t = i / pts.length;
+    const wave = pulse ? (Math.sin(customPulse*2 - t*20)*0.5+0.5) : 0.7;
+    const g = 0.5 + wave*0.5;
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+    ctx.strokeStyle = `rgba(255,${Math.round(180*g)},0,${0.2+wave*0.15})`;
+    ctx.lineWidth = 10; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+    ctx.strokeStyle = `rgba(255,${Math.round(200*g)},50,${0.75+wave*0.25})`;
+    ctx.lineWidth = 2.5; ctx.stroke();
+    if (wave > 0.6) {
+      ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+      ctx.strokeStyle = `rgba(255,255,255,${(wave-0.6)*1.2})`; ctx.lineWidth=1; ctx.stroke();
+    }
+  }
+}
+
+function hideCustomRoute() {
+  if (customRouteAnimId) cancelAnimationFrame(customRouteAnimId);
+  activeCustomRoutePoints = [];
+  if (!routeOn) clearRouteCanvas();
+}
+
+function deleteCustomRoute(idx) {
+  customRoutes.splice(idx, 1);
+  saveCustomRoutesLocal();
+  renderCustomRoutesList();
+  hideCustomRoute();
+}
+
+// ── TRYB RYSOWANIA ──
+let drawHint = null;
+function toggleCustomRoute() {
+  if (drawingCustomRoute) {
+    stopDrawing(false);
+  } else {
+    startDrawing();
+  }
+}
+
+function startDrawing() {
+  drawingCustomRoute = true;
+  drawingPoints = [];
+  document.getElementById('customRouteBtn').innerText = '✏️ Zakończ rysowanie';
+  document.getElementById('customRouteBtn').style.color = '#ff9040';
+  document.getElementById('customRouteBtn').style.borderColor = 'rgba(255,140,40,0.6)';
+  document.body.classList.add('draw-active');
+  // Hint
+  if (!drawHint) {
+    drawHint = document.createElement('div');
+    drawHint.className = 'draw-hint';
+    drawHint.innerHTML = 'Klikaj punkty trasy &nbsp;|&nbsp; <b>ENTER</b> = zapisz &nbsp;|&nbsp; <b>ESC</b> = anuluj';
+    document.body.appendChild(drawHint);
+  }
+  drawHint.style.display = '';
+  document.getElementById('mapHint').textContent = 'Tryb rysowania — klikaj punkty trasy';
+}
+
+function stopDrawing(save) {
+  drawingCustomRoute = false;
+  document.getElementById('customRouteBtn').innerText = '✏️ Własna trasa';
+  document.getElementById('customRouteBtn').style.color = '#c8a84c';
+  document.getElementById('customRouteBtn').style.borderColor = 'rgba(201,168,76,0.4)';
+  document.body.classList.remove('draw-active');
+  if (drawHint) drawHint.style.display = 'none';
+  document.getElementById('mapHint').textContent = 'Kliknij na mapę aby pingować metina';
+  clearDrawingCanvas();
+
+  if (save && drawingPoints.length >= 2) {
+    const name = prompt('Nazwa trasy:', 'Moja trasa ' + (customRoutes.length + 1));
+    if (name) {
+      customRoutes.push({ name, points: drawingPoints.map(p => ({x: p[0], y: p[1]})) });
+      saveCustomRoutesLocal();
+      renderCustomRoutesList();
+      // Pokaż od razu
+      showCustomRoute(customRoutes.length - 1);
+    }
+  }
+  drawingPoints = [];
+}
+
+function clearDrawingCanvas() {
+  const cv = document.getElementById('routeCanvas');
+  if (!cv) return;
+  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+}
+
+function drawCustomInProgress() {
+  const cv = document.getElementById('routeCanvas');
+  if (!cv) return;
+  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const pts = drawingPoints.map(p => ({ x: p[0]*W, y: p[1]*H }));
+  if (pts.length < 1) return;
+
+  // Narysuj dotychczasowe punkty i linie
+  ctx.strokeStyle = 'rgba(255,160,40,0.9)';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  pts.forEach((p, i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  pts.forEach((p, i) => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, i===0?8:5, 0, Math.PI*2);
+    ctx.fillStyle = i===0 ? '#ff9040' : 'rgba(255,160,40,0.8)';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+}
+
+// Przechwyć kliknięcia mapy w trybie rysowania
+const _origMapClick = mapContainer.onclick;
+mapContainer.addEventListener('click', function(e) {
+  if (!drawingCustomRoute) return;
+  e.stopPropagation();
+  const rect = mapImg.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top)  / rect.height;
+  if (x < 0 || x > 1 || y < 0 || y > 1) return;
+  drawingPoints.push([x, y]);
+  drawCustomInProgress();
+}, true);
+
+// Klawisze
+document.addEventListener('keydown', e => {
+  if (!drawingCustomRoute) return;
+  if (e.key === 'Enter') { e.preventDefault(); stopDrawing(true); }
+  if (e.key === 'Escape') { e.preventDefault(); stopDrawing(false); }
+  if (e.key === 'Backspace' || e.key === 'z' && e.ctrlKey) {
+    e.preventDefault();
+    drawingPoints.pop();
+    drawCustomInProgress();
+  }
+});
+
+// Init
+loadCustomRoutes();
 
 </script>
 </body>
