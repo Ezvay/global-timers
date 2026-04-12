@@ -111,7 +111,7 @@
 
   /* SIDEBAR */
   .sidebar{
-    width:270px;flex-shrink:0;border-left:1px solid var(--border);
+    width:300px;flex-shrink:0;border-left:1px solid var(--border);
     background:rgba(12,10,7,0.7);display:flex;flex-direction:column;
     max-height:calc(100vh - 57px);overflow-y:auto;
   }
@@ -121,7 +121,7 @@
   .sidebar-empty{padding:24px 16px;text-align:center;font-size:13px;color:var(--text-dim);font-style:italic;}
 
   /* PING LIST ITEM */
-  .ping-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(58,46,26,0.4);transition:background 0.2s;}
+  .ping-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid rgba(58,46,26,0.4);transition:background 0.2s;}
   .ping-item:hover{background:rgba(201,168,76,0.04);}
   .ping-dot-small{
     width:32px;height:32px;flex-shrink:0;
@@ -130,8 +130,8 @@
   }
   .ping-dot-small img{width:32px;height:32px;object-fit:contain;}
   .ping-info{flex:1;min-width:0;}
-  .ping-ch{font-family:'Cinzel',serif;font-size:11px;color:var(--gold-light);letter-spacing:1px;}
-  .ping-time{font-family:'Cinzel',serif;font-size:13px;color:#ff9090;margin-top:2px;letter-spacing:1px;}
+  .ping-ch{font-family:'Cinzel',serif;font-size:13px;color:var(--gold-light);letter-spacing:1px;}
+  .ping-time{font-family:'Cinzel',serif;font-size:15px;color:#ff9090;margin-top:3px;letter-spacing:1px;}
   .ping-remove{
     font-size:9px;color:#804040;background:none;
     font-family:'Cinzel',serif;letter-spacing:1px;padding:4px 8px;
@@ -196,8 +196,8 @@
 
   /* SIDEBAR SECTIONS */
   .sidebar-section-title{
-    padding:8px 14px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;
-    text-transform:uppercase;color:var(--text-dim);background:rgba(0,0,0,0.2);
+    padding:10px 14px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;
+    text-transform:uppercase;color:var(--gold-dark);background:rgba(0,0,0,0.25);
     border-bottom:1px solid var(--border);border-top:1px solid var(--border);
     display:flex;justify-content:space-between;align-items:center;
   }
@@ -265,18 +265,18 @@
   }
   .popup-cancel:hover{color:var(--text);border-color:rgba(255,255,255,0.2);}
   /* LICZNIKI CH + HISTORIA ZBITYCH */
-  .ch-ctr{display:flex;flex-direction:column;align-items:center;padding:4px 2px;border-radius:3px;border:1px solid rgba(58,46,26,0.4);background:rgba(0,0,0,0.2);}
-  .ch-ctr-num{font-family:'Cinzel',serif;font-size:8px;color:var(--text-dim);}
-  .ch-ctr-val{font-family:'Cinzel',serif;font-size:13px;font-weight:700;line-height:1.2;}
+  .ch-ctr{display:flex;flex-direction:column;align-items:center;padding:7px 4px;border-radius:3px;border:1px solid rgba(58,46,26,0.4);background:rgba(0,0,0,0.25);}
+  .ch-ctr-num{font-family:'Cinzel',serif;font-size:9px;color:var(--text-dim);letter-spacing:1px;}
+  .ch-ctr-val{font-family:'Cinzel',serif;font-size:18px;font-weight:700;line-height:1.2;}
   .ch-ctr-val.c-full{color:#50d070;} .ch-ctr-val.c-mid{color:#d4b030;} .ch-ctr-val.c-low{color:#d07030;} .ch-ctr-val.c-empty{color:#c04040;}
-  .ch-ctr-sub{font-size:8px;color:var(--text-dim);}
+  .ch-ctr-sub{font-size:10px;color:var(--text-dim);}
   .dead-grp{border-bottom:1px solid rgba(30,22,10,0.4);}
-  .dead-grp-hdr{padding:3px 10px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--gold-dark);background:rgba(0,0,0,0.15);display:flex;justify-content:space-between;}
-  .dead-row{display:flex;align-items:center;gap:7px;padding:5px 10px;border-bottom:1px solid rgba(30,22,10,0.2);}
-  .dead-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-  .dead-timer{font-family:'Cinzel',serif;font-size:10px;}
+  .dead-grp-hdr{padding:5px 12px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--gold-dark);background:rgba(0,0,0,0.2);display:flex;justify-content:space-between;}
+  .dead-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid rgba(30,22,10,0.2);}
+  .dead-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .dead-timer{font-family:'Cinzel',serif;font-size:13px;}
   .dead-timer.t-fresh{color:var(--text-dim);} .dead-timer.t-yellow{color:#d4b030;} .dead-timer.t-green{color:#50c060;}
-  .dead-hint{font-size:9px;color:var(--text-dim);margin-top:1px;}
+  .dead-hint{font-size:11px;color:var(--text-dim);margin-top:2px;}
 </style>
 </head>
 <body>
@@ -313,6 +313,7 @@
       <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);min-width:24px;text-align:right;" id="pingSizeVal">14</span>
     </div>
     <button class="heat-btn" id="heatBtn" onclick="toggleHeat()">🔥 Heatmapa OFF</button>
+    <button class="heat-btn" id="routeBtn" onclick="toggleRoute()" style="color:#80b0ff;border-color:rgba(80,140,255,0.4);">🗺 Trasa OFF</button>
   </div>
 </div>
 
@@ -322,6 +323,7 @@
     <div class="map-container" id="mapContainer">
       <img src="/grota_mapa.png" id="mapImg" alt="Mapa Groty" draggable="false">
       <canvas id="heatCanvas"></canvas>
+      <canvas id="routeCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;"></canvas>
       <div id="pingLayer"></div>
       <div id="generalLayer"></div>
       <div class="map-hint" id="mapHint">Kliknij na mapę aby pingować metina</div>
@@ -343,10 +345,10 @@
     <div id="pingList"><div class="sidebar-empty">Brak aktywnych pingów</div></div>
 
     <div class="sidebar-section-title" style="border-color:rgba(200,60,60,0.3);color:#c07070;">💀 Zbite (respawn 20-30min)</div>
-    <div id="chCounters" style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:6px 8px;border-bottom:1px solid var(--border);"></div>
+    <div id="chCounters" style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px 10px;border-bottom:1px solid var(--border);"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 10px 3px;border-bottom:1px solid var(--border);">
-      <span style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--gold-dark);text-transform:uppercase;">Historia</span>
-      <button onclick="undoLastKill()" style="font-family:'Cinzel',serif;font-size:8px;padding:2px 8px;border-radius:2px;cursor:pointer;border:1px solid rgba(201,168,76,0.25);color:var(--text-dim);background:none;">↩ Cofnij</button>
+      <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold-dark);text-transform:uppercase;">Historia</span>
+      <button onclick="undoLastKill()" style="font-family:'Cinzel',serif;font-size:10px;padding:3px 10px;border-radius:2px;cursor:pointer;border:1px solid rgba(201,168,76,0.25);color:var(--text-dim);background:none;">↩ Cofnij</button>
     </div>
     <div id="deadList"></div>
 
@@ -891,6 +893,223 @@ function renderDead() {
 // Odświeżaj co sekundę
 setInterval(renderDead, 1000);
 renderDead();
+
+/* ═══════════════════════════════════════
+   SUGEROWANA TRASA
+═══════════════════════════════════════ */
+let routeOn = false;
+let routeAnimFrame = null;
+let routeProgress = 0; // 0..1 — ile trasy narysowane
+
+// Waypoints — komnaty groty w kolejności optymalnej trasy
+// Start: górna lewa, serpentyna przez całą mapę
+const WAYPOINTS = [
+  // Rząd 1 (góra) — lewa → prawa
+  [0.06, 0.07], [0.20, 0.07], [0.35, 0.07], [0.50, 0.07], [0.65, 0.07], [0.82, 0.07], [0.95, 0.07],
+  // Zejście do rzędu 2
+  [0.95, 0.20],
+  // Rząd 2 — prawa → lewa
+  [0.82, 0.20], [0.65, 0.20], [0.50, 0.20], [0.35, 0.20], [0.20, 0.20], [0.06, 0.20],
+  // Zejście do rzędu 3
+  [0.06, 0.34],
+  // Rząd 3 — lewa → prawa
+  [0.20, 0.34], [0.35, 0.34], [0.50, 0.34], [0.65, 0.34], [0.82, 0.34], [0.95, 0.34],
+  // Zejście do rzędu 4
+  [0.95, 0.50],
+  // Rząd 4 — prawa → lewa
+  [0.82, 0.50], [0.65, 0.50], [0.50, 0.50], [0.35, 0.50], [0.20, 0.50], [0.06, 0.50],
+  // Zejście do rzędu 5
+  [0.06, 0.65],
+  // Rząd 5 — lewa → prawa
+  [0.20, 0.65], [0.35, 0.65], [0.50, 0.65], [0.65, 0.65], [0.82, 0.65], [0.95, 0.65],
+  // Zejście do rzędu 6
+  [0.95, 0.80],
+  // Rząd 6 — prawa → lewa
+  [0.82, 0.80], [0.65, 0.80], [0.50, 0.80], [0.35, 0.80], [0.20, 0.80], [0.06, 0.80],
+  // Zejście do rzędu 7 (dół)
+  [0.06, 0.93],
+  // Rząd 7 — lewa → prawa
+  [0.20, 0.93], [0.35, 0.93], [0.50, 0.93], [0.65, 0.93], [0.82, 0.93], [0.95, 0.93],
+];
+
+function toggleRoute() {
+  routeOn = !routeOn;
+  const btn = document.getElementById('routeBtn');
+  if (routeOn) {
+    btn.innerText = '🗺 Trasa ON';
+    btn.style.color = '#60c0ff';
+    btn.style.borderColor = 'rgba(60,180,255,0.7)';
+    btn.style.background = 'rgba(40,100,200,0.15)';
+    startRouteAnim();
+  } else {
+    btn.innerText = '🗺 Trasa OFF';
+    btn.style.color = '#80b0ff';
+    btn.style.borderColor = 'rgba(80,140,255,0.4)';
+    btn.style.background = '';
+    stopRouteAnim();
+    clearRouteCanvas();
+  }
+}
+
+function clearRouteCanvas() {
+  const cv = document.getElementById('routeCanvas');
+  if (!cv) return;
+  cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+}
+
+function startRouteAnim() {
+  routeProgress = 0;
+  if (routeAnimFrame) cancelAnimationFrame(routeAnimFrame);
+  animateRoute();
+}
+
+function stopRouteAnim() {
+  if (routeAnimFrame) cancelAnimationFrame(routeAnimFrame);
+  routeAnimFrame = null;
+}
+
+function animateRoute() {
+  if (!routeOn) return;
+  routeProgress = Math.min(1, routeProgress + 0.008); // prędkość animacji
+  drawRoute(routeProgress);
+  if (routeProgress < 1) {
+    routeAnimFrame = requestAnimationFrame(animateRoute);
+  } else {
+    // Po zakończeniu animacji — pulsuj ostatnią strzałkę
+    routeAnimFrame = null;
+  }
+}
+
+function drawRoute(progress) {
+  const cv = document.getElementById('routeCanvas');
+  if (!cv) return;
+  const imgW = mapImg.offsetWidth;
+  const imgH = mapImg.offsetHeight;
+  if (!imgW || !imgH) return;
+  cv.width  = imgW;
+  cv.height = imgH;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, imgW, imgH);
+
+  // Oblicz punkty w pikselach
+  const pts = WAYPOINTS.map(([px, py]) => [px * imgW, py * imgH]);
+
+  // Całkowita długość trasy
+  let totalLen = 0;
+  const segLens = [];
+  for (let i = 1; i < pts.length; i++) {
+    const d = Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]);
+    segLens.push(d);
+    totalLen += d;
+  }
+
+  // Rysuj tylko do progress * totalLen
+  const drawLen = progress * totalLen;
+  let drawn = 0;
+
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  let lastDrawnPt = pts[0];
+  let lastDrawnIdx = 0;
+  const drawnPts = [pts[0]];
+
+  for (let i = 1; i < pts.length; i++) {
+    const seg = segLens[i-1];
+    if (drawn + seg <= drawLen) {
+      // Cały segment
+      drawnPts.push(pts[i]);
+      drawn += seg;
+      lastDrawnPt = pts[i];
+      lastDrawnIdx = i;
+    } else {
+      // Częściowy segment
+      const rem = drawLen - drawn;
+      const t = rem / seg;
+      const px = pts[i-1][0] + (pts[i][0]-pts[i-1][0]) * t;
+      const py = pts[i-1][1] + (pts[i][1]-pts[i-1][1]) * t;
+      drawnPts.push([px, py]);
+      lastDrawnPt = [px, py];
+      break;
+    }
+  }
+
+  // Rysuj linię z gradientem niebieskim
+  for (let i = 1; i < drawnPts.length; i++) {
+    const t = i / drawnPts.length;
+    const alpha = 0.55 + 0.45 * t;
+    ctx.beginPath();
+    ctx.strokeStyle = `rgba(60,160,255,${alpha})`;
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([7, 4]);
+    ctx.moveTo(drawnPts[i-1][0], drawnPts[i-1][1]);
+    ctx.lineTo(drawnPts[i][0], drawnPts[i][1]);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Numery przy komnatach (tylko te już narysowane)
+  for (let i = 0; i < drawnPts.length - 1; i++) {
+    // Numer tylko przy oryginalnych waypointach (nie przy częściowym końcu)
+    if (i < WAYPOINTS.length) {
+      const heat = getHeat(WAYPOINTS[i][0], WAYPOINTS[i][1]);
+      const col = heat > 0.5 ? '#ff7040' : heat > 0.2 ? '#ffcc40' : '#60c0ff';
+      const [x, y] = drawnPts[i];
+      ctx.beginPath();
+      ctx.arc(x, y, 7, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,10,30,0.75)';
+      ctx.fill();
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = col;
+      ctx.font = 'bold 7px Cinzel,serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(i + 1, x, y);
+    }
+  }
+
+  // Strzałka na końcu narysowanej trasy
+  if (drawnPts.length >= 2) {
+    const p1 = drawnPts[drawnPts.length - 2];
+    const p2 = drawnPts[drawnPts.length - 1];
+    drawArrow(ctx, p1[0], p1[1], p2[0], p2[1]);
+  }
+}
+
+function drawArrow(ctx, x1, y1, x2, y2) {
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const size = 10;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(
+    x2 - size * Math.cos(angle - Math.PI / 6),
+    y2 - size * Math.sin(angle - Math.PI / 6)
+  );
+  ctx.lineTo(
+    x2 - size * Math.cos(angle + Math.PI / 6),
+    y2 - size * Math.sin(angle + Math.PI / 6)
+  );
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(60,180,255,0.95)';
+  ctx.fill();
+}
+
+function getHeat(px, py) {
+  if (!history || !history.length) return 0;
+  const r = 0.10;
+  let sum = 0;
+  history.forEach(h => {
+    const d = Math.hypot(h.x - px, h.y - py);
+    if (d < r) sum += (1 - d / r);
+  });
+  return Math.min(1, sum / 5);
+}
+
+// Przerysuj po zmianie rozmiaru
+window.addEventListener('resize', () => { if (routeOn) startRouteAnim(); });
+
 </script>
 </body>
 </html>
