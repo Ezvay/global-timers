@@ -581,6 +581,18 @@ io.on("connection",(socket)=>{
     saveData()
   })
 
+  socket.on("grotaResetHistory", () => {
+    grotaHistory = []
+    io.emit("grotaHistoryUpdate", grotaHistory)
+    saveData()
+  })
+
+  socket.on("grotaClearSnapshots", () => {
+    grotaSnapshots = []
+    io.emit("grotaSnapshotsUpdate", grotaSnapshots)
+    saveData()
+  })
+
   socket.on("grotaRemovePing",(id)=>{
     delete grotaPings[id]
     saveData()

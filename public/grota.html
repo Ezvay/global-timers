@@ -18,7 +18,7 @@
 
   /* TOP BAR */
   .topbar{
-    position:relative;z-index:10;
+    position:relative;z-index:300;overflow:visible;
     display:flex;align-items:center;justify-content:space-between;
     max-width:1500px;margin:0 auto;padding:12px 20px;
     border-bottom:1px solid var(--border);
@@ -289,6 +289,25 @@
   .dead-timer{font-family:'Cinzel',serif;font-size:13px;}
   .dead-timer.t-fresh{color:var(--text-dim);} .dead-timer.t-yellow{color:#d4b030;} .dead-timer.t-green{color:#50c060;}
   .dead-hint{font-size:11px;color:var(--text-dim);margin-top:2px;}
+  /* RESET MODAL */
+  .reset-overlay{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.75);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;}
+  .reset-overlay.hidden{display:none;}
+  .reset-box{background:linear-gradient(160deg,#1e1810,#100d08);border:1px solid rgba(200,80,80,0.4);border-radius:4px;padding:24px 28px;min-width:320px;max-width:420px;position:relative;}
+  .reset-box::before,.reset-box::after{content:'';position:absolute;width:12px;height:12px;border-color:rgba(200,80,80,0.3);border-style:solid;}
+  .reset-box::before{top:6px;left:6px;border-width:1px 0 0 1px;}
+  .reset-box::after{bottom:6px;right:6px;border-width:0 1px 1px 0;}
+  .reset-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e07070;text-align:center;margin-bottom:16px;}
+  .reset-option{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:3px;border:1px solid rgba(58,46,26,0.3);margin-bottom:6px;cursor:pointer;transition:all 0.15s;}
+  .reset-option:hover{background:rgba(200,80,80,0.06);border-color:rgba(200,80,80,0.3);}
+  .reset-option input[type=checkbox]{width:16px;height:16px;accent-color:#c07070;cursor:pointer;flex-shrink:0;}
+  .reset-option-label{flex:1;}
+  .reset-option-name{font-family:'Cinzel',serif;font-size:11px;color:var(--text);letter-spacing:1px;}
+  .reset-option-desc{font-size:10px;color:var(--text-dim);margin-top:2px;}
+  .reset-btns{display:flex;gap:8px;margin-top:16px;}
+  .reset-confirm{flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:2px;cursor:pointer;background:rgba(200,60,60,0.15);border:1px solid rgba(200,80,80,0.5);color:#e07070;}
+  .reset-confirm:hover{background:rgba(200,60,60,0.25);}
+  .reset-cancel{flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:2px;cursor:pointer;background:none;border:1px solid rgba(58,46,26,0.4);color:var(--text-dim);}
+  .reset-cancel:hover{border-color:rgba(201,168,76,0.3);color:var(--text);}
 </style>
 </head>
 <body>
@@ -325,10 +344,11 @@
       <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);min-width:24px;text-align:right;" id="pingSizeVal">14</span>
     </div>
     <button class="heat-btn" id="heatBtn" onclick="toggleHeat()">🔥 Heatmapa OFF</button>
+    <button class="heat-btn" onclick="openResetModal()" style="color:#c07070;border-color:rgba(200,80,80,0.4);">⟳ Reset</button>
     <div style="position:relative;">
       <button class="heat-btn" id="routesMenuBtn" onclick="toggleRoutesMenu()" style="color:#c8a84c;border-color:rgba(201,168,76,0.4);">🗺 Trasy ▾</button>
       <div id="routesMenuDropdown" style="
-        display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:200;
+        display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:9999;
         background:linear-gradient(160deg,#1c1510,#0f0c09);
         border:1px solid rgba(201,168,76,0.35);border-radius:3px;
         min-width:240px;box-shadow:0 8px 24px rgba(0,0,0,0.8);
@@ -1444,6 +1464,57 @@ function toggleCustomRoute() {
   if (drawingMode) cancelDrawing();
   else startDrawingFromMenu();
 }
+
+
+/* ══ RESET GROTY ══ */
+function toggleCheck(id) {
+  const el = document.getElementById(id);
+  el.checked = !el.checked;
+}
+function openResetModal()  { document.getElementById('resetOverlay').classList.remove('hidden'); }
+function closeResetModal() { document.getElementById('resetOverlay').classList.add('hidden'); }
+
+function doReset() {
+  const dead     = document.getElementById('r_dead').checked;
+  const pings    = document.getElementById('r_pings').checked;
+  const generals = document.getElementById('r_generals').checked;
+  const heat     = document.getElementById('r_heat').checked;
+  const routes   = document.getElementById('r_routes').checked;
+  const snaps    = document.getElementById('r_snaps').checked;
+
+  if (dead) {
+    // Wyczyść historię zbitych na serwerze
+    deadHistory.forEach(d => socket.emit('grotaRemoveDead', d.id));
+    deadHistory = [];
+    renderDead();
+  }
+  if (pings) {
+    Object.keys(pings).forEach(id => socket.emit('grotaRemovePing', id));
+  }
+  if (generals) {
+    Object.keys(generals_data || {}).forEach(id => socket.emit('grotaRemoveGeneral', id));
+  }
+  if (heat) {
+    socket.emit('grotaResetHistory');
+  }
+  if (routes) {
+    // Zatrzymaj wszystkie animacje
+    customRoutes.forEach((_, i) => stopRouteAnim(i));
+    customRoutes = [];
+    saveRoutesStorage();
+    renderRoutesMenu();
+    clearRouteCanvas();
+  }
+  if (snaps) {
+    socket.emit('grotaClearSnapshots');
+  }
+
+  closeResetModal();
+}
+
+/* ══ FIX DROPDOWN — otwieranie ══ */
+// Nadpisz toggleRoutesMenu żeby działało poprawnie
+const _baseToggleMenu = toggleRoutesMenu;
 
 </script>
 </body>
