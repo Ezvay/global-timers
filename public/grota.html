@@ -339,43 +339,6 @@
       <div id="pingLayer"></div>
       <div id="generalLayer"></div>
       <div class="map-hint" id="mapHint">Kliknij na mapę aby pingować metina</div>
-      <!-- Panel rysowania trasy — pojawia się podczas rysowania -->
-      <div id="drawPanel" style="
-        display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);
-        background:rgba(10,8,5,0.92);border:1px solid rgba(201,168,76,0.5);
-        border-radius:4px;padding:10px 16px;z-index:20;
-        display:none;flex-direction:column;gap:8px;align-items:center;min-width:260px;
-        box-shadow:0 4px 20px rgba(0,0,0,0.8);
-      ">
-        <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;">
-          ✏️ Rysowanie trasy
-        </div>
-        <div style="font-size:11px;color:var(--text-dim);text-align:center;">
-          Klikaj punkty na mapie &nbsp;·&nbsp; <kbd style="background:#222;padding:1px 5px;border-radius:2px;color:#aaa;">Backspace</kbd> cofnij
-        </div>
-        <div style="display:flex;gap:8px;width:100%;">
-          <input id="drawRouteName" placeholder="Nazwa trasy..." style="
-            flex:1;background:#0e0b07;border:1px solid rgba(201,168,76,0.3);
-            color:var(--text);font-family:'Crimson Text',serif;font-size:13px;
-            padding:5px 8px;border-radius:2px;outline:none;
-          ">
-        </div>
-        <div style="display:flex;gap:8px;">
-          <button onclick="saveDrawing()" style="
-            font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
-            padding:6px 16px;border-radius:2px;cursor:pointer;
-            background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.5);
-            color:var(--gold);
-          ">💾 Zapisz trasę</button>
-          <button onclick="cancelDrawing()" style="
-            font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
-            padding:6px 16px;border-radius:2px;cursor:pointer;
-            background:rgba(100,40,40,0.2);border:1px solid rgba(180,60,60,0.3);
-            color:#c07070;
-          ">✕ Anuluj</button>
-        </div>
-        <div id="drawPointCount" style="font-size:10px;color:var(--text-dim);">Punkty: 0</div>
-      </div>
     </div>
   </div>
 
@@ -1079,6 +1042,8 @@ function startDrawing() {
 
   const panel = document.getElementById('drawPanel');
   panel.style.display = 'flex';
+  // Dodaj padding-bottom do layout żeby panel nie zasłaniał dolnej części mapy
+  document.querySelector('.layout').style.paddingBottom = '60px';
   document.getElementById('drawRouteName').value = '';
   document.getElementById('drawPointCount').textContent = 'Punkty: 0';
   document.getElementById('mapHint').textContent = 'Tryb rysowania — klikaj punkty trasy';
@@ -1095,9 +1060,9 @@ function cancelDrawing() {
   document.getElementById('customRouteBtn').style.borderColor = 'rgba(201,168,76,0.4)';
   document.body.classList.remove('draw-active');
   document.getElementById('drawPanel').style.display = 'none';
+  document.querySelector('.layout').style.paddingBottom = '';
   document.getElementById('mapHint').textContent = 'Kliknij na mapę aby pingować metina';
   clearRouteCanvas();
-  // Przywróć aktywną trasę jeśli była
   if (activeRouteIdx >= 0) playRoute(activeRouteIdx);
 }
 
@@ -1121,6 +1086,7 @@ function saveDrawing() {
   document.getElementById('customRouteBtn').style.borderColor = 'rgba(201,168,76,0.4)';
   document.body.classList.remove('draw-active');
   document.getElementById('drawPanel').style.display = 'none';
+  document.querySelector('.layout').style.paddingBottom = '';
   document.getElementById('mapHint').textContent = 'Kliknij na mapę aby pingować metina';
 
   renderRoutesList();
@@ -1138,6 +1104,8 @@ function deleteRoute(idx) {
 // ── Kliknięcia na mapę w trybie rysowania ──
 mapContainer.addEventListener('click', function(e) {
   if (!drawingMode) return;
+  // Nie rysuj jeśli kliknięto w panel lub jego potomków
+  if (e.target.closest('#drawPanel')) return;
   e.stopImmediatePropagation();
   const rect = mapImg.getBoundingClientRect();
   const x = (e.clientX - rect.left) / rect.width;
@@ -1315,5 +1283,39 @@ window.addEventListener('resize', () => {
 loadCustomRoutes();
 
 </script>
+<!-- Panel rysowania — fixed na dole, poza mapą -->
+<div id="drawPanel" style="
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;z-index:500;
+  background:rgba(8,6,4,0.97);border-top:1px solid rgba(201,168,76,0.4);
+  padding:10px 20px;
+  flex-direction:row;align-items:center;gap:16px;flex-wrap:wrap;
+  box-shadow:0 -4px 20px rgba(0,0,0,0.7);
+">
+  <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;white-space:nowrap;">
+    ✏️ Rysowanie trasy
+  </div>
+  <div style="font-size:11px;color:var(--text-dim);white-space:nowrap;">
+    Klikaj punkty · <kbd style="background:#222;padding:1px 5px;border-radius:2px;color:#aaa;font-size:10px;">Backspace</kbd> cofnij
+  </div>
+  <input id="drawRouteName" placeholder="Nazwa trasy..." style="
+    flex:1;min-width:140px;max-width:240px;
+    background:#0e0b07;border:1px solid rgba(201,168,76,0.3);
+    color:var(--text);font-family:'Crimson Text',serif;font-size:14px;
+    padding:6px 10px;border-radius:2px;outline:none;
+  ">
+  <button onmousedown="event.preventDefault();event.stopPropagation();saveDrawing();" style="
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+    padding:7px 18px;border-radius:2px;cursor:pointer;white-space:nowrap;
+    background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.5);color:var(--gold);
+  ">💾 Zapisz trasę</button>
+  <button onmousedown="event.preventDefault();event.stopPropagation();cancelDrawing();" style="
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+    padding:7px 18px;border-radius:2px;cursor:pointer;white-space:nowrap;
+    background:rgba(100,40,40,0.2);border:1px solid rgba(180,60,60,0.3);color:#c07070;
+  ">✕ Anuluj</button>
+  <div id="drawPointCount" style="font-size:11px;color:var(--text-dim);white-space:nowrap;">Punkty: 0</div>
+</div>
+
 </body>
 </html>
