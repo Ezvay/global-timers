@@ -313,7 +313,15 @@
       <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);min-width:24px;text-align:right;" id="pingSizeVal">14</span>
     </div>
     <button class="heat-btn" id="heatBtn" onclick="toggleHeat()">🔥 Heatmapa OFF</button>
-    <button class="heat-btn" id="routeBtn" onclick="toggleRoute()" style="color:#80b0ff;border-color:rgba(80,140,255,0.4);">🗺 Trasa OFF</button>
+    <div style="display:flex;align-items:center;gap:4px;">
+      <button class="heat-btn" id="routeBtn" onclick="toggleRoute()" style="color:#80b0ff;border-color:rgba(80,140,255,0.4);">🗺 Trasa OFF</button>
+      <select id="routeSelect" style="display:none;background:#0e0b07;border:1px solid rgba(80,140,255,0.4);color:#80b0ff;font-family:'Cinzel',serif;font-size:10px;padding:5px 6px;border-radius:2px;cursor:pointer;outline:none;" onchange="changeRoute(this.value)">
+        <option value="0">Trasa 1</option><option value="1">Trasa 2</option>
+        <option value="2">Trasa 3</option><option value="3">Trasa 4</option>
+        <option value="4">Trasa 5</option>
+      </select>
+      <button id="routeRegenBtn" onclick="regenRoutes()" title="Generuj nowe trasy" style="display:none;background:#0e0b07;border:1px solid rgba(80,140,255,0.4);color:#80b0ff;font-family:'Cinzel',serif;font-size:13px;padding:3px 10px;border-radius:2px;cursor:pointer;">↺</button>
+    </div>
   </div>
 </div>
 
@@ -963,36 +971,57 @@ function bfsPath(start, end) {
 }
 
 // Temperatura heatmapy w węźle
+
+// Temperatura heatmapy w węźle
 function nodeHeat(ni) {
   if (!history || !history.length) return 0;
   const [px, py] = GRAPH_NODES[ni];
-  const r = 0.12;
+  const r = 0.14;
   let sum = 0;
   history.forEach(h => {
     const d = Math.hypot(h.x - px, h.y - py);
     if (d < r) sum += (1 - d / r);
   });
-  return Math.min(1, sum / 4);
+  return Math.min(1, sum / 3);
 }
 
-// Oblicz trasę: wybierz TOP N gorących węzłów i połącz je po grafie
-function computeRoute() {
+// Oblicz jedną trasę: startuj od najgorętszego węzła,
+// idź greedy do następnego najgorętszego sąsiedniego
+function computeOneRoute(usedStarts) {
   const heats = GRAPH_NODES.map((_, i) => ({ i, h: nodeHeat(i) }));
-  // Weź węzły z temperaturą > 0, posortowane malejąco
-  const hot = heats.filter(x => x.h > 0).sort((a, b) => b.h - a.h);
-  // Jeśli brak historii — pokaż pełną trasę przez wszystkie węzły
-  const targets = hot.length >= 3
-    ? hot.slice(0, Math.min(15, hot.length)).map(x => x.i)
-    : GRAPH_NODES.map((_, i) => i);
+  const hasHeat = heats.some(x => x.h > 0);
 
-  // Nearest-neighbor greedy przez wybrane węzły
-  const visited = new Set();
-  const start = targets[0] ?? 0;
-  visited.add(start);
-  let current = start;
-  const fullPath = [start];
+  let targets;
+  if (hasHeat) {
+    // Sortuj węzły malejąco po temperaturze
+    const sorted = heats.filter(x => x.h > 0).sort((a, b) => b.h - a.h);
+    // Wybierz startowy — najgorętszy który nie był jeszcze używany jako start
+    const startObj = sorted.find(x => !usedStarts.has(x.i)) || sorted[0];
+    const startIdx = startObj.i;
+    usedStarts.add(startIdx);
 
-  const remaining = targets.filter(x => x !== start);
+    // Wybierz top 8-10 gorących węzłów do odwiedzenia
+    targets = sorted.slice(0, Math.min(10, sorted.length)).map(x => x.i);
+    // Upewnij się że start jest w targets
+    if (!targets.includes(startIdx)) targets.unshift(startIdx);
+    // Przenieś start na początek
+    targets = [startIdx, ...targets.filter(x => x !== startIdx)];
+  } else {
+    // Brak heatmapy — losowa trasa przez ~12 węzłów
+    const all = GRAPH_NODES.map((_, i) => i);
+    // Fisher-Yates shuffle z seeded random żeby każda trasa była inna
+    const seed = usedStarts.size;
+    const shuffled = [...all].sort(() => Math.sin(seed * 9301 + all.indexOf(all[0])) - 0.5);
+    targets = shuffled.slice(0, 12);
+    usedStarts.add(targets[0]);
+  }
+
+  // Nearest-neighbor greedy przez wybrane węzły — po grafie BFS
+  const visited = new Set([targets[0]]);
+  let current = targets[0];
+  const fullPath = [current];
+  const remaining = targets.slice(1);
+
   while (remaining.length) {
     let best = null, bestPath = null;
     for (const t of remaining) {
@@ -1002,34 +1031,62 @@ function computeRoute() {
         best = t; bestPath = p;
       }
     }
-    if (!best) break;
+    if (!best || !bestPath) break;
     fullPath.push(...bestPath.slice(1));
     bestPath.forEach(n => visited.add(n));
     remaining.splice(remaining.indexOf(best), 1);
     current = best;
   }
 
-  // Zamień indeksy na piksele
   return fullPath.map(i => GRAPH_NODES[i]);
+}
+
+// 5 tras przechowywanych
+let allRoutes = [];
+let currentRouteIdx = 0;
+
+function regenRoutes() {
+  const usedStarts = new Set();
+  allRoutes = [];
+  for (let i = 0; i < 5; i++) {
+    allRoutes.push(computeOneRoute(usedStarts));
+  }
+  currentRouteIdx = parseInt(document.getElementById('routeSelect').value) || 0;
+  if (routeOn) startRoute();
+}
+
+function changeRoute(idx) {
+  currentRouteIdx = parseInt(idx);
+  if (routeOn) startRoute();
 }
 
 // ── ANIMACJA ──
 let routeOn = false;
 let routeAnimId = null;
-let routeProgress = 0; // 0..1
-let routePoints = [];  // [{x,y}] w pikselach mapy
-let routePulse = 0;    // faza pulsu
+let routeProgress = 0;
+let routePoints = [];
+let routePulse = 0;
 
 function toggleRoute() {
   routeOn = !routeOn;
   const btn = document.getElementById('routeBtn');
+  const sel = document.getElementById('routeSelect');
+  const reb = document.getElementById('routeRegenBtn');
   if (routeOn) {
     btn.innerText = '🗺 Trasa ON';
-    btn.style.cssText += ';color:#00eeff;border-color:rgba(0,220,255,0.8);background:rgba(0,100,150,0.2);';
-    startRoute();
+    btn.style.color = '#00eeff';
+    btn.style.borderColor = 'rgba(0,220,255,0.8)';
+    btn.style.background = 'rgba(0,100,150,0.2)';
+    sel.style.display = '';
+    reb.style.display = '';
+    regenRoutes();
   } else {
     btn.innerText = '🗺 Trasa OFF';
-    btn.style.cssText += ';color:#80b0ff;border-color:rgba(80,140,255,0.4);background:;';
+    btn.style.color = '#80b0ff';
+    btn.style.borderColor = 'rgba(80,140,255,0.4)';
+    btn.style.background = '';
+    sel.style.display = 'none';
+    reb.style.display = 'none';
     stopRoute();
     clearRouteCanvas();
   }
@@ -1049,19 +1106,17 @@ function stopRoute() {
 }
 
 function buildPixelPoints() {
-  const pts = computeRoute();
-  const W = mapImg.offsetWidth;
-  const H = mapImg.offsetHeight;
-  // Zagęść punkty żeby animacja była płynna
+  const route = allRoutes[currentRouteIdx] || allRoutes[0] || [];
+  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
   const result = [];
-  for (let i = 1; i < pts.length; i++) {
-    const ax = pts[i-1][0]*W, ay = pts[i-1][1]*H;
-    const bx = pts[i][0]*W,   by = pts[i][1]*H;
+  for (let i = 1; i < route.length; i++) {
+    const ax = route[i-1][0]*W, ay = route[i-1][1]*H;
+    const bx = route[i][0]*W,   by = route[i][1]*H;
     const dist = Math.hypot(bx-ax, by-ay);
-    const steps = Math.max(2, Math.ceil(dist / 4));
+    const steps = Math.max(2, Math.ceil(dist / 3));
     for (let s = (i===1?0:1); s <= steps; s++) {
       const t = s / steps;
-      result.push({ x: ax + (bx-ax)*t, y: ay + (by-ay)*t });
+      result.push({ x: ax+(bx-ax)*t, y: ay+(by-ay)*t });
     }
   }
   return result;
@@ -1069,20 +1124,15 @@ function buildPixelPoints() {
 
 function animRoute() {
   if (!routeOn) return;
-  routeProgress = Math.min(1, routeProgress + 0.003); // szybkość rysowania
-  routePulse += 0.04;
+  routeProgress = Math.min(1, routeProgress + 0.004);
+  routePulse += 0.05;
   drawRoute();
-  if (routeProgress < 1) {
-    routeAnimId = requestAnimationFrame(animRoute);
-  } else {
-    // Po dojściu do końca — pulsuj w pętli
-    routeAnimId = requestAnimationFrame(pulseRoute);
-  }
+  routeAnimId = requestAnimationFrame(routeProgress < 1 ? animRoute : pulseRoute);
 }
 
 function pulseRoute() {
   if (!routeOn) return;
-  routePulse += 0.04;
+  routePulse += 0.05;
   drawRoute();
   routeAnimId = requestAnimationFrame(pulseRoute);
 }
@@ -1096,70 +1146,67 @@ function drawRoute() {
   const cv = document.getElementById('routeCanvas');
   if (!cv) return;
   const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
-  if (!W || !H) return;
+  if (!W || !H || !routePoints.length) return;
   cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, W, H);
 
-  if (!routePoints.length) return;
   const endIdx = Math.floor(routeProgress * (routePoints.length - 1));
 
-  // Puls — falująca jasność wzdłuż linii
-  const pulse = (Math.sin(routePulse) * 0.5 + 0.5); // 0..1
-
-  // Rysuj segmenty z gradientem LED
+  // Rysuj segmenty od tyłu do przodu żeby gradient działał
   for (let i = 1; i <= endIdx; i++) {
-    const p1 = routePoints[i-1];
-    const p2 = routePoints[i];
-    // Pozycja wzdłuż trasy 0..1
+    const p1 = routePoints[i-1], p2 = routePoints[i];
     const t = i / routePoints.length;
-    // Fala świetlna
-    const wave = Math.sin(routePulse - t * 18) * 0.5 + 0.5;
-    const brightness = 0.6 + wave * 0.4;
-    const alpha = 0.7 + wave * 0.3;
+    // Fala LED pulsująca wzdłuż trasy
+    const wave = Math.sin(routePulse * 2 - t * 20) * 0.5 + 0.5;
+    const glow = 0.55 + wave * 0.45;
 
-    // Glow (szeroka półprzezroczysta)
+    // Warstwa 1: szerokie glow
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
-    ctx.strokeStyle = `rgba(0,${Math.round(180*brightness)},${Math.round(255*brightness)},${alpha*0.35})`;
-    ctx.lineWidth = 10;
+    ctx.strokeStyle = `rgba(0,${Math.round(160*glow)},${Math.round(255*glow)},${0.25 + wave*0.2})`;
+    ctx.lineWidth = 12;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.stroke();
 
-    // Środkowa linia (jaśniejsza)
+    // Warstwa 2: średnia linia
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
-    ctx.strokeStyle = `rgba(${Math.round(60*brightness)},${Math.round(220*brightness)},255,${alpha*0.9})`;
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = `rgba(${Math.round(40*glow)},${Math.round(210*glow)},255,${0.7 + wave*0.3})`;
+    ctx.lineWidth = 3;
     ctx.stroke();
 
-    // Biały rdzeń
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.strokeStyle = `rgba(255,255,255,${wave * 0.5})`;
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    // Warstwa 3: biały rdzeń (błysk)
+    if (wave > 0.6) {
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.strokeStyle = `rgba(255,255,255,${(wave-0.6)*1.5})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
   }
 
-  // Świecący punkt czoła animacji
+  // Świecący punkt czoła
   if (routeProgress < 1 && endIdx < routePoints.length) {
-    const tip = routePoints[endIdx];
-    const g = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, 12);
-    g.addColorStop(0, 'rgba(255,255,255,0.95)');
-    g.addColorStop(0.3, 'rgba(0,240,255,0.8)');
-    g.addColorStop(1, 'rgba(0,180,255,0)');
+    const tip = routePoints[Math.min(endIdx, routePoints.length-1)];
+    const g = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, 16);
+    g.addColorStop(0,   'rgba(255,255,255,1)');
+    g.addColorStop(0.25,'rgba(80,230,255,0.9)');
+    g.addColorStop(0.6, 'rgba(0,160,255,0.4)');
+    g.addColorStop(1,   'rgba(0,100,200,0)');
     ctx.beginPath();
-    ctx.arc(tip.x, tip.y, 12, 0, Math.PI*2);
+    ctx.arc(tip.x, tip.y, 16, 0, Math.PI*2);
     ctx.fillStyle = g;
     ctx.fill();
   }
 }
 
-// Przerysuj przy resize
-window.addEventListener('resize', () => { if (routeOn) { startRoute(); } });
+window.addEventListener('resize', () => { if (routeOn) startRoute(); });
+
 </script>
 </body>
 </html>
