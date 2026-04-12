@@ -325,6 +325,26 @@
       <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);min-width:24px;text-align:right;" id="pingSizeVal">14</span>
     </div>
     <button class="heat-btn" id="heatBtn" onclick="toggleHeat()">🔥 Heatmapa OFF</button>
+    <div style="position:relative;">
+      <button class="heat-btn" id="routesMenuBtn" onclick="toggleRoutesMenu()" style="color:#c8a84c;border-color:rgba(201,168,76,0.4);">🗺 Trasy ▾</button>
+      <div id="routesMenuDropdown" style="
+        display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:200;
+        background:linear-gradient(160deg,#1c1510,#0f0c09);
+        border:1px solid rgba(201,168,76,0.35);border-radius:3px;
+        min-width:240px;box-shadow:0 8px 24px rgba(0,0,0,0.8);
+        overflow:hidden;
+      ">
+        <div style="padding:8px 12px 6px;border-bottom:1px solid rgba(58,46,26,0.4);">
+          <button onclick="startDrawingFromMenu()" style="
+            width:100%;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+            padding:7px;border-radius:2px;cursor:pointer;
+            background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.35);
+            color:var(--gold-light);
+          ">✏️ Rysuj nową trasę</button>
+        </div>
+        <div id="routesMenuList" style="max-height:300px;overflow-y:auto;"></div>
+      </div>
+    </div>
 
   </div>
 </div>
@@ -372,41 +392,7 @@
       <div id="hotspotList"></div>
     </div>
 
-    <!-- WŁASNE TRASY -->
-    <div class="sidebar-section-title" style="color:#c8a84c;border-color:rgba(201,168,76,0.3);flex-direction:column;gap:6px;padding:10px 12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
-        <span>🗺 Moje trasy</span>
-      </div>
-      <button onclick="toggleCustomRoute()" id="customRouteBtn" style="
-        width:100%;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
-        padding:7px;border-radius:2px;cursor:pointer;
-        background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.35);
-        color:var(--gold-light);transition:all 0.2s;
-      ">✏️ Rysuj nową trasę</button>
-    </div>
-    <!-- Panel rysowania — schowany w sidebarze -->
-    <div id="drawPanel" style="display:none;flex-direction:column;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);">
-      <div style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--gold-dark);text-transform:uppercase;">Nazwa trasy</div>
-      <input id="drawRouteName" placeholder="np. Trasa przez centrum..." style="
-        background:#0e0b07;border:1px solid rgba(201,168,76,0.3);
-        color:var(--text);font-family:'Crimson Text',serif;font-size:14px;
-        padding:7px 10px;border-radius:2px;outline:none;width:100%;
-      ">
-      <div id="drawPointCount" style="font-size:11px;color:var(--text-dim);">Klikaj punkty na mapie… (0 punktów)</div>
-      <div style="display:flex;gap:6px;">
-        <button onmousedown="event.preventDefault();event.stopPropagation();saveDrawing();" style="
-          flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;
-          padding:7px;border-radius:2px;cursor:pointer;
-          background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.5);color:var(--gold);
-        ">💾 Zapisz</button>
-        <button onmousedown="event.preventDefault();event.stopPropagation();cancelDrawing();" style="
-          flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;
-          padding:7px;border-radius:2px;cursor:pointer;
-          background:rgba(100,40,40,0.15);border:1px solid rgba(180,60,60,0.3);color:#c07070;
-        ">✕ Anuluj</button>
-      </div>
-    </div>
-    <div id="customRoutesList"></div>
+
   </div>
 
 </div>
@@ -1360,6 +1346,104 @@ window.addEventListener('resize', () => redrawAllRoutes());
 loadCustomRoutes();
 // Uruchom animacje tras które były włączone
 customRoutes.forEach((r, i) => { if (r.visible) startRouteAnim(i); });
+
+
+// ── Dropdown menu tras w topbarze ──
+let routesMenuOpen = false;
+
+function toggleRoutesMenu() {
+  routesMenuOpen = !routesMenuOpen;
+  const dd = document.getElementById('routesMenuDropdown');
+  const btn = document.getElementById('routesMenuBtn');
+  if (routesMenuOpen) {
+    dd.style.display = 'block';
+    btn.style.color = '#f0c040';
+    btn.style.borderColor = 'rgba(240,192,64,0.6)';
+    btn.style.background = 'rgba(201,168,76,0.1)';
+    renderRoutesMenu();
+  } else {
+    dd.style.display = 'none';
+    btn.style.color = '#c8a84c';
+    btn.style.borderColor = 'rgba(201,168,76,0.4)';
+    btn.style.background = '';
+  }
+}
+
+// Zamknij dropdown przy kliknięciu poza nim
+document.addEventListener('click', e => {
+  if (!e.target.closest('#routesMenuBtn') && !e.target.closest('#routesMenuDropdown') && !e.target.closest('#drawPanel')) {
+    const dd = document.getElementById('routesMenuDropdown');
+    if (dd && dd.style.display !== 'none') {
+      routesMenuOpen = false;
+      dd.style.display = 'none';
+      const btn = document.getElementById('routesMenuBtn');
+      if (btn) { btn.style.color='#c8a84c'; btn.style.borderColor='rgba(201,168,76,0.4)'; btn.style.background=''; }
+    }
+  }
+});
+
+function renderRoutesMenu() {
+  const list = document.getElementById('routesMenuList');
+  if (!list) return;
+  if (!customRoutes.length) {
+    list.innerHTML = '<div style="padding:14px 12px;font-size:12px;color:var(--text-dim);text-align:center;">Brak tras.<br>Kliknij "Rysuj nową trasę"</div>';
+    return;
+  }
+  list.innerHTML = customRoutes.map((r, i) => {
+    const col = ROUTE_COLORS[r.colorIdx % ROUTE_COLORS.length];
+    const isOn = r.visible;
+    return `<div style="
+      display:flex;align-items:center;gap:8px;padding:8px 12px;
+      border-bottom:1px solid rgba(30,22,10,0.4);
+      border-left:3px solid ${isOn ? col.main : 'rgba(58,46,26,0.3)'};
+      background:${isOn ? `rgba(${col.glow},0.06)` : 'transparent'};
+      transition:all 0.15s;
+    ">
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:'Crimson Text',serif;font-size:14px;color:${isOn ? col.main : 'var(--text)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name}</div>
+        <div style="font-size:9px;color:var(--text-dim);font-family:'Cinzel',serif;letter-spacing:1px;margin-top:1px;">● ${col.name} · ${r.points.length} pkt</div>
+      </div>
+      <button onclick="toggleRouteVisible(${i});renderRoutesMenu();" style="
+        font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;
+        padding:4px 10px;border-radius:2px;cursor:pointer;
+        border:1px solid ${isOn ? col.main : 'rgba(100,80,40,0.4)'};
+        background:${isOn ? `rgba(${col.glow},0.15)` : 'none'};
+        color:${isOn ? col.main : 'var(--text-dim)'};
+        white-space:nowrap;transition:all 0.2s;
+      ">${isOn ? '◉ ON' : '○ OFF'}</button>
+      <button onclick="deleteRoute(${i});renderRoutesMenu();" style="
+        font-size:11px;padding:3px 7px;border-radius:2px;cursor:pointer;
+        border:1px solid rgba(150,50,50,0.3);background:none;color:#806060;
+        font-family:'Cinzel',serif;transition:all 0.2s;
+      " title="Usuń">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// Nadpisz renderRoutesList żeby też odświeżało menu
+const _origRenderRoutesList = renderRoutesList;
+function renderRoutesList() {
+  _origRenderRoutesList();
+  if (routesMenuOpen) renderRoutesMenu();
+}
+
+// Start rysowania z menu (nie zamykaj dropdown od razu)
+function startDrawingFromMenu() {
+  // Zamknij dropdown
+  routesMenuOpen = false;
+  const dd = document.getElementById('routesMenuDropdown');
+  if (dd) dd.style.display = 'none';
+  const btn = document.getElementById('routesMenuBtn');
+  if (btn) { btn.style.color='#c8a84c'; btn.style.borderColor='rgba(201,168,76,0.4)'; btn.style.background=''; }
+  // Start rysowania
+  startDrawing();
+}
+
+// Nadpisz toggleCustomRoute żeby działało z topbara
+function toggleCustomRoute() {
+  if (drawingMode) cancelDrawing();
+  else startDrawingFromMenu();
+}
 
 </script>
 </body>
