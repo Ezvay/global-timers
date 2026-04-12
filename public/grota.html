@@ -112,61 +112,34 @@
   }
 
   /* SIDEBAR */
-  /* LEWY PANEL — historia zbitych */
-  .left-panel{
-    width:220px;flex-shrink:0;border-right:1px solid var(--border);
-    background:rgba(8,6,4,0.6);display:flex;flex-direction:column;overflow:hidden;
-    overflow-y:auto;
-  }
-  .lp-header{
-    padding:10px 14px;border-bottom:1px solid var(--border);
-    background:rgba(0,0,0,0.3);flex-shrink:0;
-  }
-  .lp-title{font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;}
-  .lp-undo{
-    font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;text-transform:uppercase;
-    padding:3px 8px;border-radius:2px;cursor:pointer;
-    border:1px solid rgba(201,168,76,0.25);color:var(--text-dim);background:rgba(201,168,76,0.05);
-    transition:all 0.2s;margin-top:6px;width:100%;
-  }
-  .lp-undo:hover{color:var(--gold);border-color:rgba(201,168,76,0.5);}
 
-  /* LICZNIKI KANAŁÓW */
-  .ch-counters{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:6px 8px;border-bottom:1px solid var(--border);flex-shrink:0;}
+  /* LICZNIKI CH W SIDEBARZE */
   .ch-counter{
-    display:flex;flex-direction:column;align-items:center;padding:5px 2px;
+    display:flex;flex-direction:column;align-items:center;padding:4px 2px;
     border-radius:3px;border:1px solid rgba(58,46,26,0.4);background:rgba(0,0,0,0.2);
-    cursor:pointer;transition:all 0.15s;
+    cursor:default;
   }
-  .ch-counter:hover{border-color:rgba(201,168,76,0.3);}
-  .ch-num{font-family:'Cinzel',serif;font-size:9px;color:var(--text-dim);letter-spacing:1px;}
-  .ch-avail{font-family:'Cinzel',serif;font-size:14px;font-weight:600;line-height:1;}
-  .ch-avail.full{color:#60e080;}
-  .ch-avail.mid{color:#e0c040;}
-  .ch-avail.low{color:#e06040;}
-  .ch-avail.empty{color:#804040;}
-  .ch-sub{font-size:9px;color:var(--text-dim);}
+  .ch-num{font-family:'Cinzel',serif;font-size:8px;color:var(--text-dim);letter-spacing:1px;}
+  .ch-avail{font-family:'Cinzel',serif;font-size:13px;font-weight:600;line-height:1.2;}
+  .ch-avail.full{color:#60e080;} .ch-avail.mid{color:#e0c040;}
+  .ch-avail.low{color:#e07030;} .ch-avail.empty{color:#c04040;}
+  .ch-sub{font-size:8px;color:var(--text-dim);}
 
   /* HISTORIA ZBITYCH */
-  .lp-body{flex:1;overflow-y:auto;}
-  .dead-ch-group{border-bottom:1px solid rgba(30,22,10,0.5);}
+  .dead-ch-group{border-bottom:1px solid rgba(30,22,10,0.4);}
   .dead-ch-label{
-    padding:4px 10px;font-family:'Cinzel',serif;font-size:8px;
+    padding:3px 10px;font-family:'Cinzel',serif;font-size:8px;
     letter-spacing:2px;color:var(--gold-dark);text-transform:uppercase;
-    background:rgba(0,0,0,0.2);display:flex;justify-content:space-between;align-items:center;
-    position:sticky;top:0;z-index:2;
+    background:rgba(0,0,0,0.15);display:flex;justify-content:space-between;
   }
-  .dead-row{
-    display:flex;align-items:center;gap:8px;padding:6px 10px;
-    border-bottom:1px solid rgba(30,22,10,0.3);
-  }
-  .dead-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:#604040;}
-  .dead-info{flex:1;}
-  .dead-time{font-family:'Cinzel',serif;font-size:12px;letter-spacing:1px;}
+  .dead-row{display:flex;align-items:center;gap:7px;padding:5px 10px;border-bottom:1px solid rgba(30,22,10,0.2);}
+  .dead-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .dead-info{flex:1;min-width:0;}
+  .dead-time{font-family:'Cinzel',serif;font-size:10px;letter-spacing:0.5px;}
   .dead-time.fresh{color:var(--text-dim);}
-  .dead-time.yellow{color:#e0c040;}
-  .dead-time.green{color:#60e080;}
-  .dead-label{font-size:10px;color:var(--text-dim);margin-top:1px;}
+  .dead-time.yellow{color:#d4b030;}
+  .dead-time.green{color:#50c060;}
+  .dead-label-txt{font-size:9px;color:var(--text-dim);margin-top:1px;}
 
   .sidebar{
     width:270px;flex-shrink:0;border-left:1px solid var(--border);
@@ -364,15 +337,6 @@
 
 <div class="layout">
 
-  <!-- LEWY PANEL -->
-  <div class="left-panel">
-    <div class="lp-header">
-      <div class="lp-title">⚔ Historia zbitych</div>
-      <button class="lp-undo" onclick="undoLastKill()">↩ Cofnij ostatnie</button>
-    </div>
-    <div class="ch-counters" id="chCounters"></div>
-    <div class="lp-body" id="deadList"></div>
-  </div>
 
   <div class="map-wrap">
     <div class="map-container" id="mapContainer">
@@ -398,6 +362,15 @@
 
     <div class="sidebar-section-title">⚔ Metiny</div>
     <div id="pingList"><div class="sidebar-empty">Brak aktywnych pingów</div></div>
+
+    <!-- LICZNIKI KANAŁÓW -->
+    <div class="sidebar-section-title" style="margin-top:4px;">💀 Zbite metiny</div>
+    <div id="chCounters" style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:6px 8px;"></div>
+    <div style="padding:4px 8px 2px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--gold-dark);text-transform:uppercase;">Historia</span>
+      <button onclick="undoLastKill()" style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:2px;cursor:pointer;border:1px solid rgba(201,168,76,0.25);color:var(--text-dim);background:rgba(201,168,76,0.05);">↩ Cofnij</button>
+    </div>
+    <div id="deadList"></div>
 
     <div class="sidebar-section-title blue">🔵 Generałowie</div>
     <div id="generalList"><div class="sidebar-empty">Brak aktywnych generałów</div></div>
@@ -646,26 +619,21 @@ function undoLastKill() {
 function renderChCounters() {
   const wrap = document.getElementById('chCounters');
   if (!wrap) return;
-  // Policz zbite per ch (ostatnie 35 min)
   const now = Date.now();
   const deadPerCh = {};
   for (let i = 1; i <= MAX_CH; i++) deadPerCh[i] = 0;
   deadHistory.filter(d => now - d.killedAt < EXPIRE_MS).forEach(d => {
-    if (d.ch >= 1 && d.ch <= MAX_CH)
-      deadPerCh[d.ch]++;
+    if (d.ch >= 1 && d.ch <= MAX_CH) deadPerCh[d.ch]++;
   });
-
   wrap.innerHTML = '';
   for (let ch = 1; ch <= MAX_CH; ch++) {
-    const dead   = deadPerCh[ch] || 0;
-    const avail  = Math.max(0, METIN_PER_CH - dead);
-    const cls    = avail >= 5 ? 'full' : avail >= 3 ? 'mid' : avail >= 1 ? 'low' : 'empty';
-    const div    = document.createElement('div');
+    const dead  = deadPerCh[ch] || 0;
+    const avail = Math.max(0, METIN_PER_CH - dead);
+    const cls   = avail >= 5 ? 'full' : avail >= 3 ? 'mid' : avail >= 1 ? 'low' : 'empty';
+    const div   = document.createElement('div');
     div.className = 'ch-counter';
-    div.title = `CH${ch}: ${avail} dostępnych, ${dead} zbitych`;
-    div.innerHTML = `<div class="ch-num">CH${ch}</div>
-      <div class="ch-avail ${cls}">${avail}</div>
-      <div class="ch-sub">/${METIN_PER_CH}</div>`;
+    div.title = `CH${ch}: ${avail} dostępnych`;
+    div.innerHTML = `<div class="ch-num">CH${ch}</div><div class="ch-avail ${cls}">${avail}</div><div class="ch-sub">/${METIN_PER_CH}</div>`;
     wrap.appendChild(div);
   }
 }
@@ -674,17 +642,14 @@ function renderDeadList() {
   const wrap = document.getElementById('deadList');
   if (!wrap) return;
   const now  = Date.now();
-
-  // Wygasłe są czyszczone po stronie serwera przy połączeniu
   const activeHistory = deadHistory.filter(d => now - d.killedAt < EXPIRE_MS);
 
   if (!activeHistory.length) {
-    wrap.innerHTML = '<div class="sidebar-empty" style="padding:20px 14px">Brak zbitych metinów</div>';
+    wrap.innerHTML = '<div class="sidebar-empty">Brak zbitych metinów</div>';
     renderChCounters();
     return;
   }
 
-  // Grupuj po ch
   const byCh = {};
   activeHistory.forEach(d => { (byCh[d.ch] = byCh[d.ch]||[]).push(d); });
 
@@ -692,26 +657,25 @@ function renderDeadList() {
   Object.keys(byCh).sort((a,b)=>a-b).forEach(ch => {
     const grp = document.createElement('div');
     grp.className = 'dead-ch-group';
-    const label = document.createElement('div');
-    label.className = 'dead-ch-label';
-    label.innerHTML = `<span>Kanał ${ch}</span><span style="color:var(--text-dim)">${byCh[ch].length} zbitych</span>`;
-    grp.appendChild(label);
+    const lbl = document.createElement('div');
+    lbl.className = 'dead-ch-label';
+    lbl.innerHTML = `<span>Kanał ${ch}</span><span>${byCh[ch].length} zbitych</span>`;
+    grp.appendChild(lbl);
 
     byCh[ch].sort((a,b)=>b.killedAt-a.killedAt).forEach(d => {
       const elapsed = now - d.killedAt;
       const mins    = Math.floor(elapsed/60000);
       const secs    = Math.floor((elapsed%60000)/1000);
       const cls     = elapsed >= GREEN_MS ? 'green' : elapsed >= YELLOW_MS ? 'yellow' : 'fresh';
-      const label2  = elapsed >= GREEN_MS ? '✓ Można szukać' : elapsed >= YELLOW_MS ? '⚡ Może być' : '✗ Świeżo zbity';
-
+      const txt     = elapsed >= GREEN_MS ? '✓ Można szukać' : elapsed >= YELLOW_MS ? '⚡ Może respić' : '✗ Świeżo zbity';
+      const color   = cls==='green'?'#409040':cls==='yellow'?'#908040':'#604040';
       const row = document.createElement('div');
       row.className = 'dead-row';
-      row.id = 'dead_row_' + d.id;
       row.innerHTML = `
-        <div class="dead-dot" style="background:${cls==='green'?'#409040':cls==='yellow'?'#908040':'#604040'}"></div>
+        <div class="dead-dot" style="background:${color}"></div>
         <div class="dead-info">
-          <div class="dead-time ${cls}" id="dead_t_${d.id}">${mins}m ${secs}s temu</div>
-          <div class="dead-label">${label2}</div>
+          <div class="dead-time ${cls}">${mins}m ${secs}s temu</div>
+          <div class="dead-label-txt">${txt}</div>
         </div>`;
       grp.appendChild(row);
     });
