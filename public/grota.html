@@ -1002,126 +1002,169 @@ function bfsPath(start, end) {
   return null;
 }
 
-// Temperatura heatmapy w węźle
 
-// ══════════════════════════════════════════════════════
-// WŁASNE TRASY — kolory, ON/OFF, rysowanie w sidebarze
-// ══════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════
+   WŁASNE TRASY — kompletny moduł
+════════════════════════════════════════════════════ */
 
-// Paleta kolorów dla tras
-const ROUTE_COLORS = [
-  { name: 'Złota',    main: '#f0c040', glow: '240,192,64',  r:240,g:192,b:64  },
-  { name: 'Cyjan',    main: '#00e5ff', glow: '0,229,255',   r:0,  g:229,b:255 },
-  { name: 'Zielona',  main: '#50e080', glow: '80,224,128',  r:80, g:224,b:128 },
-  { name: 'Różowa',   main: '#ff60b0', glow: '255,96,176',  r:255,g:96, b:176 },
-  { name: 'Fioletowa',main: '#c060ff', glow: '192,96,255',  r:192,g:96, b:255 },
-  { name: 'Pomarań.', main: '#ff8030', glow: '255,128,48',  r:255,g:128,b:48  },
-  { name: 'Biała',    main: '#e0e0ff', glow: '220,220,255', r:220,g:220,b:255 },
-  { name: 'Czerwona', main: '#ff4040', glow: '255,64,64',   r:255,g:64, b:64  },
+// Paleta kolorów
+const RT_COLORS = [
+  {name:'Cyjan',    r:0,  g:220,b:255},
+  {name:'Złota',    r:240,g:190,b:50 },
+  {name:'Zielona',  r:60, g:220,b:100},
+  {name:'Różowa',   r:255,g:80, b:160},
+  {name:'Fioletowa',r:180,g:80, b:255},
+  {name:'Pomarańcz',r:255,g:130,b:30 },
+  {name:'Czerwona', r:255,g:60, b:60 },
+  {name:'Biała',    r:220,g:220,b:255},
 ];
+function rtCol(idx) { return RT_COLORS[idx % RT_COLORS.length]; }
+function rtCSS(col, a) { return `rgba(${col.r},${col.g},${col.b},${a})`; }
 
-let customRoutes = [];     // [{name, points:[{x,y}], colorIdx, visible}]
-let drawingMode   = false;
-let drawingPoints = [];
-let activeAnims   = {};    // idx -> animId
-let routePulses   = {};    // idx -> pulse value
+// Stan
+let rtRoutes   = [];   // [{name, points:[{x,y}], colorIdx, visible}]
+let rtAnims    = {};   // idx→animId
+let rtPulses   = {};   // idx→float
+let rtDrawing  = false;
+let rtPoints   = [];   // punkty rysowanej trasy
 
-function loadCustomRoutes() {
-  try { customRoutes = JSON.parse(localStorage.getItem('crt_grota2') || '[]'); } catch(e) { customRoutes = []; }
-  // Ensure colorIdx and visible
-  customRoutes.forEach((r, i) => {
-    if (r.colorIdx === undefined) r.colorIdx = i % ROUTE_COLORS.length;
-    if (r.visible === undefined) r.visible = false;
+// ── LocalStorage ──
+function rtLoad() {
+  try { rtRoutes = JSON.parse(localStorage.getItem('rt_v3') || '[]'); } catch(e) { rtRoutes = []; }
+  rtRoutes.forEach((r,i) => {
+    if (r.colorIdx == null) r.colorIdx = i % RT_COLORS.length;
+    if (r.visible  == null) r.visible  = false;
   });
-  renderRoutesList();
+  rtRenderMenu();
+}
+function rtSave() { localStorage.setItem('rt_v3', JSON.stringify(rtRoutes)); }
+
+// ── Dropdown menu ──
+let rtMenuOpen = false;
+
+function toggleRoutesMenu() {
+  rtMenuOpen = !rtMenuOpen;
+  const btn = document.getElementById('routesMenuBtn');
+  const dd  = document.getElementById('routesMenuDropdown');
+  if (!btn || !dd) return;
+  if (rtMenuOpen) {
+    const rect = btn.getBoundingClientRect();
+    dd.style.top   = (rect.bottom + 6) + 'px';
+    dd.style.right  = (window.innerWidth - rect.right) + 'px';
+    dd.style.display = 'block';
+    btn.style.background = 'rgba(0,180,255,0.18)';
+    btn.style.borderColor = 'rgba(0,200,255,0.8)';
+    btn.style.color = '#80e8ff';
+  } else {
+    dd.style.display = 'none';
+    btn.style.background = 'rgba(40,120,200,0.08)';
+    btn.style.borderColor = 'rgba(60,180,255,0.5)';
+    btn.style.color = '#60c8ff';
+  }
+  rtRenderMenu();
 }
 
-function saveRoutesStorage() {
-  localStorage.setItem('crt_grota2', JSON.stringify(customRoutes));
-}
+// Zamknij przy kliknięciu poza
+document.addEventListener('click', e => {
+  if (rtMenuOpen && !e.target.closest('#routesMenuBtn') && !e.target.closest('#routesMenuDropdown')) {
+    rtMenuOpen = false;
+    const dd = document.getElementById('routesMenuDropdown');
+    const btn = document.getElementById('routesMenuBtn');
+    if (dd) dd.style.display = 'none';
+    if (btn) { btn.style.background='rgba(40,120,200,0.08)'; btn.style.borderColor='rgba(60,180,255,0.5)'; btn.style.color='#60c8ff'; }
+  }
+});
 
-// ── Render listy tras w sidebarze ──
-function renderRoutesList() {
-  if (routesMenuOpen) renderRoutesMenu();
-  const list = document.getElementById('customRoutesList');
+function rtRenderMenu() {
+  const list = document.getElementById('routesMenuList');
   if (!list) return;
-  if (!customRoutes.length) {
-    list.innerHTML = '<div class="sidebar-empty" style="font-size:12px;padding:16px;">Brak zapisanych tras.<br><span style="font-size:10px;color:var(--text-dim);">Kliknij "Rysuj nową trasę"</span></div>';
+  if (!rtRoutes.length) {
+    list.innerHTML = '<div style="padding:14px 12px;color:var(--text-dim);font-size:12px;text-align:center;">Brak tras.<br><span style="font-size:10px;">Kliknij "Rysuj nową trasę"</span></div>';
     return;
   }
-  list.innerHTML = customRoutes.map((r, i) => {
-    const col = ROUTE_COLORS[r.colorIdx % ROUTE_COLORS.length];
-    const isOn = r.visible;
-    return `
-    <div class="crt-item" style="border-left:3px solid ${col.main};">
-      <div style="display:flex;flex-direction:column;flex:1;gap:3px;min-width:0;">
-        <div class="crt-name" style="color:${col.main};font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.name}">
-          ${r.name}
-        </div>
-        <div style="font-size:9px;color:var(--text-dim);font-family:'Cinzel',serif;letter-spacing:1px;">
-          ● ${col.name} &nbsp;·&nbsp; ${r.points.length} pkt
-        </div>
+  list.innerHTML = rtRoutes.map((r,i) => {
+    const col = rtCol(r.colorIdx);
+    const on  = r.visible;
+    const c1  = rtCSS(col, on ? 0.9 : 0.4);
+    const bg  = on ? rtCSS(col, 0.12) : 'transparent';
+    const border = on ? rtCSS(col, 0.7) : 'rgba(60,60,60,0.4)';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid rgba(30,22,10,0.5);border-left:3px solid ${on?rtCSS(col,0.8):'rgba(40,40,40,0.4)'};background:${bg};transition:background 0.15s;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:'Crimson Text',serif;font-size:14px;color:${c1};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name}</div>
+        <div style="font-size:9px;color:var(--text-dim);font-family:'Cinzel',serif;letter-spacing:1px;margin-top:2px;">● ${col.name} · ${r.points.length} pkt</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
-        <button class="crt-btn${isOn?' crt-on':''}" onclick="toggleRouteVisible(${i})" style="
-          font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;
-          padding:4px 8px;border-radius:2px;cursor:pointer;border:1px solid;
-          ${isOn
-            ? `background:rgba(${col.glow},0.2);border-color:${col.main};color:${col.main};`
-            : 'background:none;border-color:rgba(100,80,40,0.4);color:var(--text-dim);'
-          }
-          transition:all 0.2s;white-space:nowrap;
-        ">${isOn ? '◉ ON' : '○ OFF'}</button>
-        <button class="crt-btn danger" onclick="deleteRoute(${i})" style="
-          font-size:9px;padding:3px 8px;border-radius:2px;cursor:pointer;
-          border:1px solid rgba(150,50,50,0.3);background:none;color:#906060;
-          font-family:'Cinzel',serif;letter-spacing:1px;
-        ">✕</button>
-      </div>
+      <button onclick="rtToggleVisible(${i})" style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;padding:5px 10px;border-radius:2px;cursor:pointer;border:1px solid ${border};background:${bg};color:${c1};white-space:nowrap;">${on?'◉ ON':'○ OFF'}</button>
+      <button onclick="rtDelete(${i})" style="font-size:11px;padding:4px 8px;border-radius:2px;cursor:pointer;border:1px solid rgba(140,50,50,0.3);background:none;color:#906060;font-family:'Cinzel',serif;">✕</button>
     </div>`;
   }).join('');
 }
 
-// ── Toggle widoczności trasy ──
-function toggleRouteVisible(idx) {
-  customRoutes[idx].visible = !customRoutes[idx].visible;
-  saveRoutesStorage();
-  renderRoutesList();
-  if (customRoutes[idx].visible) {
-    startRouteAnim(idx);
-  } else {
-    stopRouteAnim(idx);
-    redrawAllRoutes();
-  }
+// ── Toggle widoczności ──
+function rtToggleVisible(idx) {
+  rtRoutes[idx].visible = !rtRoutes[idx].visible;
+  rtSave();
+  rtRenderMenu();
+  if (rtRoutes[idx].visible) rtStartAnim(idx);
+  else { rtStopAnim(idx); rtRedraw(); }
 }
 
-function startRouteAnim(idx) {
-  if (activeAnims[idx]) cancelAnimationFrame(activeAnims[idx]);
-  routePulses[idx] = 0;
-  const route = customRoutes[idx];
-  const pts = buildPixelPts(route.points);
-  const col = ROUTE_COLORS[route.colorIdx % ROUTE_COLORS.length];
+// ── Usuń trasę ──
+function rtDelete(idx) {
+  rtStopAnim(idx);
+  rtRoutes.splice(idx, 1);
+  rtSave();
+  // Przeindeksuj animacje
+  const na = {}, np = {};
+  Object.keys(rtAnims).forEach(k => {
+    const ki = parseInt(k);
+    if (ki < idx) { na[ki] = rtAnims[ki]; np[ki] = rtPulses[ki]; }
+    else if (ki > idx) { na[ki-1] = rtAnims[ki]; np[ki-1] = rtPulses[ki]; }
+  });
+  rtAnims = na; rtPulses = np;
+  rtRenderMenu();
+  rtRedraw();
+}
 
+// ── Animacja LED ──
+function rtBuildPts(points) {
+  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
+  const out = [];
+  for (let i = 1; i < points.length; i++) {
+    const ax = points[i-1].x*W, ay = points[i-1].y*H;
+    const bx = points[i].x*W,   by = points[i].y*H;
+    const dist = Math.hypot(bx-ax, by-ay);
+    const steps = Math.max(2, Math.ceil(dist/3));
+    for (let s = (i===1?0:1); s<=steps; s++) {
+      const t = s/steps;
+      out.push({x: ax+(bx-ax)*t, y: ay+(by-ay)*t});
+    }
+  }
+  return out;
+}
+
+function rtStartAnim(idx) {
+  rtStopAnim(idx);
+  rtPulses[idx] = 0;
   function frame() {
-    if (!customRoutes[idx] || !customRoutes[idx].visible) return;
-    routePulses[idx] = (routePulses[idx] || 0) + 0.055;
-    redrawAllRoutes();
-    activeAnims[idx] = requestAnimationFrame(frame);
+    if (!rtRoutes[idx] || !rtRoutes[idx].visible) return;
+    rtPulses[idx] = (rtPulses[idx]||0) + 0.06;
+    rtRedraw();
+    rtAnims[idx] = requestAnimationFrame(frame);
   }
-  activeAnims[idx] = requestAnimationFrame(frame);
+  rtAnims[idx] = requestAnimationFrame(frame);
 }
 
-function stopRouteAnim(idx) {
-  if (activeAnims[idx]) cancelAnimationFrame(activeAnims[idx]);
-  delete activeAnims[idx];
+function rtStopAnim(idx) {
+  if (rtAnims[idx]) cancelAnimationFrame(rtAnims[idx]);
+  delete rtAnims[idx];
 }
 
-function clearRouteCanvas() {
+function rtClearCanvas() {
   const cv = document.getElementById('routeCanvas');
-  if (cv) { const ctx = cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height); }
+  if (cv) cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
 }
 
-function redrawAllRoutes() {
+function rtRedraw() {
   const cv = document.getElementById('routeCanvas');
   if (!cv) return;
   const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
@@ -1130,328 +1173,186 @@ function redrawAllRoutes() {
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, W, H);
 
-  customRoutes.forEach((route, idx) => {
+  // Narysuj każdą aktywną trasę
+  rtRoutes.forEach((route, idx) => {
     if (!route.visible) return;
-    const pts = buildPixelPts(route.points);
+    const pts = rtBuildPts(route.points);
     if (pts.length < 2) return;
-    const col = ROUTE_COLORS[route.colorIdx % ROUTE_COLORS.length];
-    const pulse = routePulses[idx] || 0;
-    drawLEDRoute(ctx, pts, col, pulse);
-  });
-
-  // Rysowanie w toku — przerywana linia
-  if (drawingMode && drawingPoints.length > 0) {
-    drawInProgressOnCtx(ctx, W, H);
-  }
-}
-
-function drawLEDRoute(ctx, pts, col, pulse) {
-  const n = pts.length;
-  const {r, g, b} = col;
-
-  for (let i = 1; i < n; i++) {
-    const p1 = pts[i-1], p2 = pts[i];
-    const t = i / n;
-    const wave = Math.sin(pulse * 2.5 - t * 22) * 0.5 + 0.5;
-    const bright = 0.5 + wave * 0.5;
-
-    // Glow zewnętrzny
-    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
-    ctx.strokeStyle = `rgba(${r},${g},${b},${0.15 + wave*0.2})`;
-    ctx.lineWidth = 16; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
-
-    // Glow środkowy
-    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
-    ctx.strokeStyle = `rgba(${r},${g},${b},${0.4 + wave*0.35})`;
-    ctx.lineWidth = 6; ctx.stroke();
-
-    // Linia rdzeniowa
-    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
-    ctx.strokeStyle = `rgba(${Math.min(255,r+40)},${Math.min(255,g+40)},${Math.min(255,b+40)},${0.85 + wave*0.15})`;
-    ctx.lineWidth = 2.5; ctx.stroke();
-
-    // Biały błysk przy szczycie fali
-    if (wave > 0.65) {
+    const col = rtCol(route.colorIdx);
+    const pulse = rtPulses[idx] || 0;
+    const n = pts.length;
+    for (let i = 1; i < n; i++) {
+      const p1 = pts[i-1], p2 = pts[i];
+      const t = i/n;
+      const wave = Math.sin(pulse*2.5 - t*22)*0.5 + 0.5;
+      const b = 0.5 + wave*0.5;
+      // Glow zewnętrzny
       ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
-      ctx.strokeStyle = `rgba(255,255,255,${(wave-0.65)*2.0})`;
-      ctx.lineWidth = 1; ctx.stroke();
+      ctx.strokeStyle = rtCSS(col, 0.12+wave*0.18);
+      ctx.lineWidth=16; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+      // Glow środkowy
+      ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+      ctx.strokeStyle = rtCSS(col, 0.45+wave*0.35);
+      ctx.lineWidth=6; ctx.stroke();
+      // Linia rdzeniowa
+      ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+      ctx.strokeStyle = `rgba(${Math.min(255,col.r+60)},${Math.min(255,col.g+60)},${Math.min(255,col.b+60)},${0.85+wave*0.15})`;
+      ctx.lineWidth=2.5; ctx.stroke();
+      // Biały błysk
+      if (wave > 0.65) {
+        ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+        ctx.strokeStyle = `rgba(255,255,255,${(wave-0.65)*2.0})`;
+        ctx.lineWidth=1; ctx.stroke();
+      }
     }
-  }
-
-  // Pulsujące kółka na start/end
-  const pulse3 = Math.sin(pulse * 3) * 0.5 + 0.5;
-  [pts[0], pts[n-1]].forEach(pt => {
-    const rad = 10 + pulse3 * 5;
-    const grd = ctx.createRadialGradient(pt.x,pt.y,0, pt.x,pt.y,rad);
-    grd.addColorStop(0,   `rgba(255,255,255,${0.9+pulse3*0.1})`);
-    grd.addColorStop(0.35,`rgba(${r},${g},${b},${0.85+pulse3*0.1})`);
-    grd.addColorStop(1,   `rgba(${r},${g},${b},0)`);
-    ctx.beginPath(); ctx.arc(pt.x,pt.y,rad,0,Math.PI*2);
-    ctx.fillStyle = grd; ctx.fill();
+    // Kółka start/end
+    const pls = Math.sin((rtPulses[idx]||0)*3)*0.5+0.5;
+    [pts[0],pts[n-1]].forEach(pt => {
+      const rad = 10+pls*5;
+      const g = ctx.createRadialGradient(pt.x,pt.y,0,pt.x,pt.y,rad);
+      g.addColorStop(0,`rgba(255,255,255,${0.9+pls*0.1})`);
+      g.addColorStop(0.35,rtCSS(col,0.9));
+      g.addColorStop(1,rtCSS(col,0));
+      ctx.beginPath(); ctx.arc(pt.x,pt.y,rad,0,Math.PI*2);
+      ctx.fillStyle=g; ctx.fill();
+    });
   });
+
+  // Rysowanie w trakcie
+  if (rtDrawing && rtPoints.length > 0) {
+    const pts = rtPoints.map(p => ({x:p.x*W, y:p.y*H}));
+    ctx.save();
+    ctx.setLineDash([8,5]);
+    ctx.strokeStyle='rgba(255,160,50,0.85)';
+    ctx.lineWidth=2.5; ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath();
+    pts.forEach((p,i) => i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    pts.forEach((p,i) => {
+      ctx.beginPath(); ctx.arc(p.x,p.y,i===0?8:5,0,Math.PI*2);
+      ctx.fillStyle=i===0?'rgba(255,140,40,0.95)':'rgba(255,180,80,0.85)';
+      ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.7)'; ctx.lineWidth=1.5; ctx.stroke();
+    });
+    ctx.restore();
+  }
 }
 
-// ── Rysowanie nowej trasy ──
-function toggleCustomRoute() {
-  if (drawingMode) cancelDrawing();
-  else startDrawing();
-}
-
-function startDrawing() {
-  drawingMode = true;
-  drawingPoints = [];
-  const btn = document.getElementById('customRouteBtn');
-  btn.innerText = '✏️ Zakończ rysowanie';
-  btn.style.background = 'rgba(255,140,40,0.15)';
-  btn.style.borderColor = 'rgba(255,140,40,0.5)';
-  btn.style.color = '#ff9040';
-  document.getElementById('drawPanel').style.display = 'flex';
-  document.getElementById('drawRouteName').value = '';
-  document.getElementById('drawPointCount').textContent = 'Klikaj punkty na mapie… (0 punktów)';
+// ── Rysowanie trasy ──
+function rtStartDrawing() {
+  rtDrawing = true;
+  rtPoints  = [];
+  // Zamknij dropdown
+  rtMenuOpen = false;
+  const dd = document.getElementById('routesMenuDropdown');
+  const btn = document.getElementById('routesMenuBtn');
+  if (dd) dd.style.display = 'none';
+  if (btn) { btn.style.background='rgba(40,120,200,0.08)'; btn.style.borderColor='rgba(60,180,255,0.5)'; btn.style.color='#60c8ff'; }
+  // Pokaż panel
+  const panel = document.getElementById('drawPanel');
+  if (panel) { panel.style.display='flex'; }
+  const inp = document.getElementById('drawRouteName');
+  if (inp) inp.value = '';
+  const cnt = document.getElementById('drawPointCount');
+  if (cnt) { cnt.textContent='Klikaj punkty na mapie… (0 punktów)'; cnt.style.color='var(--text-dim)'; }
   document.getElementById('mapHint').textContent = 'Tryb rysowania — klikaj punkty trasy';
   document.body.classList.add('draw-active');
 }
 
-function cancelDrawing() {
-  drawingMode = false;
-  drawingPoints = [];
-  const btn = document.getElementById('customRouteBtn');
-  btn.innerText = '✏️ Rysuj nową trasę';
-  btn.style.background = 'rgba(201,168,76,0.1)';
-  btn.style.borderColor = 'rgba(201,168,76,0.35)';
-  btn.style.color = 'var(--gold-light)';
-  document.getElementById('drawPanel').style.display = 'none';
+function rtCancelDrawing() {
+  rtDrawing = false;
+  rtPoints  = [];
+  const panel = document.getElementById('drawPanel');
+  if (panel) panel.style.display = 'none';
   document.getElementById('mapHint').textContent = 'Kliknij na mapę aby pingować metina';
   document.body.classList.remove('draw-active');
-  redrawAllRoutes();
+  rtRedraw();
 }
 
-function saveDrawing() {
-  if (drawingPoints.length < 2) {
-    document.getElementById('drawPointCount').textContent = '⚠ Dodaj co najmniej 2 punkty!';
-    document.getElementById('drawPointCount').style.color = '#e07070';
+function rtSaveDrawing() {
+  if (rtPoints.length < 2) {
+    const cnt = document.getElementById('drawPointCount');
+    if (cnt) { cnt.textContent='⚠ Dodaj co najmniej 2 punkty!'; cnt.style.color='#e07070'; }
     return;
   }
-  const nameEl = document.getElementById('drawRouteName');
-  const name = nameEl.value.trim() || ('Trasa ' + (customRoutes.length + 1));
-  const colorIdx = customRoutes.length % ROUTE_COLORS.length;
-
-  customRoutes.push({ name, points: [...drawingPoints], colorIdx, visible: true });
-  saveRoutesStorage();
-
-  const newIdx = customRoutes.length - 1;
-  drawingMode = false;
-  drawingPoints = [];
-  const btn = document.getElementById('customRouteBtn');
-  btn.innerText = '✏️ Rysuj nową trasę';
-  btn.style.background = 'rgba(201,168,76,0.1)';
-  btn.style.borderColor = 'rgba(201,168,76,0.35)';
-  btn.style.color = 'var(--gold-light)';
-  document.getElementById('drawPanel').style.display = 'none';
+  const inp  = document.getElementById('drawRouteName');
+  const name = inp ? (inp.value.trim() || 'Trasa '+(rtRoutes.length+1)) : 'Trasa '+(rtRoutes.length+1);
+  const colorIdx = rtRoutes.length % RT_COLORS.length;
+  rtRoutes.push({name, points:[...rtPoints], colorIdx, visible:true});
+  rtSave();
+  rtDrawing = false;
+  rtPoints  = [];
+  const panel = document.getElementById('drawPanel');
+  if (panel) panel.style.display = 'none';
   document.getElementById('mapHint').textContent = 'Kliknij na mapę aby pingować metina';
   document.body.classList.remove('draw-active');
-
-  renderRoutesList();
-  startRouteAnim(newIdx);
+  rtRenderMenu();
+  rtStartAnim(rtRoutes.length-1);
 }
 
-function deleteRoute(idx) {
-  stopRouteAnim(idx);
-  customRoutes.splice(idx, 1);
-  saveRoutesStorage();
-  // Przebuduj activeAnims z nowymi indeksami
-  const newAnims = {}, newPulses = {};
-  Object.keys(activeAnims).forEach(k => {
-    const ki = parseInt(k);
-    if (ki < idx) { newAnims[ki] = activeAnims[ki]; newPulses[ki] = routePulses[ki]; }
-    else if (ki > idx) { newAnims[ki-1] = activeAnims[ki]; newPulses[ki-1] = routePulses[ki]; }
-  });
-  Object.assign(activeAnims, newAnims);
-  Object.assign(routePulses, newPulses);
-  renderRoutesList();
-  redrawAllRoutes();
-}
-
-// ── Kliknięcia mapy w trybie rysowania ──
+// Kliknięcia mapy podczas rysowania
 mapContainer.addEventListener('click', function(e) {
-  if (!drawingMode) return;
-  if (e.target.closest('#drawPanel')) return;
+  if (!rtDrawing) return;
+  if (e.target.closest('#drawPanel') || e.target.closest('#routesMenuDropdown') || e.target.closest('#resetOverlay')) return;
   e.stopImmediatePropagation();
   const rect = mapImg.getBoundingClientRect();
   const x = (e.clientX - rect.left) / rect.width;
   const y = (e.clientY - rect.top)  / rect.height;
-  if (x < 0 || x > 1 || y < 0 || y > 1) return;
-  drawingPoints.push({ x, y });
-  const cnt = drawingPoints.length;
-  document.getElementById('drawPointCount').textContent = `${cnt} punkt${cnt===1?'':'ów'} — klikaj dalej lub Zapisz`;
-  document.getElementById('drawPointCount').style.color = cnt >= 2 ? '#80c080' : 'var(--text-dim)';
-  redrawAllRoutes();
+  if (x<0||x>1||y<0||y>1) return;
+  rtPoints.push({x,y});
+  const cnt = document.getElementById('drawPointCount');
+  if (cnt) {
+    const n = rtPoints.length;
+    cnt.textContent = n >= 2 ? `${n} punktów — możesz zapisać` : `${n} punkt — dodaj więcej`;
+    cnt.style.color = n >= 2 ? '#80c080' : 'var(--text-dim)';
+  }
+  rtRedraw();
 }, true);
 
+// Klawisze w trybie rysowania
 document.addEventListener('keydown', e => {
-  if (!drawingMode) return;
-  if (e.key === 'Backspace' || (e.key==='z' && e.ctrlKey)) {
+  if (!rtDrawing) return;
+  if (e.key==='Escape') rtCancelDrawing();
+  if (e.key==='Enter') rtSaveDrawing();
+  if (e.key==='Backspace' || (e.key==='z'&&e.ctrlKey)) {
     e.preventDefault();
-    drawingPoints.pop();
-    const cnt = drawingPoints.length;
-    document.getElementById('drawPointCount').textContent = cnt > 0
-      ? `${cnt} punkt${cnt===1?'':'ów'} — klikaj dalej lub Zapisz`
-      : 'Klikaj punkty na mapie… (0 punktów)';
-    document.getElementById('drawPointCount').style.color = cnt >= 2 ? '#80c080' : 'var(--text-dim)';
-    redrawAllRoutes();
-  }
-  if (e.key === 'Escape') cancelDrawing();
-  if (e.key === 'Enter') saveDrawing();
-});
-
-function drawInProgressOnCtx(ctx, W, H) {
-  const pts = drawingPoints.map(p => ({ x: p.x*W, y: p.y*H }));
-  if (!pts.length) return;
-  ctx.save();
-  ctx.setLineDash([8, 5]);
-  ctx.strokeStyle = 'rgba(255,160,50,0.8)';
-  ctx.lineWidth = 2.5;
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  ctx.beginPath();
-  pts.forEach((p, i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
-  ctx.stroke();
-  ctx.setLineDash([]);
-  pts.forEach((p, i) => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, i===0 ? 8 : 5, 0, Math.PI*2);
-    ctx.fillStyle = i===0 ? 'rgba(255,140,40,0.95)' : 'rgba(255,180,80,0.85)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-    ctx.lineWidth = 1.5; ctx.stroke();
-  });
-  ctx.restore();
-}
-
-function buildPixelPts(points) {
-  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
-  const result = [];
-  for (let i = 1; i < points.length; i++) {
-    const ax=points[i-1].x*W, ay=points[i-1].y*H;
-    const bx=points[i].x*W,   by=points[i].y*H;
-    const dist = Math.hypot(bx-ax, by-ay);
-    const steps = Math.max(2, Math.ceil(dist/3));
-    for (let s=(i===1?0:1); s<=steps; s++) {
-      const t=s/steps;
-      result.push({ x: ax+(bx-ax)*t, y: ay+(by-ay)*t });
+    rtPoints.pop();
+    const cnt = document.getElementById('drawPointCount');
+    if (cnt) {
+      const n = rtPoints.length;
+      cnt.textContent = n>0 ? (n>=2?`${n} punktów — możesz zapisać`:`${n} punkt — dodaj więcej`) : 'Klikaj punkty na mapie…';
+      cnt.style.color = n>=2?'#80c080':'var(--text-dim)';
     }
-  }
-  return result;
-}
-
-window.addEventListener('resize', () => redrawAllRoutes());
-
-loadCustomRoutes();
-// Uruchom animacje tras które były włączone
-customRoutes.forEach((r, i) => { if (r.visible) startRouteAnim(i); });
-
-
-// ── Dropdown menu tras w topbarze ──
-let routesMenuOpen = false;
-
-function toggleRoutesMenu() {
-  routesMenuOpen = !routesMenuOpen;
-  const dd = document.getElementById('routesMenuDropdown');
-  const btn = document.getElementById('routesMenuBtn');
-  if (routesMenuOpen) {
-    // Pozycjonuj dropdown pod przyciskiem (fixed)
-    const rect = btn.getBoundingClientRect();
-    dd.style.top  = (rect.bottom + 6) + 'px';
-    dd.style.right = (window.innerWidth - rect.right) + 'px';
-    dd.style.display = 'block';
-    btn.style.color = '#a0e8ff';
-    btn.style.borderColor = 'rgba(60,180,255,0.8)';
-    btn.style.background = 'rgba(40,120,200,0.18)';
-    renderRoutesMenu();
-  } else {
-    dd.style.display = 'none';
-    btn.style.color = '#60c8ff';
-    btn.style.borderColor = 'rgba(60,180,255,0.5)';
-    btn.style.background = 'rgba(40,120,200,0.08)';
-  }
-}
-
-// Zamknij dropdown przy kliknięciu poza nim
-document.addEventListener('click', e => {
-  if (!e.target.closest('#routesMenuBtn') && !e.target.closest('#routesMenuDropdown')) {
-    const dd = document.getElementById('routesMenuDropdown');
-    if (dd && dd.style.display !== 'none') {
-      routesMenuOpen = false;
-      dd.style.display = 'none';
-      const btn = document.getElementById('routesMenuBtn');
-      if (btn) { btn.style.color='#60c8ff'; btn.style.borderColor='rgba(60,180,255,0.5)'; btn.style.background='rgba(40,120,200,0.08)'; }
-    }
+    rtRedraw();
   }
 });
 
-function renderRoutesMenu() {
-  const list = document.getElementById('routesMenuList');
-  if (!list) return;
-  if (!customRoutes.length) {
-    list.innerHTML = '<div style="padding:14px 12px;font-size:12px;color:var(--text-dim);text-align:center;">Brak tras.<br>Kliknij "Rysuj nową trasę"</div>';
-    return;
-  }
-  list.innerHTML = customRoutes.map((r, i) => {
-    const col = ROUTE_COLORS[r.colorIdx % ROUTE_COLORS.length];
-    const isOn = r.visible;
-    return `<div style="
-      display:flex;align-items:center;gap:8px;padding:8px 12px;
-      border-bottom:1px solid rgba(30,22,10,0.4);
-      border-left:3px solid ${isOn ? col.main : 'rgba(58,46,26,0.3)'};
-      background:${isOn ? `rgba(${col.glow},0.06)` : 'transparent'};
-      transition:all 0.15s;
-    ">
-      <div style="flex:1;min-width:0;">
-        <div style="font-family:'Crimson Text',serif;font-size:14px;color:${isOn ? col.main : 'var(--text)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name}</div>
-        <div style="font-size:9px;color:var(--text-dim);font-family:'Cinzel',serif;letter-spacing:1px;margin-top:1px;">● ${col.name} · ${r.points.length} pkt</div>
-      </div>
-      <button onclick="toggleRouteVisible(${i});renderRoutesMenu();" style="
-        font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;
-        padding:4px 10px;border-radius:2px;cursor:pointer;
-        border:1px solid ${isOn ? col.main : 'rgba(100,80,40,0.4)'};
-        background:${isOn ? `rgba(${col.glow},0.15)` : 'none'};
-        color:${isOn ? col.main : 'var(--text-dim)'};
-        white-space:nowrap;transition:all 0.2s;
-      ">${isOn ? '◉ ON' : '○ OFF'}</button>
-      <button onclick="deleteRoute(${i});renderRoutesMenu();" style="
-        font-size:11px;padding:3px 7px;border-radius:2px;cursor:pointer;
-        border:1px solid rgba(150,50,50,0.3);background:none;color:#806060;
-        font-family:'Cinzel',serif;transition:all 0.2s;
-      " title="Usuń">✕</button>
-    </div>`;
-  }).join('');
+// Wrappers dla HTML onclick
+function startDrawingFromMenu() { rtStartDrawing(); }
+function toggleCustomRoute() { if (rtDrawing) rtCancelDrawing(); else rtStartDrawing(); }
+function cancelDrawing() { rtCancelDrawing(); }
+function saveDrawing() { rtSaveDrawing(); }
+
+// Reset tras (wywoływany z doReset)
+function rtResetAll() {
+  rtRoutes.forEach((_,i) => rtStopAnim(i));
+  rtAnims = {}; rtPulses = {};
+  rtRoutes = [];
+  rtSave();
+  rtRenderMenu();
+  rtClearCanvas();
 }
 
-// Start rysowania z menu
-function startDrawingFromMenu() {
-  // Zamknij dropdown
-  routesMenuOpen = false;
-  const dd = document.getElementById('routesMenuDropdown');
-  if (dd) dd.style.display = 'none';
-  const btn = document.getElementById('routesMenuBtn');
-  if (btn) { btn.style.color='#c8a84c'; btn.style.borderColor='rgba(201,168,76,0.4)'; btn.style.background=''; }
-  // Start rysowania
-  startDrawing();
-}
+window.addEventListener('resize', () => rtRedraw());
 
-
-
-
-/* ══ RESET GROTY ══ */
-function toggleCheck(id) {
-  const el = document.getElementById(id);
-  el.checked = !el.checked;
-}
+// ── RESET MODAL ──
 function openResetModal() {
   const el = document.getElementById('resetOverlay');
-  // Wypełnij opcje resetu
+  if (!el) return;
   el.querySelector('#resetOptions').innerHTML = [
-    ['r_dead',     'Historia zbitych & timery',  'Czyści liczniki CH i historię zbitych metinów', true],
-    ['r_pings',    'Aktywne pingi metinów',       'Usuwa wszystkie znaczniki metinów z mapy',      true],
+    ['r_dead',     'Historia zbitych & timery',  'Czyści liczniki CH i historię zbitych metinów', true ],
+    ['r_pings',    'Aktywne pingi metinów',       'Usuwa wszystkie znaczniki metinów z mapy',      true ],
     ['r_generals', 'Generałowie',                 'Usuwa wszystkie znaczniki generałów',           false],
     ['r_heat',     'Heatmapa',                    'Usuwa historię pingów (heatmapa → zero)',        false],
     ['r_routes',   'Moje trasy',                  'Usuwa wszystkie zapisane własne trasy',          false],
@@ -1460,9 +1361,8 @@ function openResetModal() {
     <div onclick="document.getElementById('${id}').checked=!document.getElementById('${id}').checked" style="
       display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:3px;
       border:1px solid rgba(58,46,26,0.3);margin-bottom:6px;cursor:pointer;
-      transition:all 0.15s;
-    " onmouseover="this.style.background='rgba(200,80,80,0.06)';this.style.borderColor='rgba(200,80,80,0.3)'"
-       onmouseout="this.style.background='';this.style.borderColor='rgba(58,46,26,0.3)'">
+    " onmouseover="this.style.borderColor='rgba(200,80,80,0.4)';this.style.background='rgba(200,80,80,0.06)'"
+       onmouseout="this.style.borderColor='rgba(58,46,26,0.3)';this.style.background='transparent'">
       <input type="checkbox" id="${id}" ${checked?'checked':''} onclick="event.stopPropagation()"
         style="width:16px;height:16px;accent-color:#c07070;cursor:pointer;flex-shrink:0;">
       <div style="flex:1;">
@@ -1472,47 +1372,30 @@ function openResetModal() {
     </div>`).join('');
   el.style.display = 'flex';
 }
-function closeResetModal() { document.getElementById('resetOverlay').style.display = 'none'; }
-
+function closeResetModal() {
+  const el = document.getElementById('resetOverlay');
+  if (el) el.style.display = 'none';
+}
 function doReset() {
-  // Odtwórz dźwięk
   try { new Audio('/reset.mp3').play(); } catch(e) {}
-  const doDead     = document.getElementById('r_dead').checked;
-  const doPings    = document.getElementById('r_pings').checked;
-  const doGenerals = document.getElementById('r_generals').checked;
-  const doHeat     = document.getElementById('r_heat').checked;
-  const doRoutes   = document.getElementById('r_routes').checked;
-  const doSnaps    = document.getElementById('r_snaps').checked;
-
-  if (doDead) {
-    deadHistory.forEach(d => socket.emit('grotaRemoveDead', d.id));
-    deadHistory = [];
-    renderDead();
-  }
-  if (doPings) {
-    Object.keys(pings).forEach(id => socket.emit('grotaRemovePing', id));
-  }
-  if (doGenerals) {
-    Object.keys(generals || {}).forEach(id => socket.emit('grotaRemoveGeneral', id));
-  }
-  if (doHeat) {
-    socket.emit('grotaResetHistory');
-  }
-  if (doRoutes) {
-    customRoutes.forEach((_, i) => stopRouteAnim(i));
-    customRoutes = [];
-    saveRoutesStorage();
-    renderRoutesMenu();
-    clearRouteCanvas();
-  }
-  if (doSnaps) {
-    socket.emit('grotaClearSnapshots');
-  }
-
+  const doDead     = document.getElementById('r_dead')    ?.checked;
+  const doPings    = document.getElementById('r_pings')   ?.checked;
+  const doGenerals = document.getElementById('r_generals')?.checked;
+  const doHeat     = document.getElementById('r_heat')    ?.checked;
+  const doRoutes   = document.getElementById('r_routes')  ?.checked;
+  const doSnaps    = document.getElementById('r_snaps')   ?.checked;
+  if (doDead)     { deadHistory.forEach(d => socket.emit('grotaRemoveDead', d.id)); deadHistory=[]; renderDead(); }
+  if (doPings)    { Object.keys(pings).forEach(id => socket.emit('grotaRemovePing', id)); }
+  if (doGenerals) { Object.keys(generals||{}).forEach(id => socket.emit('grotaRemoveGeneral', id)); }
+  if (doHeat)     { socket.emit('grotaResetHistory'); }
+  if (doRoutes)   { rtResetAll(); }
+  if (doSnaps)    { socket.emit('grotaClearSnapshots'); }
   closeResetModal();
 }
 
-
+// ── INIT ──
+rtLoad();
+rtRoutes.forEach((r,i) => { if (r.visible) rtStartAnim(i); });
 
 </script>
 
