@@ -58,7 +58,7 @@
     box-shadow:0 0 40px rgba(0,0,0,0.8);
     max-width:100%;
   }
-  .map-container img{display:block;height:auto;user-select:none;pointer-events:none;}
+  .map-container img{display:block;height:auto;user-select:none;pointer-events:none;max-height:calc(100vh - 80px);max-width:100%;}
   .map-hint{
     position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
     font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;text-transform:uppercase;
@@ -112,8 +112,9 @@
   /* SIDEBAR */
   /* LEWY PANEL — historia zbitych */
   .left-panel{
-    width:260px;flex-shrink:0;border-right:1px solid var(--border);
+    width:220px;flex-shrink:0;border-right:1px solid var(--border);
     background:rgba(8,6,4,0.6);display:flex;flex-direction:column;overflow:hidden;
+    overflow-y:auto;
   }
   .lp-header{
     padding:10px 14px;border-bottom:1px solid var(--border);
@@ -129,7 +130,7 @@
   .lp-undo:hover{color:var(--gold);border-color:rgba(201,168,76,0.5);}
 
   /* LICZNIKI KANAŁÓW */
-  .ch-counters{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+  .ch-counters{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:6px 8px;border-bottom:1px solid var(--border);flex-shrink:0;}
   .ch-counter{
     display:flex;flex-direction:column;align-items:center;padding:5px 2px;
     border-radius:3px;border:1px solid rgba(58,46,26,0.4);background:rgba(0,0,0,0.2);
@@ -355,6 +356,7 @@
       <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);min-width:24px;text-align:right;" id="pingSizeVal">14</span>
     </div>
     <button class="heat-btn" id="heatBtn" onclick="toggleHeat()">🔥 Heatmapa OFF</button>
+    <button class="heat-btn" id="routeBtn" onclick="toggleRoute()" style="background:rgba(60,140,255,0.1);border-color:rgba(60,140,255,0.3);color:#80b0ff;">🗺 Trasa OFF</button>
   </div>
 </div>
 
@@ -374,6 +376,7 @@
     <div class="map-container" id="mapContainer">
       <img src="/grota_mapa.png" id="mapImg" alt="Mapa Groty" draggable="false">
       <canvas id="heatCanvas"></canvas>
+      <canvas id="routeCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;"></canvas>
       <div id="pingLayer"></div>
       <div id="generalLayer"></div>
       <div class="map-hint" id="mapHint">Kliknij na mapę aby pingować metina</div>
@@ -473,7 +476,9 @@ const heatBtn       = document.getElementById('heatBtn');
 })();
 
 function applyMapSize() {
-  mapImg.style.width = Math.round(1080 * mapSizePct / 100) + 'px';
+  const maxW = Math.max(300, window.innerWidth - 220 - 280 - 40); // lewy panel + prawy panel + padding
+  const w = Math.min(Math.round(1080 * mapSizePct / 100), maxW);
+  mapImg.style.width = w + 'px';
   if (heatOn) syncCanvas();
 }
 
@@ -610,7 +615,7 @@ function startTicking(p) {
 }
 
 /* HISTORIA ZBITYCH */
-const MAX_CH = 8;
+// MAX_CH already defined above
 const METIN_PER_CH = 6;
 const YELLOW_MS = 20 * 60 * 1000;
 const GREEN_MS  = 30 * 60 * 1000;
@@ -949,6 +954,11 @@ socket.on('grotaSnapshotsUpdate', data => {
   renderSnapshots();
 });
 
+// Inicjalizacja lewego panelu
+initRouteCanvas();
+renderChCounters();
+renderDeadList();
+
 socket.on('grotaPingsUpdate', data => {
   pings = data;
   renderPings();
@@ -957,6 +967,123 @@ socket.on('grotaPingsUpdate', data => {
 socket.on('grotaHistoryUpdate', data => {
   history = data;
   if (heatOn) syncCanvas();
+
+/* ═══ SUGEROWANA TRASA ═══ */
+let routeOn = false;
+let routeCanvas, routeCtx;
+function initRouteCanvas() {
+  routeCanvas = document.getElementById('routeCanvas');
+  if (routeCanvas) routeCtx = routeCanvas.getContext('2d');
+}
+
+// Waypoints trasy — % szerokości/wysokości mapy, wzdłuż korytarzy
+// Zoptymalizowane pod układ mapy groty
+const ROUTE_WAYPOINTS = [
+  [0.08,0.08],[0.22,0.08],[0.38,0.08],[0.55,0.08],[0.72,0.08],[0.88,0.08],
+  [0.88,0.22],[0.72,0.22],[0.55,0.22],[0.38,0.22],[0.22,0.22],[0.08,0.22],
+  [0.08,0.38],[0.22,0.38],[0.38,0.38],[0.55,0.38],[0.72,0.38],[0.88,0.38],
+  [0.88,0.55],[0.72,0.55],[0.55,0.55],[0.38,0.55],[0.22,0.55],[0.08,0.55],
+  [0.08,0.72],[0.22,0.72],[0.38,0.72],[0.55,0.72],[0.72,0.72],[0.88,0.72],
+  [0.88,0.88],[0.72,0.88],[0.55,0.88],[0.38,0.88],[0.22,0.88],
+];
+
+function toggleRoute() {
+  if (!routeCanvas) initRouteCanvas();
+  routeOn = !routeOn;
+  const btn = document.getElementById('routeBtn');
+  if (routeOn) {
+    btn.style.background = 'rgba(60,140,255,0.2)';
+    btn.style.borderColor = 'rgba(60,140,255,0.7)';
+    btn.innerText = '🗺 Trasa ON';
+    drawRoute();
+  } else {
+    btn.style.background = 'rgba(60,140,255,0.1)';
+    btn.style.borderColor = 'rgba(60,140,255,0.3)';
+    btn.innerText = '🗺 Trasa OFF';
+    if (routeCtx) routeCtx.clearRect(0,0,routeCanvas.width,routeCanvas.height);
+  }
+}
+
+function drawRoute() {
+  const imgW = mapImg.offsetWidth;
+  const imgH = mapImg.offsetHeight;
+  routeCanvas.width  = imgW;
+  routeCanvas.height = imgH;
+  routeCtx.clearRect(0,0,imgW,imgH);
+  if (!routeOn) return;
+
+  // Jeśli jest heatmapa — posortuj waypoints wg temperatury (najgorętsze na początku)
+  let pts = ROUTE_WAYPOINTS.map(([px,py]) => ({
+    x: px*imgW, y: py*imgH,
+    heat: getHeatAt(px,py)
+  }));
+
+  // Znajdź punkt startowy (najgorętszy) i zrób optymalną trasę nearest-neighbor
+  let start = pts.reduce((best,p) => p.heat > best.heat ? p : best, pts[0]);
+  let ordered = [start];
+  let remaining = pts.filter(p => p !== start);
+  while (remaining.length) {
+    const last = ordered[ordered.length-1];
+    let nearest = remaining.reduce((best,p) => {
+      const d = Math.hypot(p.x-last.x,p.y-last.y);
+      return d < Math.hypot(best.x-last.x,best.y-last.y) ? p : best;
+    });
+    ordered.push(nearest);
+    remaining = remaining.filter(p => p !== nearest);
+  }
+
+  // Rysuj trasę
+  routeCtx.beginPath();
+  routeCtx.strokeStyle = 'rgba(60,200,255,0.7)';
+  routeCtx.lineWidth   = 2.5;
+  routeCtx.setLineDash([8,5]);
+  routeCtx.lineCap     = 'round';
+  routeCtx.lineJoin    = 'round';
+  ordered.forEach((p,i) => {
+    if (i===0) routeCtx.moveTo(p.x,p.y);
+    else routeCtx.lineTo(p.x,p.y);
+  });
+  routeCtx.stroke();
+
+  // Numery kroków
+  ordered.forEach((p,i) => {
+    const heat = p.heat;
+    const col  = heat > 0.5 ? '#ff6040' : heat > 0.2 ? '#e0c040' : '#60b0ff';
+    routeCtx.beginPath();
+    routeCtx.arc(p.x,p.y,8,0,Math.PI*2);
+    routeCtx.fillStyle = 'rgba(0,0,0,0.7)';
+    routeCtx.fill();
+    routeCtx.strokeStyle = col;
+    routeCtx.lineWidth = 1.5;
+    routeCtx.setLineDash([]);
+    routeCtx.stroke();
+    routeCtx.fillStyle = col;
+    routeCtx.font = 'bold 8px Cinzel,serif';
+    routeCtx.textAlign = 'center';
+    routeCtx.textBaseline = 'middle';
+    routeCtx.fillText(i+1, p.x, p.y);
+    routeCtx.setLineDash([8,5]);
+  });
+}
+
+function getHeatAt(px,py) {
+  if (!history || !history.length) return 0;
+  const imgW = mapImg.offsetWidth;
+  const imgH = mapImg.offsetHeight;
+  const r    = 0.08; // promień wpływu
+  let sum    = 0;
+  history.forEach(h => {
+    const dx = h.x - px, dy = h.y - py;
+    const d  = Math.sqrt(dx*dx + dy*dy);
+    if (d < r) sum += (1 - d/r);
+  });
+  return Math.min(1, sum / 5);
+}
+
+// Przerysuj trasę przy zmianie rozmiaru
+window.addEventListener('resize', () => { if (routeOn) drawRoute(); });
+mapImg.addEventListener('load', () => { if (routeOn) drawRoute(); });
+
 });
 </script>
 </body>
