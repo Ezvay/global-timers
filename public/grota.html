@@ -1042,6 +1042,7 @@ function saveRoutesStorage() {
 
 // ── Render listy tras w sidebarze ──
 function renderRoutesList() {
+  if (routesMenuOpen) renderRoutesMenu();
   const list = document.getElementById('customRoutesList');
   if (!list) return;
   if (!customRoutes.length) {
@@ -1425,14 +1426,7 @@ function renderRoutesMenu() {
   }).join('');
 }
 
-// Nadpisz renderRoutesList żeby też odświeżało menu
-const _origRenderRoutesList = renderRoutesList;
-function renderRoutesList() {
-  _origRenderRoutesList();
-  if (routesMenuOpen) renderRoutesMenu();
-}
-
-// Start rysowania z menu (nie zamykaj dropdown od razu)
+// Start rysowania z menu
 function startDrawingFromMenu() {
   // Zamknij dropdown
   routesMenuOpen = false;
@@ -1444,11 +1438,7 @@ function startDrawingFromMenu() {
   startDrawing();
 }
 
-// Nadpisz toggleCustomRoute żeby działało z topbara
-function toggleCustomRoute() {
-  if (drawingMode) cancelDrawing();
-  else startDrawingFromMenu();
-}
+
 
 
 /* ══ RESET GROTY ══ */
@@ -1485,6 +1475,8 @@ function openResetModal() {
 function closeResetModal() { document.getElementById('resetOverlay').style.display = 'none'; }
 
 function doReset() {
+  // Odtwórz dźwięk
+  try { new Audio('/reset.mp3').play(); } catch(e) {}
   const dead     = document.getElementById('r_dead').checked;
   const pings    = document.getElementById('r_pings').checked;
   const generals = document.getElementById('r_generals').checked;
@@ -1522,9 +1514,7 @@ function doReset() {
   closeResetModal();
 }
 
-/* ══ FIX DROPDOWN — otwieranie ══ */
-// Nadpisz toggleRoutesMenu żeby działało poprawnie
-const _baseToggleMenu = toggleRoutesMenu;
+
 
 </script>
 
