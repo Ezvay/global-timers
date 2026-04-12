@@ -67,7 +67,6 @@ let grotaPings    = {}
 let grotaHistory  = []
 let grotaGenerals = {}
 let grotaSnapshots= []
-let deadHistory   = []  // historia zbitych metinów (z timerami)
 let charOrder     = []
 
 /* ======================
@@ -97,7 +96,6 @@ async function connectDB() {
     grotaHistory   = doc.grotaHistory   || []
     grotaGenerals  = doc.grotaGenerals  || {}
     grotaSnapshots = doc.grotaSnapshots || []
-    deadHistory    = (doc.deadHistory   || []).filter(d => Date.now() - d.killedAt < 35*60*1000)
     charOrder           = doc.charOrder           || []
   charsList           = doc.charsList           || {}
   skarbiec            = doc.skarbiec            || { inwestycje: {}, udzialy: {}, sprzedaz: [], zakupy: [] }
@@ -161,7 +159,7 @@ async function saveNow() {
       { _id: DOC_ID },
       { _id: DOC_ID, timers, characters, tasks, resetHour, resetMinute,
         customPlaces, customTimers, grotaPings, grotaHistory,
-        grotaGenerals, grotaSnapshots, charOrder, charsList, skarbiec, deadHistory,
+        grotaGenerals, grotaSnapshots, charOrder, charsList, skarbiec,
         runningTimers: [...runningTimers],
         runningCustomTimers: [...runningCustomTimers] },
       { upsert: true }
@@ -627,9 +625,6 @@ io.on("connection",(socket)=>{
   socket.emit("grotaHistoryUpdate",  grotaHistory)
   socket.emit("grotaGeneralsUpdate", grotaGenerals)
   socket.emit("grotaSnapshotsUpdate",grotaSnapshots)
-  // Wyczyść wygasłe wpisy i wyślij dead history
-  deadHistory = deadHistory.filter(d => Date.now() - d.killedAt < 35*60*1000)
-  socket.emit("deadHistoryUpdate",   deadHistory)
 })
 
 /* ======================

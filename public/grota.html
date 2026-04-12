@@ -74,8 +74,6 @@
   #heatCanvas.visible{opacity:1;}
 
   /* PING MARKERS */
-  #pingLayer{position:absolute;inset:0;z-index:5;pointer-events:none;}
-  #generalLayer{position:absolute;inset:0;z-index:5;pointer-events:none;}
   .ping-marker{position:absolute;transform:translate(-50%,-50%);pointer-events:all;z-index:5;display:flex;flex-direction:column;align-items:center;}
   .ping-dot{
     width:14px;height:14px;position:relative;
@@ -112,35 +110,6 @@
   }
 
   /* SIDEBAR */
-
-  /* LICZNIKI CH W SIDEBARZE */
-  .ch-counter{
-    display:flex;flex-direction:column;align-items:center;padding:4px 2px;
-    border-radius:3px;border:1px solid rgba(58,46,26,0.4);background:rgba(0,0,0,0.2);
-    cursor:default;
-  }
-  .ch-num{font-family:'Cinzel',serif;font-size:8px;color:var(--text-dim);letter-spacing:1px;}
-  .ch-avail{font-family:'Cinzel',serif;font-size:13px;font-weight:600;line-height:1.2;}
-  .ch-avail.full{color:#60e080;} .ch-avail.mid{color:#e0c040;}
-  .ch-avail.low{color:#e07030;} .ch-avail.empty{color:#c04040;}
-  .ch-sub{font-size:8px;color:var(--text-dim);}
-
-  /* HISTORIA ZBITYCH */
-  .dead-ch-group{border-bottom:1px solid rgba(30,22,10,0.4);}
-  .dead-ch-label{
-    padding:3px 10px;font-family:'Cinzel',serif;font-size:8px;
-    letter-spacing:2px;color:var(--gold-dark);text-transform:uppercase;
-    background:rgba(0,0,0,0.15);display:flex;justify-content:space-between;
-  }
-  .dead-row{display:flex;align-items:center;gap:7px;padding:5px 10px;border-bottom:1px solid rgba(30,22,10,0.2);}
-  .dead-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-  .dead-info{flex:1;min-width:0;}
-  .dead-time{font-family:'Cinzel',serif;font-size:10px;letter-spacing:0.5px;}
-  .dead-time.fresh{color:var(--text-dim);}
-  .dead-time.yellow{color:#d4b030;}
-  .dead-time.green{color:#50c060;}
-  .dead-label-txt{font-size:9px;color:var(--text-dim);margin-top:1px;}
-
   .sidebar{
     width:270px;flex-shrink:0;border-left:1px solid var(--border);
     background:rgba(12,10,7,0.7);display:flex;flex-direction:column;
@@ -295,6 +264,19 @@
     border-radius:2px;padding:7px 20px;cursor:pointer;transition:all 0.2s;width:100%;
   }
   .popup-cancel:hover{color:var(--text);border-color:rgba(255,255,255,0.2);}
+  /* LICZNIKI CH + HISTORIA ZBITYCH */
+  .ch-ctr{display:flex;flex-direction:column;align-items:center;padding:4px 2px;border-radius:3px;border:1px solid rgba(58,46,26,0.4);background:rgba(0,0,0,0.2);}
+  .ch-ctr-num{font-family:'Cinzel',serif;font-size:8px;color:var(--text-dim);}
+  .ch-ctr-val{font-family:'Cinzel',serif;font-size:13px;font-weight:700;line-height:1.2;}
+  .ch-ctr-val.c-full{color:#50d070;} .ch-ctr-val.c-mid{color:#d4b030;} .ch-ctr-val.c-low{color:#d07030;} .ch-ctr-val.c-empty{color:#c04040;}
+  .ch-ctr-sub{font-size:8px;color:var(--text-dim);}
+  .dead-grp{border-bottom:1px solid rgba(30,22,10,0.4);}
+  .dead-grp-hdr{padding:3px 10px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--gold-dark);background:rgba(0,0,0,0.15);display:flex;justify-content:space-between;}
+  .dead-row{display:flex;align-items:center;gap:7px;padding:5px 10px;border-bottom:1px solid rgba(30,22,10,0.2);}
+  .dead-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .dead-timer{font-family:'Cinzel',serif;font-size:10px;}
+  .dead-timer.t-fresh{color:var(--text-dim);} .dead-timer.t-yellow{color:#d4b030;} .dead-timer.t-green{color:#50c060;}
+  .dead-hint{font-size:9px;color:var(--text-dim);margin-top:1px;}
 </style>
 </head>
 <body>
@@ -331,18 +313,15 @@
       <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);min-width:24px;text-align:right;" id="pingSizeVal">14</span>
     </div>
     <button class="heat-btn" id="heatBtn" onclick="toggleHeat()">🔥 Heatmapa OFF</button>
-    <button class="heat-btn" id="routeBtn" onclick="toggleRoute()" style="background:rgba(60,140,255,0.1);border-color:rgba(60,140,255,0.3);color:#80b0ff;">🗺 Trasa OFF</button>
   </div>
 </div>
 
 <div class="layout">
 
-
   <div class="map-wrap">
     <div class="map-container" id="mapContainer">
       <img src="/grota_mapa.png" id="mapImg" alt="Mapa Groty" draggable="false">
       <canvas id="heatCanvas"></canvas>
-      <canvas id="routeCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;"></canvas>
       <div id="pingLayer"></div>
       <div id="generalLayer"></div>
       <div class="map-hint" id="mapHint">Kliknij na mapę aby pingować metina</div>
@@ -363,12 +342,11 @@
     <div class="sidebar-section-title">⚔ Metiny</div>
     <div id="pingList"><div class="sidebar-empty">Brak aktywnych pingów</div></div>
 
-    <!-- LICZNIKI KANAŁÓW -->
-    <div class="sidebar-section-title" style="margin-top:4px;">💀 Zbite metiny</div>
-    <div id="chCounters" style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:6px 8px;"></div>
-    <div style="padding:4px 8px 2px;display:flex;justify-content:space-between;align-items:center;">
+    <div class="sidebar-section-title" style="border-color:rgba(200,60,60,0.3);color:#c07070;">💀 Zbite (respawn 20-30min)</div>
+    <div id="chCounters" style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:6px 8px;border-bottom:1px solid var(--border);"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 10px 3px;border-bottom:1px solid var(--border);">
       <span style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--gold-dark);text-transform:uppercase;">Historia</span>
-      <button onclick="undoLastKill()" style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:2px;cursor:pointer;border:1px solid rgba(201,168,76,0.25);color:var(--text-dim);background:rgba(201,168,76,0.05);">↩ Cofnij</button>
+      <button onclick="undoLastKill()" style="font-family:'Cinzel',serif;font-size:8px;padding:2px 8px;border-radius:2px;cursor:pointer;border:1px solid rgba(201,168,76,0.25);color:var(--text-dim);background:none;">↩ Cofnij</button>
     </div>
     <div id="deadList"></div>
 
@@ -453,7 +431,6 @@ const heatBtn       = document.getElementById('heatBtn');
 function applyMapSize() {
   mapImg.style.width = Math.round(1080 * mapSizePct / 100) + 'px';
   if (heatOn) syncCanvas();
-  if (routeOn) drawRoute();
 }
 
 function setMode(mode) {
@@ -588,107 +565,7 @@ function startTicking(p) {
   timerRafs[p.id] = requestAnimationFrame(tick);
 }
 
-/* HISTORIA ZBITYCH */
-// MAX_CH already defined above
-const METIN_PER_CH = 6;
-const YELLOW_MS = 20 * 60 * 1000;
-const GREEN_MS  = 30 * 60 * 1000;
-const EXPIRE_MS = 35 * 60 * 1000;
-
-let deadHistory = []; // synchronizowane z serwerem
-let undoStack = []; // tylko lokalnie — do cofania
-
-function removePing(id) {
-  const p = pings[id];
-  if (p) {
-    const dead = { id: 'dead_'+Date.now()+'_'+id, ch: p.ch, killedAt: Date.now(), x: p.x, y: p.y };
-    undoStack.push({ ping: {...p}, dead });
-    if (undoStack.length > 3) undoStack.shift();
-    socket.emit('grotaAddDead', dead); // zapisz na serwerze
-  }
-  socket.emit('grotaRemovePing', id);
-}
-
-function undoLastKill() {
-  if (!undoStack.length) return;
-  const last = undoStack.pop();
-  socket.emit('grotaRemoveDead', last.dead.id); // usuń z serwera
-  socket.emit('grotaAddPing', { x: last.ping.x, y: last.ping.y, ch: last.ping.ch });
-}
-
-function renderChCounters() {
-  const wrap = document.getElementById('chCounters');
-  if (!wrap) return;
-  const now = Date.now();
-  const deadPerCh = {};
-  for (let i = 1; i <= MAX_CH; i++) deadPerCh[i] = 0;
-  deadHistory.filter(d => now - d.killedAt < EXPIRE_MS).forEach(d => {
-    if (d.ch >= 1 && d.ch <= MAX_CH) deadPerCh[d.ch]++;
-  });
-  wrap.innerHTML = '';
-  for (let ch = 1; ch <= MAX_CH; ch++) {
-    const dead  = deadPerCh[ch] || 0;
-    const avail = Math.max(0, METIN_PER_CH - dead);
-    const cls   = avail >= 5 ? 'full' : avail >= 3 ? 'mid' : avail >= 1 ? 'low' : 'empty';
-    const div   = document.createElement('div');
-    div.className = 'ch-counter';
-    div.title = `CH${ch}: ${avail} dostępnych`;
-    div.innerHTML = `<div class="ch-num">CH${ch}</div><div class="ch-avail ${cls}">${avail}</div><div class="ch-sub">/${METIN_PER_CH}</div>`;
-    wrap.appendChild(div);
-  }
-}
-
-function renderDeadList() {
-  const wrap = document.getElementById('deadList');
-  if (!wrap) return;
-  const now  = Date.now();
-  const activeHistory = deadHistory.filter(d => now - d.killedAt < EXPIRE_MS);
-
-  if (!activeHistory.length) {
-    wrap.innerHTML = '<div class="sidebar-empty">Brak zbitych metinów</div>';
-    renderChCounters();
-    return;
-  }
-
-  const byCh = {};
-  activeHistory.forEach(d => { (byCh[d.ch] = byCh[d.ch]||[]).push(d); });
-
-  wrap.innerHTML = '';
-  Object.keys(byCh).sort((a,b)=>a-b).forEach(ch => {
-    const grp = document.createElement('div');
-    grp.className = 'dead-ch-group';
-    const lbl = document.createElement('div');
-    lbl.className = 'dead-ch-label';
-    lbl.innerHTML = `<span>Kanał ${ch}</span><span>${byCh[ch].length} zbitych</span>`;
-    grp.appendChild(lbl);
-
-    byCh[ch].sort((a,b)=>b.killedAt-a.killedAt).forEach(d => {
-      const elapsed = now - d.killedAt;
-      const mins    = Math.floor(elapsed/60000);
-      const secs    = Math.floor((elapsed%60000)/1000);
-      const cls     = elapsed >= GREEN_MS ? 'green' : elapsed >= YELLOW_MS ? 'yellow' : 'fresh';
-      const txt     = elapsed >= GREEN_MS ? '✓ Można szukać' : elapsed >= YELLOW_MS ? '⚡ Może respić' : '✗ Świeżo zbity';
-      const color   = cls==='green'?'#409040':cls==='yellow'?'#908040':'#604040';
-      const row = document.createElement('div');
-      row.className = 'dead-row';
-      row.innerHTML = `
-        <div class="dead-dot" style="background:${color}"></div>
-        <div class="dead-info">
-          <div class="dead-time ${cls}">${mins}m ${secs}s temu</div>
-          <div class="dead-label-txt">${txt}</div>
-        </div>`;
-      grp.appendChild(row);
-    });
-    wrap.appendChild(grp);
-  });
-
-  renderChCounters();
-}
-
-// Tick co sekundę
-setInterval(() => {
-  renderDeadList();
-}, 1000);
+function removePing(id) { socket.emit('grotaRemovePing', id); }
 
 /* GENERALS */
 function placeGeneral(g) {
@@ -913,11 +790,6 @@ socket.on('grotaSnapshotsUpdate', data => {
   renderSnapshots();
 });
 
-// Inicjalizacja lewego panelu
-initRouteCanvas();
-renderChCounters();
-renderDeadList();
-
 socket.on('grotaPingsUpdate', data => {
   pings = data;
   renderPings();
@@ -926,130 +798,99 @@ socket.on('grotaPingsUpdate', data => {
 socket.on('grotaHistoryUpdate', data => {
   history = data;
   if (heatOn) syncCanvas();
-  if (routeOn) drawRoute();
 });
 
-socket.on('deadHistoryUpdate', data => {
-  deadHistory = data;
-  renderDeadList();
-});
+/* ═══ HISTORIA ZBITYCH METINÓW ═══ */
+const METIN_PER_CH = 6;
+const YELLOW_MS    = 20 * 60 * 1000;
+const GREEN_MS     = 30 * 60 * 1000;
+const EXPIRE_MS    = 35 * 60 * 1000;
 
-/* ═══ SUGEROWANA TRASA ═══ */
-let routeOn = false;
-let routeCanvas, routeCtx;
-function initRouteCanvas() {
-  routeCanvas = document.getElementById('routeCanvas');
-  if (routeCanvas) routeCtx = routeCanvas.getContext('2d');
-}
+let deadHistory = []; // [{id, ch, killedAt}]
+let undoStack   = []; // max 3 ostatnich
 
-// Waypoints trasy — % szerokości/wysokości mapy, wzdłuż korytarzy
-// Zoptymalizowane pod układ mapy groty
-const ROUTE_WAYPOINTS = [
-  [0.08,0.08],[0.22,0.08],[0.38,0.08],[0.55,0.08],[0.72,0.08],[0.88,0.08],
-  [0.88,0.22],[0.72,0.22],[0.55,0.22],[0.38,0.22],[0.22,0.22],[0.08,0.22],
-  [0.08,0.38],[0.22,0.38],[0.38,0.38],[0.55,0.38],[0.72,0.38],[0.88,0.38],
-  [0.88,0.55],[0.72,0.55],[0.55,0.55],[0.38,0.55],[0.22,0.55],[0.08,0.55],
-  [0.08,0.72],[0.22,0.72],[0.38,0.72],[0.55,0.72],[0.72,0.72],[0.88,0.72],
-  [0.88,0.88],[0.72,0.88],[0.55,0.88],[0.38,0.88],[0.22,0.88],
-];
-
-function toggleRoute() {
-  if (!routeCanvas) initRouteCanvas();
-  routeOn = !routeOn;
-  const btn = document.getElementById('routeBtn');
-  if (routeOn) {
-    btn.style.background = 'rgba(60,140,255,0.2)';
-    btn.style.borderColor = 'rgba(60,140,255,0.7)';
-    btn.innerText = '🗺 Trasa ON';
-    drawRoute();
-  } else {
-    btn.style.background = 'rgba(60,140,255,0.1)';
-    btn.style.borderColor = 'rgba(60,140,255,0.3)';
-    btn.innerText = '🗺 Trasa OFF';
-    if (routeCtx) routeCtx.clearRect(0,0,routeCanvas.width,routeCanvas.height);
+// Nadpisz removePing żeby zapisywał historię
+const _origRemovePing = removePing;
+window.removePing = function(id) {
+  const p = pings[id];
+  if (p) {
+    const dead = { id: 'dead_' + Date.now() + '_' + id, ch: p.ch, killedAt: Date.now(), px: p.x, py: p.y };
+    deadHistory.push(dead);
+    undoStack.push({ pingData: { x: p.x, y: p.y, ch: p.ch }, dead });
+    if (undoStack.length > 3) undoStack.shift();
+    renderDead();
   }
+  socket.emit('grotaRemovePing', id);
+};
+
+function undoLastKill() {
+  if (!undoStack.length) return;
+  const last = undoStack.pop();
+  deadHistory = deadHistory.filter(d => d.id !== last.dead.id);
+  socket.emit('grotaAddPing', { x: last.pingData.x, y: last.pingData.y, ch: last.pingData.ch });
+  renderDead();
 }
 
-function drawRoute() {
-  const imgW = mapImg.offsetWidth;
-  const imgH = mapImg.offsetHeight;
-  routeCanvas.width  = imgW;
-  routeCanvas.height = imgH;
-  routeCtx.clearRect(0,0,imgW,imgH);
-  if (!routeOn) return;
+function renderDead() {
+  const now = Date.now();
+  deadHistory = deadHistory.filter(d => now - d.killedAt < EXPIRE_MS);
 
-  // Jeśli jest heatmapa — posortuj waypoints wg temperatury (najgorętsze na początku)
-  let pts = ROUTE_WAYPOINTS.map(([px,py]) => ({
-    x: px*imgW, y: py*imgH,
-    heat: getHeatAt(px,py)
-  }));
+  // Liczniki
+  const wrap = document.getElementById('chCounters');
+  if (wrap) {
+    const deadPer = {};
+    for (let i = 1; i <= 8; i++) deadPer[i] = 0;
+    deadHistory.forEach(d => { if (d.ch >= 1 && d.ch <= 8) deadPer[d.ch]++; });
+    wrap.innerHTML = '';
+    for (let ch = 1; ch <= 8; ch++) {
+      const avail = Math.max(0, METIN_PER_CH - deadPer[ch]);
+      const cls   = avail >= 5 ? 'c-full' : avail >= 3 ? 'c-mid' : avail >= 1 ? 'c-low' : 'c-empty';
+      const el = document.createElement('div');
+      el.className = 'ch-ctr';
+      el.title = `CH${ch}: ${avail} dostępnych`;
+      el.innerHTML = `<div class="ch-ctr-num">CH${ch}</div><div class="ch-ctr-val ${cls}">${avail}</div><div class="ch-ctr-sub">/${METIN_PER_CH}</div>`;
+      wrap.appendChild(el);
+    }
+  }
 
-  // Znajdź punkt startowy (najgorętszy) i zrób optymalną trasę nearest-neighbor
-  let start = pts.reduce((best,p) => p.heat > best.heat ? p : best, pts[0]);
-  let ordered = [start];
-  let remaining = pts.filter(p => p !== start);
-  while (remaining.length) {
-    const last = ordered[ordered.length-1];
-    let nearest = remaining.reduce((best,p) => {
-      const d = Math.hypot(p.x-last.x,p.y-last.y);
-      return d < Math.hypot(best.x-last.x,best.y-last.y) ? p : best;
+  // Historia
+  const list = document.getElementById('deadList');
+  if (!list) return;
+  if (!deadHistory.length) {
+    list.innerHTML = '<div class="sidebar-empty">Brak zbitych</div>';
+    return;
+  }
+  const byCh = {};
+  deadHistory.forEach(d => { (byCh[d.ch] = byCh[d.ch] || []).push(d); });
+  list.innerHTML = '';
+  Object.keys(byCh).sort((a,b) => a-b).forEach(ch => {
+    const grp = document.createElement('div');
+    grp.className = 'dead-grp';
+    const hdr = document.createElement('div');
+    hdr.className = 'dead-grp-hdr';
+    hdr.innerHTML = `<span>Kanał ${ch}</span><span>${byCh[ch].length} zbitych</span>`;
+    grp.appendChild(hdr);
+    byCh[ch].sort((a,b) => b.killedAt - a.killedAt).forEach(d => {
+      const el   = now - d.killedAt;
+      const mins = Math.floor(el / 60000);
+      const secs = Math.floor((el % 60000) / 1000);
+      const cls  = el >= GREEN_MS ? 't-green' : el >= YELLOW_MS ? 't-yellow' : 't-fresh';
+      const col  = el >= GREEN_MS ? '#409040' : el >= YELLOW_MS ? '#907030' : '#604040';
+      const hint = el >= GREEN_MS ? '✓ Można szukać' : el >= YELLOW_MS ? '⚡ Może być' : '✗ Świeżo zbity';
+      const row  = document.createElement('div');
+      row.className = 'dead-row';
+      row.innerHTML = `<div class="dead-dot" style="background:${col}"></div>
+        <div><div class="dead-timer ${cls}">${mins}m ${secs}s temu</div>
+        <div class="dead-hint">${hint}</div></div>`;
+      grp.appendChild(row);
     });
-    ordered.push(nearest);
-    remaining = remaining.filter(p => p !== nearest);
-  }
-
-  // Rysuj trasę
-  routeCtx.beginPath();
-  routeCtx.strokeStyle = 'rgba(60,200,255,0.7)';
-  routeCtx.lineWidth   = 2.5;
-  routeCtx.setLineDash([8,5]);
-  routeCtx.lineCap     = 'round';
-  routeCtx.lineJoin    = 'round';
-  ordered.forEach((p,i) => {
-    if (i===0) routeCtx.moveTo(p.x,p.y);
-    else routeCtx.lineTo(p.x,p.y);
-  });
-  routeCtx.stroke();
-
-  // Numery kroków
-  ordered.forEach((p,i) => {
-    const heat = p.heat;
-    const col  = heat > 0.5 ? '#ff6040' : heat > 0.2 ? '#e0c040' : '#60b0ff';
-    routeCtx.beginPath();
-    routeCtx.arc(p.x,p.y,8,0,Math.PI*2);
-    routeCtx.fillStyle = 'rgba(0,0,0,0.7)';
-    routeCtx.fill();
-    routeCtx.strokeStyle = col;
-    routeCtx.lineWidth = 1.5;
-    routeCtx.setLineDash([]);
-    routeCtx.stroke();
-    routeCtx.fillStyle = col;
-    routeCtx.font = 'bold 8px Cinzel,serif';
-    routeCtx.textAlign = 'center';
-    routeCtx.textBaseline = 'middle';
-    routeCtx.fillText(i+1, p.x, p.y);
-    routeCtx.setLineDash([8,5]);
+    list.appendChild(grp);
   });
 }
 
-function getHeatAt(px,py) {
-  if (!history || !history.length) return 0;
-  const imgW = mapImg.offsetWidth;
-  const imgH = mapImg.offsetHeight;
-  const r    = 0.08; // promień wpływu
-  let sum    = 0;
-  history.forEach(h => {
-    const dx = h.x - px, dy = h.y - py;
-    const d  = Math.sqrt(dx*dx + dy*dy);
-    if (d < r) sum += (1 - d/r);
-  });
-  return Math.min(1, sum / 5);
-}
-
-// Przerysuj trasę przy zmianie rozmiaru
-window.addEventListener('resize', () => { if (routeOn) drawRoute(); });
-mapImg.addEventListener('load', () => { if (routeOn) drawRoute(); });
-
+// Odświeżaj co sekundę
+setInterval(renderDead, 1000);
+renderDead();
 </script>
 </body>
 </html>
