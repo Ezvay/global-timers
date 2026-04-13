@@ -325,7 +325,7 @@
 
 <div class="topbar">
   <div class="topbar-left">
-    <a class="nav-btn" href="/">⬅ Powrót</a>
+    <a class="nav-btn" href="/mapy.html">⬅ Powrót</a>
     <div class="page-title">Dolina</div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
@@ -374,7 +374,7 @@
       <div id="snapList"></div>
     </div>
 
-    <div class="sidebar-section-title">⚔ Metiny <span style="font-size:10px;color:var(--text-dim);letter-spacing:0;font-family:'Crimson Text',serif;font-style:italic;">(40 lvl / 45 lvl)</span></div>
+    <div class="sidebar-section-title">⚔ Metiny <span style="font-size:10px;color:var(--text-dim);font-family:'Crimson Text',serif;">(40 lvl / 45 lvl)</span></div>
     <div id="pingList"><div class="sidebar-empty">Brak aktywnych pingów</div></div>
 
     <div class="sidebar-section-title" style="border-color:rgba(200,60,60,0.3);color:#c07070;">💀 Zbite (respawn 20-30min)</div>
@@ -440,9 +440,9 @@ const heatBtn       = document.getElementById('heatBtn');
 
 /* SLIDERS INIT — po deklaracji elementów DOM */
 (function() {
-  const pingSizeSlider = document.getElementById('pingSize_dolina');
+  const pingSizeSlider = document.getElementById('pingSize');
   const pingSizeVal    = document.getElementById('pingSizeVal');
-  const mapSizeSlider  = document.getElementById('mapSize_dolina');
+  const mapSizeSlider  = document.getElementById('mapSize');
   const mapSizeValEl   = document.getElementById('mapSizeVal');
 
   pingSizeSlider.value = pingSize;
