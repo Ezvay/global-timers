@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapy — Patologiczne Timery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9a84c; --gold-light: #f0d080; --gold-dark: #7a5f1e;
+    --bg: #0a0806; --border: #3a2e1a; --text: #d4c4a0; --text-dim: #7a6a50;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Crimson Text',serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+
+  .bg-layer {
+    position:fixed;inset:0;z-index:0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(139,26,26,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(100,70,10,0.1) 0%, transparent 50%),
+      #0a0806;
+  }
+  .bg-pattern {
+    position:fixed;inset:0;z-index:0;opacity:0.03;
+    background-image:repeating-linear-gradient(45deg,#c9a84c 0,#c9a84c 1px,transparent 0,transparent 50%);
+    background-size:30px 30px;
+  }
+  .particles { position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden; }
+  .particle { position:absolute;border-radius:50%;background:var(--gold);animation:float-up linear infinite;opacity:0; }
+  @keyframes float-up {
+    0%   { opacity:0;transform:translateY(0) scale(1); }
+    10%  { opacity:0.6; }
+    90%  { opacity:0.2; }
+    100% { opacity:0;transform:translateY(-100vh) scale(0.3); }
+  }
+
+  /* TOPBAR */
+  .topbar {
+    position:relative;z-index:10;
+    display:flex;align-items:center;justify-content:space-between;
+    max-width:1200px;margin:0 auto;padding:14px 24px;
+  }
+  .nav-btn {
+    font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--gold-dark);background:rgba(201,168,76,0.06);
+    border:1px solid rgba(201,168,76,0.25);border-radius:2px;
+    padding:7px 14px;cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.2s;
+  }
+  .nav-btn:hover { color:var(--gold);border-color:rgba(201,168,76,0.6);background:rgba(201,168,76,0.12); }
+  .page-title {
+    font-family:'Cinzel',serif;font-size:16px;font-weight:600;
+    color:var(--gold-light);letter-spacing:3px;
+    text-shadow:0 0 20px rgba(201,168,76,0.4);
+  }
+
+  /* CONTENT */
+  .content {
+    position:relative;z-index:1;
+    display:flex;flex-direction:column;align-items:center;
+    padding:20px 20px 60px;width:100%;
+  }
+
+  /* LOGO */
+  .logo-wrap { margin:0 0 12px; }
+  .logo-wrap img {
+    width:380px;max-width:90%;
+    filter:drop-shadow(0 0 30px rgba(201,168,76,0.35));
+    animation:logo-pulse 4s ease-in-out infinite;
+  }
+  @keyframes logo-pulse {
+    0%,100% { filter:drop-shadow(0 0 20px rgba(201,168,76,0.3)); }
+    50%      { filter:drop-shadow(0 0 40px rgba(201,168,76,0.55)); }
+  }
+
+  .subtitle {
+    font-family:'Cinzel',serif;font-size:10px;letter-spacing:4px;
+    color:var(--text-dim);text-transform:uppercase;margin-bottom:32px;
+  }
+
+  .ornament-line { display:flex;align-items:center;gap:12px;justify-content:center;margin:6px 0 20px; }
+  .ornament-diamond { width:8px;height:8px;background:var(--gold-dark);transform:rotate(45deg); }
+
+  /* KARTY MAP */
+  .card-grid {
+    display:flex;flex-wrap:wrap;gap:28px;
+    justify-content:center;max-width:1100px;
+  }
+
+  .map-card {
+    position:relative;width:280px;text-decoration:none;color:inherit;
+    display:block;transition:transform 0.3s;
+  }
+  .map-card:hover { transform:translateY(-4px); }
+
+  .map-card-inner {
+    position:relative;background:linear-gradient(160deg,#1a1408,#0d0a06);
+    border:1px solid rgba(58,46,26,0.7);border-radius:3px;
+    overflow:hidden;transition:border-color 0.3s,box-shadow 0.3s;
+  }
+  .map-card:hover .map-card-inner {
+    border-color:rgba(201,168,76,0.5);
+    box-shadow:0 0 30px rgba(201,168,76,0.12),0 8px 32px rgba(0,0,0,0.6);
+  }
+
+  /* Rogowe ozdoby */
+  .map-card-inner::before,.map-card-inner::after {
+    content:'';position:absolute;width:14px;height:14px;
+    border-color:rgba(201,168,76,0.25);border-style:solid;z-index:2;transition:border-color 0.3s;
+  }
+  .map-card-inner::before { top:7px;left:7px;border-width:1px 0 0 1px; }
+  .map-card-inner::after  { bottom:7px;right:7px;border-width:0 1px 1px 0; }
+  .map-card:hover .map-card-inner::before,
+  .map-card:hover .map-card-inner::after { border-color:rgba(201,168,76,0.6); }
+
+  /* Glow hover */
+  .map-card-glow {
+    position:absolute;inset:0;z-index:0;opacity:0;transition:opacity 0.4s;
+    background:radial-gradient(ellipse at 50% 0%,rgba(201,168,76,0.18),transparent 70%);
+    pointer-events:none;
+  }
+  .map-card:hover .map-card-glow { opacity:1; }
+
+  /* Podgląd mapy */
+  .map-img-wrap {
+    position:relative;height:200px;overflow:hidden;
+    border-bottom:1px solid rgba(58,46,26,0.5);
+  }
+  .map-img-wrap::after {
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(to bottom,transparent 50%,rgba(10,8,6,0.6) 100%);
+  }
+  .map-img-wrap img {
+    width:100%;height:100%;object-fit:cover;object-position:center;
+    transition:transform 0.4s,filter 0.4s;
+    filter:saturate(0.85) brightness(0.9);
+  }
+  .map-card:hover .map-img-wrap img {
+    transform:scale(1.08);
+    filter:saturate(1.05) brightness(0.95);
+  }
+
+  /* Poziom badge */
+  .lvl-badge {
+    position:absolute;top:10px;right:10px;z-index:3;
+    background:rgba(10,8,6,0.85);border:1px solid rgba(201,168,76,0.4);
+    border-radius:2px;padding:3px 8px;
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:var(--gold);
+  }
+
+  /* Body karty */
+  .map-card-body { padding:14px 18px 18px;position:relative;z-index:1; }
+  .map-card-divider {
+    height:1px;background:linear-gradient(to right,transparent,rgba(201,168,76,0.4),transparent);
+    margin-bottom:12px;
+  }
+  .map-card-title {
+    font-family:'Cinzel',serif;font-size:15px;font-weight:600;
+    color:var(--gold-light);letter-spacing:2px;margin-bottom:5px;
+    transition:text-shadow 0.3s;
+  }
+  .map-card:hover .map-card-title {
+    text-shadow:0 0 20px rgba(201,168,76,0.8),0 0 40px rgba(201,168,76,0.3);
+  }
+  .map-card-desc { font-size:12px;color:var(--text-dim);letter-spacing:0.5px;margin-bottom:12px; }
+  .map-card-enter {
+    display:flex;align-items:center;gap:6px;
+    font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--gold-dark);transition:color 0.2s,gap 0.2s;
+  }
+  .map-card:hover .map-card-enter { color:var(--gold);gap:10px; }
+  .enter-arrow { font-size:16px;transition:transform 0.2s; }
+  .map-card:hover .enter-arrow { transform:translateX(4px); }
+</style>
+</head>
+<body>
+<div class="bg-layer"></div>
+<div class="bg-pattern"></div>
+<div class="particles" id="particles"></div>
+
+<div class="topbar">
+  <a class="nav-btn" href="/index.html">← Powrót</a>
+  <span class="page-title">Mapy</span>
+  <div style="width:80px;"></div>
+</div>
+
+<div class="content">
+  <div class="logo-wrap">
+    <img src="/logo_mapy.png" alt="Mapy">
+  </div>
+  <div class="ornament-line">
+    <div class="ornament-diamond"></div>
+    <div class="ornament-diamond" style="opacity:.4;width:5px;height:5px;"></div>
+    <div class="ornament-diamond" style="opacity:.2;width:3px;height:3px;"></div>
+  </div>
+  <div class="subtitle">Wybierz mapę &nbsp;•&nbsp; Pingi metinów &nbsp;•&nbsp; Heatmapa</div>
+
+  <div class="card-grid">
+
+    <!-- PUSTYNIA -->
+    <a class="map-card" href="/pustynia.html">
+      <div class="map-card-inner">
+        <div class="map-card-glow"></div>
+        <div class="map-img-wrap">
+          <img src="/pustynia_mapa.png" alt="Pustynia">
+          <div class="lvl-badge">40 / 45 / 50 lvl</div>
+        </div>
+        <div class="map-card-body">
+          <div class="map-card-divider"></div>
+          <div class="map-card-title">Pustynia</div>
+          <div class="map-card-desc">Metiny 40 / 45 / 50 lvl &nbsp;•&nbsp; 8 kanałów</div>
+          <div class="map-card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
+        </div>
+      </div>
+    </a>
+
+    <!-- ŚWIĄTYNIA HWANG -->
+    <a class="map-card" href="/swiatynia.html">
+      <div class="map-card-inner">
+        <div class="map-card-glow"></div>
+        <div class="map-img-wrap">
+          <img src="/swiatynia_mapa.png" alt="Świątynia Hwang">
+        </div>
+        <div class="map-card-body">
+          <div class="map-card-divider"></div>
+          <div class="map-card-title">Świątynia Hwang</div>
+          <div class="map-card-desc">Mapa &nbsp;•&nbsp; Pingi metinów &nbsp;•&nbsp; 8 kanałów</div>
+          <div class="map-card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
+        </div>
+      </div>
+    </a>
+
+    <!-- DOLINA -->
+    <a class="map-card" href="/dolina.html">
+      <div class="map-card-inner">
+        <div class="map-card-glow"></div>
+        <div class="map-img-wrap">
+          <img src="/dolina_mapa.png" alt="Dolina">
+          <div class="lvl-badge">40 / 45 lvl</div>
+        </div>
+        <div class="map-card-body">
+          <div class="map-card-divider"></div>
+          <div class="map-card-title">Dolina</div>
+          <div class="map-card-desc">Metiny 40 / 45 lvl &nbsp;•&nbsp; 8 kanałów</div>
+          <div class="map-card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
+        </div>
+      </div>
+    </a>
+
+    <!-- LAS -->
+    <a class="map-card" href="/las.html">
+      <div class="map-card-inner">
+        <div class="map-card-glow"></div>
+        <div class="map-img-wrap">
+          <img src="/las_mapa.png" alt="Las">
+        </div>
+        <div class="map-card-body">
+          <div class="map-card-divider"></div>
+          <div class="map-card-title">Las</div>
+          <div class="map-card-desc">Mapa &nbsp;•&nbsp; Pingi metinów &nbsp;•&nbsp; 8 kanałów</div>
+          <div class="map-card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
+        </div>
+      </div>
+    </a>
+
+    <!-- RED LAS -->
+    <a class="map-card" href="/red_las.html">
+      <div class="map-card-inner">
+        <div class="map-card-glow"></div>
+        <div class="map-img-wrap">
+          <img src="/red_las_mapa.png" alt="Red Las">
+        </div>
+        <div class="map-card-body">
+          <div class="map-card-divider"></div>
+          <div class="map-card-title">Red Las</div>
+          <div class="map-card-desc">Mapa &nbsp;•&nbsp; Pingi metinów &nbsp;•&nbsp; 8 kanałów</div>
+          <div class="map-card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
+        </div>
+      </div>
+    </a>
+
+    <!-- SOHAN -->
+    <a class="map-card" href="/sohan.html">
+      <div class="map-card-inner">
+        <div class="map-card-glow"></div>
+        <div class="map-img-wrap">
+          <img src="/sohan_mapa.png" alt="Sohan">
+          <div class="lvl-badge">55 / 65 lvl</div>
+        </div>
+        <div class="map-card-body">
+          <div class="map-card-divider"></div>
+          <div class="map-card-title">Sohan</div>
+          <div class="map-card-desc">Metiny 55 / 65 lvl &nbsp;•&nbsp; 8 kanałów</div>
+          <div class="map-card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
+        </div>
+      </div>
+    </a>
+
+  </div>
+</div>
+
+<script>
+// Cząsteczki — identyczne jak na stronie głównej
+(function() {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 18; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 3 + 1;
+    p.style.cssText = `
+      width:${size}px;height:${size}px;
+      left:${Math.random()*100}%;
+      bottom:${Math.random()*-20}%;
+      animation-duration:${8+Math.random()*14}s;
+      animation-delay:${Math.random()*8}s;
+    `;
+    container.appendChild(p);
+  }
+})();
+</script>
+</body>
+</html>
