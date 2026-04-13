@@ -7,10 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --gold:#c9a84c;--gold-light:#f0d080;--gold-dark:#7a5f1e;
-    --bg:#0a0806;--border:#3a2e1a;--text:#d4c4a0;--text-dim:#7a6a50;
-  }
+  :root{--gold:#c9a84c;--gold-light:#f0d080;--gold-dark:#7a5f1e;--bg:#0a0806;--border:#3a2e1a;--text:#d4c4a0;--text-dim:#7a6a50;}
   *{margin:0;padding:0;box-sizing:border-box;}
   body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
   .bg-layer{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(139,26,26,0.15),transparent 60%),#0a0806;}
@@ -34,15 +31,14 @@
   .ornament-diamond{width:8px;height:8px;background:var(--gold-dark);transform:rotate(45deg);}
   .subtitle{font-family:'Cinzel',serif;font-size:10px;letter-spacing:4px;color:var(--text-dim);text-transform:uppercase;margin-bottom:28px;}
 
-  /* GRID — 3 kolumny, karty identyczne rozmiarem jak mapa na grocie */
-  .card-grid{display:flex;flex-wrap:wrap;gap:24px;justify-content:center;max-width:1380px;}
+  /* GRID kart */
+  .card-grid{display:flex;flex-wrap:wrap;gap:24px;justify-content:center;max-width:1100px;}
 
-  .map-card{position:relative;width:420px;text-decoration:none;color:inherit;display:block;transition:transform 0.3s;}
+  .map-card{position:relative;width:320px;text-decoration:none;color:inherit;display:block;transition:transform 0.3s;}
   .map-card:hover{transform:translateY(-4px);}
 
   .map-card-inner{position:relative;background:linear-gradient(160deg,#1a1408,#0d0a06);border:1px solid rgba(58,46,26,0.7);border-radius:3px;overflow:hidden;transition:border-color 0.3s,box-shadow 0.3s;}
   .map-card:hover .map-card-inner{border-color:rgba(201,168,76,0.5);box-shadow:0 0 30px rgba(201,168,76,0.12),0 8px 32px rgba(0,0,0,0.6);}
-
   .map-card-inner::before,.map-card-inner::after{content:'';position:absolute;width:14px;height:14px;border-color:rgba(201,168,76,0.25);border-style:solid;z-index:2;transition:border-color 0.3s;}
   .map-card-inner::before{top:7px;left:7px;border-width:1px 0 0 1px;}
   .map-card-inner::after{bottom:7px;right:7px;border-width:0 1px 1px 0;}
@@ -51,10 +47,10 @@
   .map-card-glow{position:absolute;inset:0;z-index:0;opacity:0;transition:opacity 0.4s;background:radial-gradient(ellipse at 50% 0%,rgba(201,168,76,0.18),transparent 70%);pointer-events:none;}
   .map-card:hover .map-card-glow{opacity:1;}
 
-  /* Kwadratowy podgląd mapy — proporcje 1:1 jak oryginalne mapki */
+  /* Podgląd — kwadratowy 1:1 */
   .map-img-wrap{position:relative;width:100%;padding-bottom:100%;overflow:hidden;border-bottom:1px solid rgba(58,46,26,0.5);}
-  .map-img-wrap::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent 60%,rgba(10,8,6,0.55) 100%);}
-  .map-img-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;transition:transform 0.4s,filter 0.4s;filter:saturate(0.85) brightness(0.9);}
+  .map-img-wrap::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent 60%,rgba(10,8,6,0.5) 100%);}
+  .map-img-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;transition:transform 0.4s,filter 0.4s;filter:saturate(0.9) brightness(0.88);}
   .map-card:hover .map-img-wrap img{transform:scale(1.06);filter:saturate(1.05) brightness(0.95);}
 
   .lvl-badge{position:absolute;top:10px;right:10px;z-index:3;background:rgba(10,8,6,0.88);border:1px solid rgba(201,168,76,0.45);border-radius:2px;padding:3px 9px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:var(--gold);}
@@ -68,10 +64,6 @@
   .map-card:hover .map-card-enter{color:var(--gold);gap:10px;}
   .enter-arrow{font-size:16px;transition:transform 0.2s;}
   .map-card:hover .enter-arrow{transform:translateX(4px);}
-
-  /* Karta niedostępna (brak mapki) */
-  .map-card.soon .map-img-wrap{background:linear-gradient(135deg,#1a1408,#0d0a06);}
-  .soon-label{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;color:var(--text-dim);text-transform:uppercase;}
 </style>
 </head>
 <body>
@@ -98,13 +90,10 @@
 
   <div class="card-grid">
 
-    <!-- ŚWIĄTYNIA HWANG -->
     <a class="map-card" href="/swiatynia.html">
       <div class="map-card-inner">
         <div class="map-card-glow"></div>
-        <div class="map-img-wrap">
-          <img src="/swiatynia_mapa.png" alt="Świątynia Hwang">
-        </div>
+        <div class="map-img-wrap"><img src="/swiatynia_mapa.png" alt="Świątynia Hwang"></div>
         <div class="map-card-body">
           <div class="map-card-divider"></div>
           <div class="map-card-title">Świątynia Hwang</div>
@@ -114,13 +103,10 @@
       </div>
     </a>
 
-    <!-- LAS -->
     <a class="map-card" href="/las.html">
       <div class="map-card-inner">
         <div class="map-card-glow"></div>
-        <div class="map-img-wrap">
-          <img src="/las_mapa.png" alt="Las">
-        </div>
+        <div class="map-img-wrap"><img src="/las_mapa.png" alt="Las"></div>
         <div class="map-card-body">
           <div class="map-card-divider"></div>
           <div class="map-card-title">Las</div>
@@ -130,12 +116,12 @@
       </div>
     </a>
 
-    <!-- PUSTYNIA — brak mapki, placeholder -->
-    <a class="map-card soon" href="/pustynia.html">
+    <a class="map-card" href="/pustynia.html">
       <div class="map-card-inner">
         <div class="map-card-glow"></div>
         <div class="map-img-wrap">
-          <div class="soon-label">Wkrótce</div>
+          <img src="/pustynia_mapa.png" alt="Pustynia">
+          <div class="lvl-badge">40 / 45 / 50 lvl</div>
         </div>
         <div class="map-card-body">
           <div class="map-card-divider"></div>
@@ -146,12 +132,12 @@
       </div>
     </a>
 
-    <!-- DOLINA — brak mapki, placeholder -->
-    <a class="map-card soon" href="/dolina.html">
+    <a class="map-card" href="/dolina.html">
       <div class="map-card-inner">
         <div class="map-card-glow"></div>
         <div class="map-img-wrap">
-          <div class="soon-label">Wkrótce</div>
+          <img src="/dolina_mapa.png" alt="Dolina">
+          <div class="lvl-badge">40 / 45 lvl</div>
         </div>
         <div class="map-card-body">
           <div class="map-card-divider"></div>
@@ -162,13 +148,10 @@
       </div>
     </a>
 
-    <!-- RED LAS — brak mapki, placeholder -->
-    <a class="map-card soon" href="/redlas.html">
+    <a class="map-card" href="/redlas.html">
       <div class="map-card-inner">
         <div class="map-card-glow"></div>
-        <div class="map-img-wrap">
-          <div class="soon-label">Wkrótce</div>
-        </div>
+        <div class="map-img-wrap"><img src="/redlas_mapa.png" alt="Red Las"></div>
         <div class="map-card-body">
           <div class="map-card-divider"></div>
           <div class="map-card-title">Red Las</div>
@@ -178,12 +161,12 @@
       </div>
     </a>
 
-    <!-- SOHAN — brak mapki, placeholder -->
-    <a class="map-card soon" href="/sohan.html">
+    <a class="map-card" href="/sohan.html">
       <div class="map-card-inner">
         <div class="map-card-glow"></div>
         <div class="map-img-wrap">
-          <div class="soon-label">Wkrótce</div>
+          <img src="/sohan_mapa.png" alt="Sohan">
+          <div class="lvl-badge">55 / 65 lvl</div>
         </div>
         <div class="map-card-body">
           <div class="map-card-divider"></div>
@@ -201,8 +184,7 @@
 (function(){
   const c=document.getElementById('particles');
   for(let i=0;i<18;i++){
-    const p=document.createElement('div');
-    p.className='particle';
+    const p=document.createElement('div');p.className='particle';
     const s=Math.random()*3+1;
     p.style.cssText=`width:${s}px;height:${s}px;left:${Math.random()*100}%;bottom:${Math.random()*-20}%;animation-duration:${8+Math.random()*14}s;animation-delay:${Math.random()*8}s;`;
     c.appendChild(p);
