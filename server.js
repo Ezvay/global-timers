@@ -68,14 +68,12 @@ let grotaHistory  = []
 let grotaGenerals = {}
 let grotaSnapshots= []
 let grotaDeadHistory = []  // historia zbitych metinów z timerami
-
-// Inne mapy
-let swiatyniaPings={};let swiatyniaHistory=[];let swiatyniaGenerals={};let swiatyniaSnapshots=[];let swiatyniaDeadHistory=[]
-let lasPings={};let lasHistory=[];let lasGenerals={};let lasSnapshots=[];let lasDeadHistory=[]
-let pustyniaPings={};let pustyniaHistory=[];let pustyniaGenerals={};let pustyniaSnapshots=[];let pustyniaDeadHistory=[]
-let dolinaPings={};let dolinaHistory=[];let dolinaGenerals={};let dolinaSnapshots=[];let dolinaDeadHistory=[]
-let redlasPings={};let redlasHistory=[];let redlasGenerals={};let redlasSnapshots=[];let redlasDeadHistory=[]
-let sohanPings={};let sohanHistory=[];let sohanGenerals={};let sohanSnapshots=[];let sohanDeadHistory=[]
+let swiatyniaPings={}, swiatyniaHistory=[], swiatyniaGenerals={}, swiatyniaSnapshots=[], swiatyniaDeadHistory=[]
+let lasPings={}, lasHistory=[], lasGenerals={}, lasSnapshots=[], lasDeadHistory=[]
+let pustyniaPings={}, pustyniaHistory=[], pustyniaGenerals={}, pustyniaSnapshots=[], pustyniaDeadHistory=[]
+let dolinaPings={}, dolinaHistory=[], dolinaGenerals={}, dolinaSnapshots=[], dolinaDeadHistory=[]
+let redlasPings={}, redlasHistory=[], redlasGenerals={}, redlasSnapshots=[], redlasDeadHistory=[]
+let sohanPings={}, sohanHistory=[], sohanGenerals={}, sohanSnapshots=[], sohanDeadHistory=[]
 let charOrder     = []
 
 /* ======================
@@ -177,7 +175,12 @@ async function saveNow() {
       { _id: DOC_ID, timers, characters, tasks, resetHour, resetMinute,
         customPlaces, customTimers, grotaPings, grotaHistory,
         grotaGenerals, grotaSnapshots, grotaDeadHistory, charOrder, charsList, skarbiec,
-        swiatyniaPings,swiatyniaHistory,swiatyniaGenerals,swiatyniaSnapshots,swiatyniaDeadHistory, lasPings,lasHistory,lasGenerals,lasSnapshots,lasDeadHistory, pustyniaPings,pustyniaHistory,pustyniaGenerals,pustyniaSnapshots,pustyniaDeadHistory, dolinaPings,dolinaHistory,dolinaGenerals,dolinaSnapshots,dolinaDeadHistory, redlasPings,redlasHistory,redlasGenerals,redlasSnapshots,redlasDeadHistory, sohanPings,sohanHistory,sohanGenerals,sohanSnapshots,sohanDeadHistory,
+        swiatyniaPings,swiatyniaHistory,swiatyniaGenerals,swiatyniaSnapshots,swiatyniaDeadHistory,
+        lasPings,lasHistory,lasGenerals,lasSnapshots,lasDeadHistory,
+        pustyniaPings,pustyniaHistory,pustyniaGenerals,pustyniaSnapshots,pustyniaDeadHistory,
+        dolinaPings,dolinaHistory,dolinaGenerals,dolinaSnapshots,dolinaDeadHistory,
+        redlasPings,redlasHistory,redlasGenerals,redlasSnapshots,redlasDeadHistory,
+        sohanPings,sohanHistory,sohanGenerals,sohanSnapshots,sohanDeadHistory,
         runningTimers: [...runningTimers],
         runningCustomTimers: [...runningCustomTimers] },
       { upsert: true }
@@ -674,12 +677,120 @@ io.on("connection",(socket)=>{
   // Wyślij dead history (odfiltruj wygasłe)
   grotaDeadHistory = grotaDeadHistory.filter(d => Date.now() - d.killedAt < 35*60*1000)
   socket.emit("grotaDeadHistoryUpdate", grotaDeadHistory)
-  swiatyniaDeadHistory=swiatyniaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000);socket.emit("swiatyniaPingsUpdate",swiatyniaPings);socket.emit("swiatyniaHistoryUpdate",swiatyniaHistory);socket.emit("swiatyniaGeneralsUpdate",swiatyniaGenerals);socket.emit("swiatyniaSnapshotsUpdate",swiatyniaSnapshots);socket.emit("swiatyniaDeadHistoryUpdate",swiatyniaDeadHistory)
-  lasDeadHistory=lasDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000);socket.emit("lasPingsUpdate",lasPings);socket.emit("lasHistoryUpdate",lasHistory);socket.emit("lasGeneralsUpdate",lasGenerals);socket.emit("lasSnapshotsUpdate",lasSnapshots);socket.emit("lasDeadHistoryUpdate",lasDeadHistory)
-  pustyniaDeadHistory=pustyniaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000);socket.emit("pustyniaPingsUpdate",pustyniaPings);socket.emit("pustyniaHistoryUpdate",pustyniaHistory);socket.emit("pustyniaGeneralsUpdate",pustyniaGenerals);socket.emit("pustyniaSnapshotsUpdate",pustyniaSnapshots);socket.emit("pustyniaDeadHistoryUpdate",pustyniaDeadHistory)
-  dolinaDeadHistory=dolinaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000);socket.emit("dolinaPingsUpdate",dolinaPings);socket.emit("dolinaHistoryUpdate",dolinaHistory);socket.emit("dolinaGeneralsUpdate",dolinaGenerals);socket.emit("dolinaSnapshotsUpdate",dolinaSnapshots);socket.emit("dolinaDeadHistoryUpdate",dolinaDeadHistory)
-  redlasDeadHistory=redlasDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000);socket.emit("redlasPingsUpdate",redlasPings);socket.emit("redlasHistoryUpdate",redlasHistory);socket.emit("redlasGeneralsUpdate",redlasGenerals);socket.emit("redlasSnapshotsUpdate",redlasSnapshots);socket.emit("redlasDeadHistoryUpdate",redlasDeadHistory)
-  sohanDeadHistory=sohanDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000);socket.emit("sohanPingsUpdate",sohanPings);socket.emit("sohanHistoryUpdate",sohanHistory);socket.emit("sohanGeneralsUpdate",sohanGenerals);socket.emit("sohanSnapshotsUpdate",sohanSnapshots);socket.emit("sohanDeadHistoryUpdate",sohanDeadHistory)
+  // === swiatynia ===
+  socket.on('swiatyniaAddPing',(data)=>{ const id=Date.now()+'-'+Math.random(); swiatyniaPings[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}; swiatyniaHistory.push({x:data.x,y:data.y,ts:Date.now()}); if(swiatyniaHistory.length>2000) swiatyniaHistory=swiatyniaHistory.slice(-2000); io.emit('swiatyniaPingsUpdate',swiatyniaPings); io.emit('swiatyniaHistoryUpdate',swiatyniaHistory); saveData() })
+  socket.on('swiatyniaRemovePing',(id)=>{ delete swiatyniaPings[id]; io.emit('swiatyniaPingsUpdate',swiatyniaPings); saveData() })
+  socket.on('swiatyniaAddGeneral',(data)=>{ const id=Date.now()+'-'+Math.random(); swiatyniaGenerals[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}; io.emit('swiatyniaGeneralsUpdate',swiatyniaGenerals); saveData() })
+  socket.on('swiatyniaRemoveGeneral',(id)=>{ delete swiatyniaGenerals[id]; io.emit('swiatyniaGeneralsUpdate',swiatyniaGenerals); saveData() })
+  socket.on('swiatyniaAddDead',(dead)=>{ if(!dead||!dead.id) return; swiatyniaDeadHistory.push(dead); swiatyniaDeadHistory=swiatyniaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000); io.emit('swiatyniaDeadHistoryUpdate',swiatyniaDeadHistory); saveData() })
+  socket.on('swiatyniaRemoveDead',(id)=>{ swiatyniaDeadHistory=swiatyniaDeadHistory.filter(d=>d.id!==id); io.emit('swiatyniaDeadHistoryUpdate',swiatyniaDeadHistory); saveData() })
+  socket.on('swiatyniaResetHistory',()=>{ swiatyniaHistory=[]; io.emit('swiatyniaHistoryUpdate',swiatyniaHistory); saveData() })
+  socket.on('swiatyniaClearSnapshots',()=>{ swiatyniaSnapshots=[]; io.emit('swiatyniaSnapshotsUpdate',swiatyniaSnapshots); saveData() })
+  socket.on('swiatyniaSaveSnapshot',(data)=>{ const id=Date.now()+'-'+Math.random(); swiatyniaSnapshots.unshift({id,name:data.name,pings:{...swiatyniaPings},ts:Date.now()}); if(swiatyniaSnapshots.length>20) swiatyniaSnapshots=swiatyniaSnapshots.slice(0,20); io.emit('swiatyniaSnapshotsUpdate',swiatyniaSnapshots); saveData() })
+  socket.on('swiatyniaLoadSnapshot',(id)=>{ const s=swiatyniaSnapshots.find(x=>x.id===id); if(!s) return; swiatyniaPings={...s.pings}; io.emit('swiatyniaPingsUpdate',swiatyniaPings) })
+  socket.on('swiatyniaDeleteSnapshot',(id)=>{ swiatyniaSnapshots=swiatyniaSnapshots.filter(x=>x.id!==id); io.emit('swiatyniaSnapshotsUpdate',swiatyniaSnapshots); saveData() })
+  socket.emit('swiatyniaPingsUpdate',swiatyniaPings)
+  socket.emit('swiatyniaHistoryUpdate',swiatyniaHistory)
+  socket.emit('swiatyniaGeneralsUpdate',swiatyniaGenerals)
+  socket.emit('swiatyniaSnapshotsUpdate',swiatyniaSnapshots)
+  swiatyniaDeadHistory=swiatyniaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
+  socket.emit('swiatyniaDeadHistoryUpdate',swiatyniaDeadHistory)
+
+  // === las ===
+  socket.on('lasAddPing',(data)=>{ const id=Date.now()+'-'+Math.random(); lasPings[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}; lasHistory.push({x:data.x,y:data.y,ts:Date.now()}); if(lasHistory.length>2000) lasHistory=lasHistory.slice(-2000); io.emit('lasPingsUpdate',lasPings); io.emit('lasHistoryUpdate',lasHistory); saveData() })
+  socket.on('lasRemovePing',(id)=>{ delete lasPings[id]; io.emit('lasPingsUpdate',lasPings); saveData() })
+  socket.on('lasAddGeneral',(data)=>{ const id=Date.now()+'-'+Math.random(); lasGenerals[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}; io.emit('lasGeneralsUpdate',lasGenerals); saveData() })
+  socket.on('lasRemoveGeneral',(id)=>{ delete lasGenerals[id]; io.emit('lasGeneralsUpdate',lasGenerals); saveData() })
+  socket.on('lasAddDead',(dead)=>{ if(!dead||!dead.id) return; lasDeadHistory.push(dead); lasDeadHistory=lasDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000); io.emit('lasDeadHistoryUpdate',lasDeadHistory); saveData() })
+  socket.on('lasRemoveDead',(id)=>{ lasDeadHistory=lasDeadHistory.filter(d=>d.id!==id); io.emit('lasDeadHistoryUpdate',lasDeadHistory); saveData() })
+  socket.on('lasResetHistory',()=>{ lasHistory=[]; io.emit('lasHistoryUpdate',lasHistory); saveData() })
+  socket.on('lasClearSnapshots',()=>{ lasSnapshots=[]; io.emit('lasSnapshotsUpdate',lasSnapshots); saveData() })
+  socket.on('lasSaveSnapshot',(data)=>{ const id=Date.now()+'-'+Math.random(); lasSnapshots.unshift({id,name:data.name,pings:{...lasPings},ts:Date.now()}); if(lasSnapshots.length>20) lasSnapshots=lasSnapshots.slice(0,20); io.emit('lasSnapshotsUpdate',lasSnapshots); saveData() })
+  socket.on('lasLoadSnapshot',(id)=>{ const s=lasSnapshots.find(x=>x.id===id); if(!s) return; lasPings={...s.pings}; io.emit('lasPingsUpdate',lasPings) })
+  socket.on('lasDeleteSnapshot',(id)=>{ lasSnapshots=lasSnapshots.filter(x=>x.id!==id); io.emit('lasSnapshotsUpdate',lasSnapshots); saveData() })
+  socket.emit('lasPingsUpdate',lasPings)
+  socket.emit('lasHistoryUpdate',lasHistory)
+  socket.emit('lasGeneralsUpdate',lasGenerals)
+  socket.emit('lasSnapshotsUpdate',lasSnapshots)
+  lasDeadHistory=lasDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
+  socket.emit('lasDeadHistoryUpdate',lasDeadHistory)
+
+  // === pustynia ===
+  socket.on('pustyniaAddPing',(data)=>{ const id=Date.now()+'-'+Math.random(); pustyniaPings[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}; pustyniaHistory.push({x:data.x,y:data.y,ts:Date.now()}); if(pustyniaHistory.length>2000) pustyniaHistory=pustyniaHistory.slice(-2000); io.emit('pustyniaPingsUpdate',pustyniaPings); io.emit('pustyniaHistoryUpdate',pustyniaHistory); saveData() })
+  socket.on('pustyniaRemovePing',(id)=>{ delete pustyniaPings[id]; io.emit('pustyniaPingsUpdate',pustyniaPings); saveData() })
+  socket.on('pustyniaAddGeneral',(data)=>{ const id=Date.now()+'-'+Math.random(); pustyniaGenerals[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}; io.emit('pustyniaGeneralsUpdate',pustyniaGenerals); saveData() })
+  socket.on('pustyniaRemoveGeneral',(id)=>{ delete pustyniaGenerals[id]; io.emit('pustyniaGeneralsUpdate',pustyniaGenerals); saveData() })
+  socket.on('pustyniaAddDead',(dead)=>{ if(!dead||!dead.id) return; pustyniaDeadHistory.push(dead); pustyniaDeadHistory=pustyniaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000); io.emit('pustyniaDeadHistoryUpdate',pustyniaDeadHistory); saveData() })
+  socket.on('pustyniaRemoveDead',(id)=>{ pustyniaDeadHistory=pustyniaDeadHistory.filter(d=>d.id!==id); io.emit('pustyniaDeadHistoryUpdate',pustyniaDeadHistory); saveData() })
+  socket.on('pustyniaResetHistory',()=>{ pustyniaHistory=[]; io.emit('pustyniaHistoryUpdate',pustyniaHistory); saveData() })
+  socket.on('pustyniaClearSnapshots',()=>{ pustyniaSnapshots=[]; io.emit('pustyniaSnapshotsUpdate',pustyniaSnapshots); saveData() })
+  socket.on('pustyniaSaveSnapshot',(data)=>{ const id=Date.now()+'-'+Math.random(); pustyniaSnapshots.unshift({id,name:data.name,pings:{...pustyniaPings},ts:Date.now()}); if(pustyniaSnapshots.length>20) pustyniaSnapshots=pustyniaSnapshots.slice(0,20); io.emit('pustyniaSnapshotsUpdate',pustyniaSnapshots); saveData() })
+  socket.on('pustyniaLoadSnapshot',(id)=>{ const s=pustyniaSnapshots.find(x=>x.id===id); if(!s) return; pustyniaPings={...s.pings}; io.emit('pustyniaPingsUpdate',pustyniaPings) })
+  socket.on('pustyniaDeleteSnapshot',(id)=>{ pustyniaSnapshots=pustyniaSnapshots.filter(x=>x.id!==id); io.emit('pustyniaSnapshotsUpdate',pustyniaSnapshots); saveData() })
+  socket.emit('pustyniaPingsUpdate',pustyniaPings)
+  socket.emit('pustyniaHistoryUpdate',pustyniaHistory)
+  socket.emit('pustyniaGeneralsUpdate',pustyniaGenerals)
+  socket.emit('pustyniaSnapshotsUpdate',pustyniaSnapshots)
+  pustyniaDeadHistory=pustyniaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
+  socket.emit('pustyniaDeadHistoryUpdate',pustyniaDeadHistory)
+
+  // === dolina ===
+  socket.on('dolinaAddPing',(data)=>{ const id=Date.now()+'-'+Math.random(); dolinaPings[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}; dolinaHistory.push({x:data.x,y:data.y,ts:Date.now()}); if(dolinaHistory.length>2000) dolinaHistory=dolinaHistory.slice(-2000); io.emit('dolinaPingsUpdate',dolinaPings); io.emit('dolinaHistoryUpdate',dolinaHistory); saveData() })
+  socket.on('dolinaRemovePing',(id)=>{ delete dolinaPings[id]; io.emit('dolinaPingsUpdate',dolinaPings); saveData() })
+  socket.on('dolinaAddGeneral',(data)=>{ const id=Date.now()+'-'+Math.random(); dolinaGenerals[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}; io.emit('dolinaGeneralsUpdate',dolinaGenerals); saveData() })
+  socket.on('dolinaRemoveGeneral',(id)=>{ delete dolinaGenerals[id]; io.emit('dolinaGeneralsUpdate',dolinaGenerals); saveData() })
+  socket.on('dolinaAddDead',(dead)=>{ if(!dead||!dead.id) return; dolinaDeadHistory.push(dead); dolinaDeadHistory=dolinaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000); io.emit('dolinaDeadHistoryUpdate',dolinaDeadHistory); saveData() })
+  socket.on('dolinaRemoveDead',(id)=>{ dolinaDeadHistory=dolinaDeadHistory.filter(d=>d.id!==id); io.emit('dolinaDeadHistoryUpdate',dolinaDeadHistory); saveData() })
+  socket.on('dolinaResetHistory',()=>{ dolinaHistory=[]; io.emit('dolinaHistoryUpdate',dolinaHistory); saveData() })
+  socket.on('dolinaClearSnapshots',()=>{ dolinaSnapshots=[]; io.emit('dolinaSnapshotsUpdate',dolinaSnapshots); saveData() })
+  socket.on('dolinaSaveSnapshot',(data)=>{ const id=Date.now()+'-'+Math.random(); dolinaSnapshots.unshift({id,name:data.name,pings:{...dolinaPings},ts:Date.now()}); if(dolinaSnapshots.length>20) dolinaSnapshots=dolinaSnapshots.slice(0,20); io.emit('dolinaSnapshotsUpdate',dolinaSnapshots); saveData() })
+  socket.on('dolinaLoadSnapshot',(id)=>{ const s=dolinaSnapshots.find(x=>x.id===id); if(!s) return; dolinaPings={...s.pings}; io.emit('dolinaPingsUpdate',dolinaPings) })
+  socket.on('dolinaDeleteSnapshot',(id)=>{ dolinaSnapshots=dolinaSnapshots.filter(x=>x.id!==id); io.emit('dolinaSnapshotsUpdate',dolinaSnapshots); saveData() })
+  socket.emit('dolinaPingsUpdate',dolinaPings)
+  socket.emit('dolinaHistoryUpdate',dolinaHistory)
+  socket.emit('dolinaGeneralsUpdate',dolinaGenerals)
+  socket.emit('dolinaSnapshotsUpdate',dolinaSnapshots)
+  dolinaDeadHistory=dolinaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
+  socket.emit('dolinaDeadHistoryUpdate',dolinaDeadHistory)
+
+  // === redlas ===
+  socket.on('redlasAddPing',(data)=>{ const id=Date.now()+'-'+Math.random(); redlasPings[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}; redlasHistory.push({x:data.x,y:data.y,ts:Date.now()}); if(redlasHistory.length>2000) redlasHistory=redlasHistory.slice(-2000); io.emit('redlasPingsUpdate',redlasPings); io.emit('redlasHistoryUpdate',redlasHistory); saveData() })
+  socket.on('redlasRemovePing',(id)=>{ delete redlasPings[id]; io.emit('redlasPingsUpdate',redlasPings); saveData() })
+  socket.on('redlasAddGeneral',(data)=>{ const id=Date.now()+'-'+Math.random(); redlasGenerals[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}; io.emit('redlasGeneralsUpdate',redlasGenerals); saveData() })
+  socket.on('redlasRemoveGeneral',(id)=>{ delete redlasGenerals[id]; io.emit('redlasGeneralsUpdate',redlasGenerals); saveData() })
+  socket.on('redlasAddDead',(dead)=>{ if(!dead||!dead.id) return; redlasDeadHistory.push(dead); redlasDeadHistory=redlasDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000); io.emit('redlasDeadHistoryUpdate',redlasDeadHistory); saveData() })
+  socket.on('redlasRemoveDead',(id)=>{ redlasDeadHistory=redlasDeadHistory.filter(d=>d.id!==id); io.emit('redlasDeadHistoryUpdate',redlasDeadHistory); saveData() })
+  socket.on('redlasResetHistory',()=>{ redlasHistory=[]; io.emit('redlasHistoryUpdate',redlasHistory); saveData() })
+  socket.on('redlasClearSnapshots',()=>{ redlasSnapshots=[]; io.emit('redlasSnapshotsUpdate',redlasSnapshots); saveData() })
+  socket.on('redlasSaveSnapshot',(data)=>{ const id=Date.now()+'-'+Math.random(); redlasSnapshots.unshift({id,name:data.name,pings:{...redlasPings},ts:Date.now()}); if(redlasSnapshots.length>20) redlasSnapshots=redlasSnapshots.slice(0,20); io.emit('redlasSnapshotsUpdate',redlasSnapshots); saveData() })
+  socket.on('redlasLoadSnapshot',(id)=>{ const s=redlasSnapshots.find(x=>x.id===id); if(!s) return; redlasPings={...s.pings}; io.emit('redlasPingsUpdate',redlasPings) })
+  socket.on('redlasDeleteSnapshot',(id)=>{ redlasSnapshots=redlasSnapshots.filter(x=>x.id!==id); io.emit('redlasSnapshotsUpdate',redlasSnapshots); saveData() })
+  socket.emit('redlasPingsUpdate',redlasPings)
+  socket.emit('redlasHistoryUpdate',redlasHistory)
+  socket.emit('redlasGeneralsUpdate',redlasGenerals)
+  socket.emit('redlasSnapshotsUpdate',redlasSnapshots)
+  redlasDeadHistory=redlasDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
+  socket.emit('redlasDeadHistoryUpdate',redlasDeadHistory)
+
+  // === sohan ===
+  socket.on('sohanAddPing',(data)=>{ const id=Date.now()+'-'+Math.random(); sohanPings[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}; sohanHistory.push({x:data.x,y:data.y,ts:Date.now()}); if(sohanHistory.length>2000) sohanHistory=sohanHistory.slice(-2000); io.emit('sohanPingsUpdate',sohanPings); io.emit('sohanHistoryUpdate',sohanHistory); saveData() })
+  socket.on('sohanRemovePing',(id)=>{ delete sohanPings[id]; io.emit('sohanPingsUpdate',sohanPings); saveData() })
+  socket.on('sohanAddGeneral',(data)=>{ const id=Date.now()+'-'+Math.random(); sohanGenerals[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}; io.emit('sohanGeneralsUpdate',sohanGenerals); saveData() })
+  socket.on('sohanRemoveGeneral',(id)=>{ delete sohanGenerals[id]; io.emit('sohanGeneralsUpdate',sohanGenerals); saveData() })
+  socket.on('sohanAddDead',(dead)=>{ if(!dead||!dead.id) return; sohanDeadHistory.push(dead); sohanDeadHistory=sohanDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000); io.emit('sohanDeadHistoryUpdate',sohanDeadHistory); saveData() })
+  socket.on('sohanRemoveDead',(id)=>{ sohanDeadHistory=sohanDeadHistory.filter(d=>d.id!==id); io.emit('sohanDeadHistoryUpdate',sohanDeadHistory); saveData() })
+  socket.on('sohanResetHistory',()=>{ sohanHistory=[]; io.emit('sohanHistoryUpdate',sohanHistory); saveData() })
+  socket.on('sohanClearSnapshots',()=>{ sohanSnapshots=[]; io.emit('sohanSnapshotsUpdate',sohanSnapshots); saveData() })
+  socket.on('sohanSaveSnapshot',(data)=>{ const id=Date.now()+'-'+Math.random(); sohanSnapshots.unshift({id,name:data.name,pings:{...sohanPings},ts:Date.now()}); if(sohanSnapshots.length>20) sohanSnapshots=sohanSnapshots.slice(0,20); io.emit('sohanSnapshotsUpdate',sohanSnapshots); saveData() })
+  socket.on('sohanLoadSnapshot',(id)=>{ const s=sohanSnapshots.find(x=>x.id===id); if(!s) return; sohanPings={...s.pings}; io.emit('sohanPingsUpdate',sohanPings) })
+  socket.on('sohanDeleteSnapshot',(id)=>{ sohanSnapshots=sohanSnapshots.filter(x=>x.id!==id); io.emit('sohanSnapshotsUpdate',sohanSnapshots); saveData() })
+  socket.emit('sohanPingsUpdate',sohanPings)
+  socket.emit('sohanHistoryUpdate',sohanHistory)
+  socket.emit('sohanGeneralsUpdate',sohanGenerals)
+  socket.emit('sohanSnapshotsUpdate',sohanSnapshots)
+  sohanDeadHistory=sohanDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
+  socket.emit('sohanDeadHistoryUpdate',sohanDeadHistory)
+
 })
 
 /* ======================
@@ -723,476 +834,7 @@ connectDB().then(()=>{
     }
   }
 
-
-  // ── MAP: swiatynia ──
-  let swiatyniaPings = {}
-  let swiatyniaHistory = []
-  let swiatyniaGenerals = {}
-  let swiatyniaSnapshots = []
-  let swiatyniaDeadHistory = []
-  socket.on('swiatyniaAddPing',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    swiatyniaPings[id] = {id, x:data.x, y:data.y, ch:data.ch, startedAt:Date.now()}
-    swiatyniaHistory.push({x:data.x, y:data.y, ts:Date.now()})
-    if(swiatyniaHistory.length>2000) swiatyniaHistory = swiatyniaHistory.slice(-2000)
-    io.emit('swiatyniaPingsUpdate', swiatyniaPings)
-    io.emit('swiatyniaHistoryUpdate', swiatyniaHistory)
-    saveData()
-  })
-  socket.on('swiatyniaRemovePing',(id)=>{
-    delete swiatyniaPings[id]
-    io.emit('swiatyniaPingsUpdate', swiatyniaPings)
-    saveData()
-  })
-  socket.on('swiatyniaAddGeneral',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    swiatyniaGenerals[id] = {id, x:data.x, y:data.y, ch:data.ch, startedAt:Date.now()}
-    io.emit('swiatyniaGeneralsUpdate', swiatyniaGenerals)
-    saveData()
-  })
-  socket.on('swiatyniaRemoveGeneral',(id)=>{
-    delete swiatyniaGenerals[id]
-    io.emit('swiatyniaGeneralsUpdate', swiatyniaGenerals)
-    saveData()
-  })
-  socket.on('swiatyniaAddDead',(dead)=>{
-    if(!dead||!dead.id) return
-    swiatyniaDeadHistory.push(dead)
-    swiatyniaDeadHistory = swiatyniaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
-    io.emit('swiatyniaDeadHistoryUpdate', swiatyniaDeadHistory)
-    saveData()
-  })
-  socket.on('swiatyniaRemoveDead',(id)=>{
-    swiatyniaDeadHistory = swiatyniaDeadHistory.filter(d=>d.id!==id)
-    io.emit('swiatyniaDeadHistoryUpdate', swiatyniaDeadHistory)
-    saveData()
-  })
-  socket.on('swiatyniaResetHistory',()=>{
-    swiatyniaHistory = []
-    io.emit('swiatyniaHistoryUpdate', swiatyniaHistory)
-    saveData()
-  })
-  socket.on('swiatyniaClearSnapshots',()=>{
-    swiatyniaSnapshots = []
-    io.emit('swiatyniaSnapshotsUpdate', swiatyniaSnapshots)
-    saveData()
-  })
-  socket.on('swiatyniaSaveSnapshot',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    swiatyniaSnapshots.unshift({id, name:data.name, pings:{...swiatyniaPings}, ts:Date.now()})
-    if(swiatyniaSnapshots.length>20) swiatyniaSnapshots = swiatyniaSnapshots.slice(0,20)
-    io.emit('swiatyniaSnapshotsUpdate', swiatyniaSnapshots)
-    saveData()
-  })
-  socket.on('swiatyniaLoadSnapshot',(id)=>{
-    const s = swiatyniaSnapshots.find(x=>x.id===id)
-    if(!s) return
-    swiatyniaPings = {...s.pings}
-    io.emit('swiatyniaPingsUpdate', swiatyniaPings)
-  })
-  socket.on('swiatyniaDeleteSnapshot',(id)=>{
-    swiatyniaSnapshots = swiatyniaSnapshots.filter(x=>x.id!==id)
-    io.emit('swiatyniaSnapshotsUpdate', swiatyniaSnapshots)
-    saveData()
-  })
-  socket.emit('swiatyniaPingsUpdate', swiatyniaPings)
-  socket.emit('swiatyniaHistoryUpdate', swiatyniaHistory)
-  socket.emit('swiatyniaGeneralsUpdate', swiatyniaGenerals)
-  socket.emit('swiatyniaSnapshotsUpdate', swiatyniaSnapshots)
-  swiatyniaDeadHistory = swiatyniaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
-  socket.emit('swiatyniaDeadHistoryUpdate', swiatyniaDeadHistory)
-
-  // ── MAP: las ──
-  let lasPings = {}
-  let lasHistory = []
-  let lasGenerals = {}
-  let lasSnapshots = []
-  let lasDeadHistory = []
-  socket.on('lasAddPing',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    lasPings[id] = {id, x:data.x, y:data.y, ch:data.ch, startedAt:Date.now()}
-    lasHistory.push({x:data.x, y:data.y, ts:Date.now()})
-    if(lasHistory.length>2000) lasHistory = lasHistory.slice(-2000)
-    io.emit('lasPingsUpdate', lasPings)
-    io.emit('lasHistoryUpdate', lasHistory)
-    saveData()
-  })
-  socket.on('lasRemovePing',(id)=>{
-    delete lasPings[id]
-    io.emit('lasPingsUpdate', lasPings)
-    saveData()
-  })
-  socket.on('lasAddGeneral',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    lasGenerals[id] = {id, x:data.x, y:data.y, ch:data.ch, startedAt:Date.now()}
-    io.emit('lasGeneralsUpdate', lasGenerals)
-    saveData()
-  })
-  socket.on('lasRemoveGeneral',(id)=>{
-    delete lasGenerals[id]
-    io.emit('lasGeneralsUpdate', lasGenerals)
-    saveData()
-  })
-  socket.on('lasAddDead',(dead)=>{
-    if(!dead||!dead.id) return
-    lasDeadHistory.push(dead)
-    lasDeadHistory = lasDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
-    io.emit('lasDeadHistoryUpdate', lasDeadHistory)
-    saveData()
-  })
-  socket.on('lasRemoveDead',(id)=>{
-    lasDeadHistory = lasDeadHistory.filter(d=>d.id!==id)
-    io.emit('lasDeadHistoryUpdate', lasDeadHistory)
-    saveData()
-  })
-  socket.on('lasResetHistory',()=>{
-    lasHistory = []
-    io.emit('lasHistoryUpdate', lasHistory)
-    saveData()
-  })
-  socket.on('lasClearSnapshots',()=>{
-    lasSnapshots = []
-    io.emit('lasSnapshotsUpdate', lasSnapshots)
-    saveData()
-  })
-  socket.on('lasSaveSnapshot',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    lasSnapshots.unshift({id, name:data.name, pings:{...lasPings}, ts:Date.now()})
-    if(lasSnapshots.length>20) lasSnapshots = lasSnapshots.slice(0,20)
-    io.emit('lasSnapshotsUpdate', lasSnapshots)
-    saveData()
-  })
-  socket.on('lasLoadSnapshot',(id)=>{
-    const s = lasSnapshots.find(x=>x.id===id)
-    if(!s) return
-    lasPings = {...s.pings}
-    io.emit('lasPingsUpdate', lasPings)
-  })
-  socket.on('lasDeleteSnapshot',(id)=>{
-    lasSnapshots = lasSnapshots.filter(x=>x.id!==id)
-    io.emit('lasSnapshotsUpdate', lasSnapshots)
-    saveData()
-  })
-  socket.emit('lasPingsUpdate', lasPings)
-  socket.emit('lasHistoryUpdate', lasHistory)
-  socket.emit('lasGeneralsUpdate', lasGenerals)
-  socket.emit('lasSnapshotsUpdate', lasSnapshots)
-  lasDeadHistory = lasDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
-  socket.emit('lasDeadHistoryUpdate', lasDeadHistory)
-
-  // ── MAP: pustynia ──
-  let pustyniaPings = {}
-  let pustyniaHistory = []
-  let pustyniaGenerals = {}
-  let pustyniaSnapshots = []
-  let pustyniaDeadHistory = []
-  socket.on('pustyniaAddPing',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    pustyniaPings[id] = {id, x:data.x, y:data.y, ch:data.ch, startedAt:Date.now()}
-    pustyniaHistory.push({x:data.x, y:data.y, ts:Date.now()})
-    if(pustyniaHistory.length>2000) pustyniaHistory = pustyniaHistory.slice(-2000)
-    io.emit('pustyniaPingsUpdate', pustyniaPings)
-    io.emit('pustyniaHistoryUpdate', pustyniaHistory)
-    saveData()
-  })
-  socket.on('pustyniaRemovePing',(id)=>{
-    delete pustyniaPings[id]
-    io.emit('pustyniaPingsUpdate', pustyniaPings)
-    saveData()
-  })
-  socket.on('pustyniaAddGeneral',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    pustyniaGenerals[id] = {id, x:data.x, y:data.y, ch:data.ch, startedAt:Date.now()}
-    io.emit('pustyniaGeneralsUpdate', pustyniaGenerals)
-    saveData()
-  })
-  socket.on('pustyniaRemoveGeneral',(id)=>{
-    delete pustyniaGenerals[id]
-    io.emit('pustyniaGeneralsUpdate', pustyniaGenerals)
-    saveData()
-  })
-  socket.on('pustyniaAddDead',(dead)=>{
-    if(!dead||!dead.id) return
-    pustyniaDeadHistory.push(dead)
-    pustyniaDeadHistory = pustyniaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
-    io.emit('pustyniaDeadHistoryUpdate', pustyniaDeadHistory)
-    saveData()
-  })
-  socket.on('pustyniaRemoveDead',(id)=>{
-    pustyniaDeadHistory = pustyniaDeadHistory.filter(d=>d.id!==id)
-    io.emit('pustyniaDeadHistoryUpdate', pustyniaDeadHistory)
-    saveData()
-  })
-  socket.on('pustyniaResetHistory',()=>{
-    pustyniaHistory = []
-    io.emit('pustyniaHistoryUpdate', pustyniaHistory)
-    saveData()
-  })
-  socket.on('pustyniaClearSnapshots',()=>{
-    pustyniaSnapshots = []
-    io.emit('pustyniaSnapshotsUpdate', pustyniaSnapshots)
-    saveData()
-  })
-  socket.on('pustyniaSaveSnapshot',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    pustyniaSnapshots.unshift({id, name:data.name, pings:{...pustyniaPings}, ts:Date.now()})
-    if(pustyniaSnapshots.length>20) pustyniaSnapshots = pustyniaSnapshots.slice(0,20)
-    io.emit('pustyniaSnapshotsUpdate', pustyniaSnapshots)
-    saveData()
-  })
-  socket.on('pustyniaLoadSnapshot',(id)=>{
-    const s = pustyniaSnapshots.find(x=>x.id===id)
-    if(!s) return
-    pustyniaPings = {...s.pings}
-    io.emit('pustyniaPingsUpdate', pustyniaPings)
-  })
-  socket.on('pustyniaDeleteSnapshot',(id)=>{
-    pustyniaSnapshots = pustyniaSnapshots.filter(x=>x.id!==id)
-    io.emit('pustyniaSnapshotsUpdate', pustyniaSnapshots)
-    saveData()
-  })
-  socket.emit('pustyniaPingsUpdate', pustyniaPings)
-  socket.emit('pustyniaHistoryUpdate', pustyniaHistory)
-  socket.emit('pustyniaGeneralsUpdate', pustyniaGenerals)
-  socket.emit('pustyniaSnapshotsUpdate', pustyniaSnapshots)
-  pustyniaDeadHistory = pustyniaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
-  socket.emit('pustyniaDeadHistoryUpdate', pustyniaDeadHistory)
-
-  // ── MAP: dolina ──
-  let dolinaPings = {}
-  let dolinaHistory = []
-  let dolinaGenerals = {}
-  let dolinaSnapshots = []
-  let dolinaDeadHistory = []
-  socket.on('dolinaAddPing',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    dolinaPings[id] = {id, x:data.x, y:data.y, ch:data.ch, startedAt:Date.now()}
-    dolinaHistory.push({x:data.x, y:data.y, ts:Date.now()})
-    if(dolinaHistory.length>2000) dolinaHistory = dolinaHistory.slice(-2000)
-    io.emit('dolinaPingsUpdate', dolinaPings)
-    io.emit('dolinaHistoryUpdate', dolinaHistory)
-    saveData()
-  })
-  socket.on('dolinaRemovePing',(id)=>{
-    delete dolinaPings[id]
-    io.emit('dolinaPingsUpdate', dolinaPings)
-    saveData()
-  })
-  socket.on('dolinaAddGeneral',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    dolinaGenerals[id] = {id, x:data.x, y:data.y, ch:data.ch, startedAt:Date.now()}
-    io.emit('dolinaGeneralsUpdate', dolinaGenerals)
-    saveData()
-  })
-  socket.on('dolinaRemoveGeneral',(id)=>{
-    delete dolinaGenerals[id]
-    io.emit('dolinaGeneralsUpdate', dolinaGenerals)
-    saveData()
-  })
-  socket.on('dolinaAddDead',(dead)=>{
-    if(!dead||!dead.id) return
-    dolinaDeadHistory.push(dead)
-    dolinaDeadHistory = dolinaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
-    io.emit('dolinaDeadHistoryUpdate', dolinaDeadHistory)
-    saveData()
-  })
-  socket.on('dolinaRemoveDead',(id)=>{
-    dolinaDeadHistory = dolinaDeadHistory.filter(d=>d.id!==id)
-    io.emit('dolinaDeadHistoryUpdate', dolinaDeadHistory)
-    saveData()
-  })
-  socket.on('dolinaResetHistory',()=>{
-    dolinaHistory = []
-    io.emit('dolinaHistoryUpdate', dolinaHistory)
-    saveData()
-  })
-  socket.on('dolinaClearSnapshots',()=>{
-    dolinaSnapshots = []
-    io.emit('dolinaSnapshotsUpdate', dolinaSnapshots)
-    saveData()
-  })
-  socket.on('dolinaSaveSnapshot',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    dolinaSnapshots.unshift({id, name:data.name, pings:{...dolinaPings}, ts:Date.now()})
-    if(dolinaSnapshots.length>20) dolinaSnapshots = dolinaSnapshots.slice(0,20)
-    io.emit('dolinaSnapshotsUpdate', dolinaSnapshots)
-    saveData()
-  })
-  socket.on('dolinaLoadSnapshot',(id)=>{
-    const s = dolinaSnapshots.find(x=>x.id===id)
-    if(!s) return
-    dolinaPings = {...s.pings}
-    io.emit('dolinaPingsUpdate', dolinaPings)
-  })
-  socket.on('dolinaDeleteSnapshot',(id)=>{
-    dolinaSnapshots = dolinaSnapshots.filter(x=>x.id!==id)
-    io.emit('dolinaSnapshotsUpdate', dolinaSnapshots)
-    saveData()
-  })
-  socket.emit('dolinaPingsUpdate', dolinaPings)
-  socket.emit('dolinaHistoryUpdate', dolinaHistory)
-  socket.emit('dolinaGeneralsUpdate', dolinaGenerals)
-  socket.emit('dolinaSnapshotsUpdate', dolinaSnapshots)
-  dolinaDeadHistory = dolinaDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
-  socket.emit('dolinaDeadHistoryUpdate', dolinaDeadHistory)
-
-  // ── MAP: redlas ──
-  let redlasPings = {}
-  let redlasHistory = []
-  let redlasGenerals = {}
-  let redlasSnapshots = []
-  let redlasDeadHistory = []
-  socket.on('redlasAddPing',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    redlasPings[id] = {id, x:data.x, y:data.y, ch:data.ch, startedAt:Date.now()}
-    redlasHistory.push({x:data.x, y:data.y, ts:Date.now()})
-    if(redlasHistory.length>2000) redlasHistory = redlasHistory.slice(-2000)
-    io.emit('redlasPingsUpdate', redlasPings)
-    io.emit('redlasHistoryUpdate', redlasHistory)
-    saveData()
-  })
-  socket.on('redlasRemovePing',(id)=>{
-    delete redlasPings[id]
-    io.emit('redlasPingsUpdate', redlasPings)
-    saveData()
-  })
-  socket.on('redlasAddGeneral',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    redlasGenerals[id] = {id, x:data.x, y:data.y, ch:data.ch, startedAt:Date.now()}
-    io.emit('redlasGeneralsUpdate', redlasGenerals)
-    saveData()
-  })
-  socket.on('redlasRemoveGeneral',(id)=>{
-    delete redlasGenerals[id]
-    io.emit('redlasGeneralsUpdate', redlasGenerals)
-    saveData()
-  })
-  socket.on('redlasAddDead',(dead)=>{
-    if(!dead||!dead.id) return
-    redlasDeadHistory.push(dead)
-    redlasDeadHistory = redlasDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
-    io.emit('redlasDeadHistoryUpdate', redlasDeadHistory)
-    saveData()
-  })
-  socket.on('redlasRemoveDead',(id)=>{
-    redlasDeadHistory = redlasDeadHistory.filter(d=>d.id!==id)
-    io.emit('redlasDeadHistoryUpdate', redlasDeadHistory)
-    saveData()
-  })
-  socket.on('redlasResetHistory',()=>{
-    redlasHistory = []
-    io.emit('redlasHistoryUpdate', redlasHistory)
-    saveData()
-  })
-  socket.on('redlasClearSnapshots',()=>{
-    redlasSnapshots = []
-    io.emit('redlasSnapshotsUpdate', redlasSnapshots)
-    saveData()
-  })
-  socket.on('redlasSaveSnapshot',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    redlasSnapshots.unshift({id, name:data.name, pings:{...redlasPings}, ts:Date.now()})
-    if(redlasSnapshots.length>20) redlasSnapshots = redlasSnapshots.slice(0,20)
-    io.emit('redlasSnapshotsUpdate', redlasSnapshots)
-    saveData()
-  })
-  socket.on('redlasLoadSnapshot',(id)=>{
-    const s = redlasSnapshots.find(x=>x.id===id)
-    if(!s) return
-    redlasPings = {...s.pings}
-    io.emit('redlasPingsUpdate', redlasPings)
-  })
-  socket.on('redlasDeleteSnapshot',(id)=>{
-    redlasSnapshots = redlasSnapshots.filter(x=>x.id!==id)
-    io.emit('redlasSnapshotsUpdate', redlasSnapshots)
-    saveData()
-  })
-  socket.emit('redlasPingsUpdate', redlasPings)
-  socket.emit('redlasHistoryUpdate', redlasHistory)
-  socket.emit('redlasGeneralsUpdate', redlasGenerals)
-  socket.emit('redlasSnapshotsUpdate', redlasSnapshots)
-  redlasDeadHistory = redlasDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
-  socket.emit('redlasDeadHistoryUpdate', redlasDeadHistory)
-
-  // ── MAP: sohan ──
-  let sohanPings = {}
-  let sohanHistory = []
-  let sohanGenerals = {}
-  let sohanSnapshots = []
-  let sohanDeadHistory = []
-  socket.on('sohanAddPing',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    sohanPings[id] = {id, x:data.x, y:data.y, ch:data.ch, startedAt:Date.now()}
-    sohanHistory.push({x:data.x, y:data.y, ts:Date.now()})
-    if(sohanHistory.length>2000) sohanHistory = sohanHistory.slice(-2000)
-    io.emit('sohanPingsUpdate', sohanPings)
-    io.emit('sohanHistoryUpdate', sohanHistory)
-    saveData()
-  })
-  socket.on('sohanRemovePing',(id)=>{
-    delete sohanPings[id]
-    io.emit('sohanPingsUpdate', sohanPings)
-    saveData()
-  })
-  socket.on('sohanAddGeneral',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    sohanGenerals[id] = {id, x:data.x, y:data.y, ch:data.ch, startedAt:Date.now()}
-    io.emit('sohanGeneralsUpdate', sohanGenerals)
-    saveData()
-  })
-  socket.on('sohanRemoveGeneral',(id)=>{
-    delete sohanGenerals[id]
-    io.emit('sohanGeneralsUpdate', sohanGenerals)
-    saveData()
-  })
-  socket.on('sohanAddDead',(dead)=>{
-    if(!dead||!dead.id) return
-    sohanDeadHistory.push(dead)
-    sohanDeadHistory = sohanDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
-    io.emit('sohanDeadHistoryUpdate', sohanDeadHistory)
-    saveData()
-  })
-  socket.on('sohanRemoveDead',(id)=>{
-    sohanDeadHistory = sohanDeadHistory.filter(d=>d.id!==id)
-    io.emit('sohanDeadHistoryUpdate', sohanDeadHistory)
-    saveData()
-  })
-  socket.on('sohanResetHistory',()=>{
-    sohanHistory = []
-    io.emit('sohanHistoryUpdate', sohanHistory)
-    saveData()
-  })
-  socket.on('sohanClearSnapshots',()=>{
-    sohanSnapshots = []
-    io.emit('sohanSnapshotsUpdate', sohanSnapshots)
-    saveData()
-  })
-  socket.on('sohanSaveSnapshot',(data)=>{
-    const id = Date.now()+'-'+Math.random()
-    sohanSnapshots.unshift({id, name:data.name, pings:{...sohanPings}, ts:Date.now()})
-    if(sohanSnapshots.length>20) sohanSnapshots = sohanSnapshots.slice(0,20)
-    io.emit('sohanSnapshotsUpdate', sohanSnapshots)
-    saveData()
-  })
-  socket.on('sohanLoadSnapshot',(id)=>{
-    const s = sohanSnapshots.find(x=>x.id===id)
-    if(!s) return
-    sohanPings = {...s.pings}
-    io.emit('sohanPingsUpdate', sohanPings)
-  })
-  socket.on('sohanDeleteSnapshot',(id)=>{
-    sohanSnapshots = sohanSnapshots.filter(x=>x.id!==id)
-    io.emit('sohanSnapshotsUpdate', sohanSnapshots)
-    saveData()
-  })
-  socket.emit('sohanPingsUpdate', sohanPings)
-  socket.emit('sohanHistoryUpdate', sohanHistory)
-  socket.emit('sohanGeneralsUpdate', sohanGenerals)
-  socket.emit('sohanSnapshotsUpdate', sohanSnapshots)
-  sohanDeadHistory = sohanDeadHistory.filter(d=>Date.now()-d.killedAt<35*60*1000)
-  socket.emit('sohanDeadHistoryUpdate', sohanDeadHistory)
-
-    http.listen(3000,()=>{ console.log("Server działa na porcie 3000") })
+  http.listen(3000,()=>{ console.log("Server działa na porcie 3000") })
 }).catch(err=>{
   console.error("Błąd połączenia z MongoDB:", err)
   process.exit(1)
