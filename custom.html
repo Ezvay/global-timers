@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patologiczne Timery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #f0d080;
+    --gold-dark: #7a5f1e;
+    --red: #8b1a1a;
+    --bg: #0a0806;
+    --surface: #110e09;
+    --border: #3a2e1a;
+    --text: #d4c4a0;
+    --text-dim: #7a6a50;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Crimson Text', serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .bg-layer {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(139,26,26,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 20% 80%, rgba(100,70,10,0.12) 0%, transparent 50%),
+      #0a0806;
+  }
+  .bg-pattern {
+    position: fixed; inset: 0; z-index: 0; opacity: 0.04;
+    background-image: repeating-linear-gradient(45deg, #c9a84c 0, #c9a84c 1px, transparent 0, transparent 50%);
+    background-size: 30px 30px;
+  }
+  .particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .particle {
+    position: absolute; border-radius: 50%; background: var(--gold);
+    animation: float-up linear infinite; opacity: 0;
+  }
+  @keyframes float-up {
+    0% { opacity: 0; transform: translateY(0) scale(1); }
+    10% { opacity: 0.8; }
+    90% { opacity: 0.3; }
+    100% { opacity: 0; transform: translateY(-100vh) scale(0.3); }
+  }
+  .content {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 40px 20px 60px; min-height: 100vh; width: 100%;
+  }
+  .ornament-line {
+    display: flex; align-items: center; gap: 12px;
+    justify-content: center; margin: 6px 0;
+  }
+  .ornament-line::before, .ornament-line::after {
+    content: ''; flex: 1; height: 1px; max-width: 200px;
+    background: linear-gradient(to right, transparent, var(--gold-dark), var(--gold), var(--gold-dark), transparent);
+  }
+  .ornament-diamond {
+    width: 8px; height: 8px; background: var(--gold);
+    transform: rotate(45deg); box-shadow: 0 0 8px var(--gold);
+  }
+  .logo-wrap { margin: 16px 0 10px; width: 100%; text-align: center; }
+  .logo-wrap img {
+    max-width: 520px; width: clamp(280px, 36%, 520px);
+    filter: drop-shadow(0 0 30px rgba(201,168,76,0.6)) drop-shadow(0 0 60px rgba(201,168,76,0.25));
+    animation: logo-pulse 4s ease-in-out infinite;
+  }
+  @keyframes logo-pulse {
+    0%, 100% { filter: drop-shadow(0 0 30px rgba(201,168,76,0.6)) drop-shadow(0 0 60px rgba(201,168,76,0.25)); }
+    50% { filter: drop-shadow(0 0 45px rgba(201,168,76,0.95)) drop-shadow(0 0 80px rgba(201,168,76,0.4)); }
+  }
+  .subtitle {
+    font-family: 'Cinzel', serif; font-size: 10px;
+    letter-spacing: 6px; color: var(--gold-dark);
+    text-transform: uppercase; margin-bottom: 50px;
+  }
+  .card-grid {
+    display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; max-width: 1500px; width: 100%;
+  }
+  .card { position: relative; width: 275px; text-decoration: none; color: inherit; display: block; }
+  .card-inner {
+    position: relative;
+    background: linear-gradient(160deg, #1c1510 0%, #110e09 60%, #0e0b07 100%);
+    border: 1px solid var(--gold-dark); border-radius: 3px; overflow: hidden;
+    transition: transform 0.4s cubic-bezier(0.23,1,0.32,1), box-shadow 0.4s ease, border-color 0.3s;
+  }
+  .card:hover .card-inner {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 24px 70px rgba(0,0,0,0.85), 0 0 45px rgba(201,168,76,0.22), inset 0 1px 0 rgba(201,168,76,0.25);
+    border-color: var(--gold);
+  }
+  .card-inner::before, .card-inner::after {
+    content: ''; position: absolute; width: 14px; height: 14px; z-index: 3; border-color: rgba(201,168,76,0.7); border-style: solid;
+  }
+  .card-inner::before { top: 7px; left: 7px; border-width: 1px 0 0 1px; }
+  .card-inner::after { bottom: 7px; right: 7px; border-width: 0 1px 1px 0; }
+  .corner-tr, .corner-bl {
+    position: absolute; width: 14px; height: 14px; z-index: 3;
+    border-color: rgba(201,168,76,0.7); border-style: solid;
+  }
+  .corner-tr { top: 7px; right: 7px; border-width: 1px 1px 0 0; }
+  .corner-bl { bottom: 7px; left: 7px; border-width: 0 0 1px 1px; }
+  .card-glow {
+    position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 0%, rgba(139,26,26,0.35) 0%, transparent 70%);
+    opacity: 0; transition: opacity 0.4s;
+  }
+  .card:hover .card-glow { opacity: 1; }
+  .card-img-wrap { position: relative; height: 195px; overflow: hidden; }
+  .card-img-wrap::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(10,8,6,0.88) 100%);
+  }
+  .card-img-wrap img {
+    width: 100%; height: 100%; object-fit: cover; object-position: center top;
+    transition: transform 0.6s cubic-bezier(0.23,1,0.32,1), filter 0.4s;
+    filter: saturate(0.75) brightness(0.8);
+  }
+  .card:hover .card-img-wrap img { transform: scale(1.1); filter: saturate(1.1) brightness(0.95); }
+  .card-body { padding: 14px 18px 18px; }
+  .card-divider {
+    height: 1px; margin-bottom: 12px;
+    background: linear-gradient(to right, transparent, var(--gold-dark), transparent);
+  }
+  .card-title {
+    font-family: 'Cinzel', serif; font-size: 16px; font-weight: 600;
+    color: var(--gold-light); text-align: center; letter-spacing: 1px;
+    text-shadow: 0 0 20px rgba(201,168,76,0.4); transition: text-shadow 0.3s;
+  }
+  .card:hover .card-title { text-shadow: 0 0 30px rgba(201,168,76,0.95), 0 0 60px rgba(201,168,76,0.4); }
+  .card-desc { font-size: 13px; color: var(--text-dim); text-align: center; margin-top: 5px; font-style: italic; }
+  .card-enter {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 13px; padding: 7px; border: 1px solid rgba(201,168,76,0.25); border-radius: 2px;
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 3px;
+    color: var(--gold-dark); text-transform: uppercase; transition: all 0.3s;
+    background: rgba(201,168,76,0.04);
+  }
+  .card:hover .card-enter {
+    color: var(--gold); border-color: rgba(201,168,76,0.5);
+    background: rgba(201,168,76,0.1); box-shadow: 0 0 12px rgba(201,168,76,0.12);
+  }
+  .enter-arrow { font-size: 14px; transition: transform 0.3s; }
+  .card:hover .enter-arrow { transform: translateX(5px); }
+  .footer { margin-top: 60px; text-align: center; }
+  .footer-text {
+    font-family: 'Cinzel', serif; font-size: 10px;
+    letter-spacing: 4px; color: var(--text-dim); text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="bg-layer"></div>
+<div class="bg-pattern"></div>
+<div class="particles" id="particles"></div>
+<div class="content">
+  <div class="ornament-line">
+    <div class="ornament-diamond"></div>
+    <div class="ornament-diamond" style="opacity:.4;width:5px;height:5px;"></div>
+    <div class="ornament-diamond" style="opacity:.2;width:3px;height:3px;"></div>
+  </div>
+  <div class="logo-wrap">
+    <img src="/logo.png" alt="Patologiczne Timery">
+  </div>
+  <div class="subtitle">Gildia Patologów &nbsp;•&nbsp; Timery Bojowe</div>
+  <div class="card-grid">
+    <a class="card" href="/giants.html">
+      <div class="card-inner">
+        <div class="corner-tr"></div><div class="corner-bl"></div>
+        <div class="card-glow"></div>
+        <div class="card-img-wrap">
+          <img src="/giants_logo.jpg" alt="Kraina Gigantów">
+        </div>
+        <div class="card-body">
+          <div class="card-divider"></div>
+          <div class="card-title">Kraina Gigantów</div>
+          <div class="card-desc">16 timerów &nbsp;•&nbsp; Góra & Dół</div>
+          <div class="card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
+        </div>
+      </div>
+    </a>
+
+    <a class="card" href="/grota.html">
+      <div class="card-inner">
+        <div class="corner-tr"></div><div class="corner-bl"></div>
+        <div class="card-glow"></div>
+        <div class="card-img-wrap">
+          <img src="/grota_logo.png" alt="Grota Wygnańców"
+               style="object-fit:cover;object-position:center top;">
+        </div>
+        <div class="card-body">
+          <div class="card-divider"></div>
+          <div class="card-title">Grota Wygnańców</div>
+          <div class="card-desc">Mapa &nbsp;•&nbsp; Pingi metinów</div>
+          <div class="card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
+        </div>
+      </div>
+    </a>
+
+    <a class="card" href="/monkeys.html">
+      <div class="card-inner">
+        <div class="corner-tr"></div><div class="corner-bl"></div>
+        <div class="card-glow"></div>
+        <div class="card-img-wrap">
+          <img src="https://pl-wiki.metin2.gameforge.com/images/d/df/Lord_Ma%C5%82p.png" alt="Loch Małp">
+        </div>
+        <div class="card-body">
+          <div class="card-divider"></div>
+          <div class="card-title">Loch Małp</div>
+          <div class="card-desc">8 timerów &nbsp;•&nbsp; Respawn</div>
+          <div class="card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
+        </div>
+      </div>
+    </a>
+
+    <a class="card" href="/custom.html">
+      <div class="card-inner">
+        <div class="corner-tr"></div><div class="corner-bl"></div>
+        <div class="card-glow"></div>
+        <div class="card-img-wrap">
+          <img src="/custom-bg.jpg" alt="Własne Timery"
+               style="object-fit:cover;background:#0a0808;"
+               onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(160deg,#1a0c0c,#0a0808)';this.parentElement.innerHTML+='<div style='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:Cinzel,serif;font-size:11px;letter-spacing:3px;color:#3a2e1a;text-transform:uppercase'>Brak obrazka</div>'">
+        </div>
+        <div class="card-body">
+          <div class="card-divider"></div>
+          <div class="card-title">Własne Timery</div>
+          <div class="card-desc">Dowolne miejsca &nbsp;•&nbsp; Własny respawn</div>
+          <div class="card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
+        </div>
+      </div>
+    </a>
+
+    <a class="card" href="/skarbiec.html">
+      <div class="card-inner">
+        <div class="corner-tr"></div><div class="corner-bl"></div>
+        <div class="card-glow"></div>
+        <div class="card-img-wrap">
+          <img src="/skarbiec_logo.png" alt="Skarbiec Gildii" style="object-fit:cover;object-position:center;">
+        </div>
+        <div class="card-body">
+          <div class="card-divider"></div>
+          <div class="card-title">Skarbiec Gildii</div>
+          <div class="card-desc">Rozliczenia &nbsp;•&nbsp; Podział zysku</div>
+          <div class="card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
+        </div>
+      </div>
+    </a>
+
+    <a class="card" href="/characters.html">
+      <div class="card-inner">
+        <div class="corner-tr"></div><div class="corner-bl"></div>
+        <div class="card-glow"></div>
+        <div class="card-img-wrap">
+          <img src="/characters_logo.png" alt="Postacie" style="object-fit:cover;object-position:center top;">
+        </div>
+        <div class="card-body">
+          <div class="card-divider"></div>
+          <div class="card-title">Postacie</div>
+          <div class="card-desc">7 postaci &nbsp;•&nbsp; Zadania & Medale</div>
+          <div class="card-enter"><span>Wejdź</span><span class="enter-arrow">›</span></div>
+        </div>
+      </div>
+    </a>
+
+  </div>
+  <div class="footer">
+    <div class="ornament-line" style="margin-top:20px;margin-bottom:10px;">
+      <div class="ornament-diamond" style="width:5px;height:5px;opacity:0.5;"></div>
+    </div>
+    <div class="footer-text">Patologiczne Timery</div>
+  </div>
+</div>
+<script>
+const pc = document.getElementById('particles');
+for (let i = 0; i < 28; i++) {
+  const p = document.createElement('div');
+  p.className = 'particle';
+  p.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;animation-duration:${8+Math.random()*20}s;animation-delay:${Math.random()*20}s;width:${1+Math.random()*2.5}px;height:${1+Math.random()*2.5}px;`;
+  pc.appendChild(p);
+}
+</script>
+</body>
+</html>

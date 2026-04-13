@@ -1,10 +1,1603 @@
-{
-  "name": "global-timers",
-  "version": "1.0.0",
-  "main": "server.js",
-  "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.7.2",
-    "mongodb": "^6.3.0"
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grota Wygnańców</title>
+<script src="/socket.io/socket.io.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold:#c9a84c; --gold-light:#f0d080; --gold-dark:#7a5f1e;
+    --bg:#090806; --border:#3a2e1a; --text:#d4c4a0; --text-dim:#7a6a50;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+  .bg-layer{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(40,20,80,0.15) 0%,transparent 60%),#090806;}
+
+  /* TOP BAR */
+  .topbar{
+    position:relative;z-index:300;overflow:visible;
+    display:flex;align-items:center;justify-content:space-between;
+    max-width:1500px;margin:0 auto;padding:12px 20px;
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(to bottom,rgba(17,14,9,0.96),rgba(9,8,6,0.8));
+  }
+  .topbar-left{display:flex;align-items:center;gap:12px;}
+  .page-title{font-family:'Cinzel',serif;font-size:18px;font-weight:600;color:var(--gold-light);letter-spacing:2px;text-shadow:0 0 20px rgba(201,168,76,0.4);}
+  .nav-btn{
+    font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--gold-dark);background:rgba(201,168,76,0.06);
+    border:1px solid rgba(201,168,76,0.25);border-radius:2px;
+    padding:7px 14px;cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.2s;
+  }
+  .nav-btn:hover{color:var(--gold);border-color:rgba(201,168,76,0.6);background:rgba(201,168,76,0.12);}
+
+  /* HEATMAP TOGGLE */
+  .heat-btn{
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+    padding:7px 14px;border-radius:2px;cursor:pointer;transition:all 0.2s;
+    border:1px solid rgba(255,160,40,0.3);color:#a06020;background:rgba(255,160,40,0.06);
+  }
+  .heat-btn.on{color:#ffb040;border-color:rgba(255,160,40,0.7);background:rgba(255,160,40,0.15);box-shadow:0 0 12px rgba(255,140,20,0.2);}
+
+  /* LAYOUT */
+  .layout{
+    position:relative;z-index:1;
+    display:flex;gap:0;
+    max-width:1500px;margin:0 auto;
+    min-height:calc(100vh - 57px);
+  }
+
+  /* MAP AREA */
+  .map-wrap{flex:1;position:relative;padding:20px;min-width:0;display:flex;align-items:flex-start;justify-content:center;}
+  .map-container{
+    position:relative;display:inline-block;cursor:crosshair;
+    border:1px solid rgba(201,168,76,0.2);border-radius:3px;
+    box-shadow:0 0 40px rgba(0,0,0,0.8);
+    max-width:100%;
+  }
+  .map-container img{display:block;height:auto;user-select:none;pointer-events:none;}
+  .map-hint{
+    position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;text-transform:uppercase;
+    color:rgba(201,168,76,0.35);white-space:nowrap;pointer-events:none;
+  }
+
+  /* CANVAS HEATMAP — sits exactly over image */
+  #heatCanvas{
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    pointer-events:none;border-radius:3px;
+    opacity:0;transition:opacity 0.4s;
+  }
+  #heatCanvas.visible{opacity:1;}
+
+  /* PING MARKERS */
+  .ping-marker{position:absolute;transform:translate(-50%,-50%);pointer-events:all;z-index:5;display:flex;flex-direction:column;align-items:center;}
+  .ping-dot{
+    width:14px;height:14px;position:relative;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    transition:transform 0.15s,filter 0.15s;
+    animation:ping-appear 0.3s cubic-bezier(0.23,1,0.32,1);
+    filter:drop-shadow(0 0 4px rgba(255,80,40,0.9));
+  }
+  .ping-dot img{
+    width:14px;height:14px;object-fit:contain;pointer-events:none;
+  }
+  .ping-dot:hover{
+    transform:scale(1.3);
+    filter:drop-shadow(0 0 7px rgba(255,120,40,1));
+  }
+  @keyframes ping-appear{0%{transform:scale(0);opacity:0;}70%{transform:scale(1.2);}100%{transform:scale(1);opacity:1;}}
+  .ping-pulse{
+    position:absolute;top:50%;left:50%;
+    width:14px;height:14px;border-radius:50%;
+    background:rgba(255,60,20,0.25);transform:translate(-50%,-50%);
+    animation:pulse-ring 2s ease-out infinite;pointer-events:none;
+  }
+  @keyframes pulse-ring{0%{transform:translate(-50%,-50%) scale(1);opacity:0.8;}100%{transform:translate(-50%,-50%) scale(3);opacity:0;}}
+  .ping-ch-badge{
+    position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+    background:rgba(0,0,0,0.92);
+    border:1.5px solid var(--gold);border-radius:3px;
+    font-family:'Cinzel',serif;font-size:11px;font-weight:600;
+    color:#fff;padding:1px 5px;pointer-events:none;
+    white-space:nowrap;line-height:1.5;
+    text-shadow:0 0 6px rgba(201,168,76,0.8);
+    box-shadow:0 0 6px rgba(0,0,0,0.8);
+  }
+
+  /* SIDEBAR */
+  .sidebar{
+    width:300px;flex-shrink:0;border-left:1px solid var(--border);
+    background:rgba(12,10,7,0.7);display:flex;flex-direction:column;
+    max-height:calc(100vh - 57px);overflow-y:auto;
+  }
+  .sidebar-section{padding:12px 14px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.25);}
+  .sidebar-title{font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:2px;}
+  .sidebar-sub{font-size:12px;color:var(--text-dim);font-style:italic;}
+  .sidebar-empty{padding:24px 16px;text-align:center;font-size:13px;color:var(--text-dim);font-style:italic;}
+
+  /* PING LIST ITEM */
+  .ping-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid rgba(58,46,26,0.4);transition:background 0.2s;}
+  .ping-item:hover{background:rgba(201,168,76,0.04);}
+  .ping-dot-small{
+    width:32px;height:32px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    filter:drop-shadow(0 0 5px rgba(255,80,30,0.7));
+  }
+  .ping-dot-small img{width:32px;height:32px;object-fit:contain;}
+  .ping-info{flex:1;min-width:0;}
+  .ping-ch{font-family:'Cinzel',serif;font-size:13px;color:var(--gold-light);letter-spacing:1px;}
+  .ping-time{font-family:'Cinzel',serif;font-size:15px;color:#ff9090;margin-top:3px;letter-spacing:1px;}
+  .ping-remove{
+    font-size:9px;color:#804040;background:none;
+    font-family:'Cinzel',serif;letter-spacing:1px;padding:4px 8px;
+    border:1px solid rgba(180,50,50,0.2);border-radius:2px;cursor:pointer;transition:all 0.2s;
+  }
+  .ping-remove:hover{color:#ff6060;border-color:rgba(200,60,60,0.6);background:rgba(140,30,30,0.15);}
+
+  /* HOTSPOT INFO (sidebar) */
+  .hotspot-section{padding:10px 14px;border-bottom:1px solid rgba(58,46,26,0.4);}
+  .hotspot-title{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:#ffb040;text-transform:uppercase;margin-bottom:6px;}
+  .hotspot-item{
+    display:flex;align-items:center;gap:8px;padding:5px 0;
+    font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;
+  }
+  .hotspot-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .hotspot-count{color:var(--text-dim);font-size:11px;}
+
+  /* POPUP */
+  /* MODE TOGGLE */
+  .mode-bar{display:flex;gap:8px;align-items:center;}
+  .mode-btn{
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+    padding:6px 14px;border-radius:2px;cursor:pointer;transition:all 0.2s;
+    border:1px solid rgba(201,168,76,0.2);color:var(--text-dim);background:rgba(255,255,255,0.03);
+  }
+  .mode-btn.active-metin  {color:#ff8060;border-color:rgba(255,100,60,0.6);background:rgba(180,50,20,0.15);}
+  .mode-btn.active-general{color:#60b0ff;border-color:rgba(60,140,255,0.6);background:rgba(20,60,180,0.15);}
+
+  /* GENERAL MARKER */
+  .general-marker{position:absolute;transform:translate(-50%,-50%);pointer-events:all;z-index:5;display:flex;flex-direction:column;align-items:center;}
+  .general-dot{
+    position:relative;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:transform 0.15s,filter 0.15s;
+    animation:ping-appear 0.3s cubic-bezier(0.23,1,0.32,1);
+    filter:drop-shadow(0 0 5px rgba(60,140,255,0.9));
+  }
+  .general-dot img{object-fit:contain;pointer-events:none;}
+  .general-dot:hover{transform:scale(1.3);filter:drop-shadow(0 0 9px rgba(100,180,255,1));}
+  .general-pulse{
+    position:absolute;top:50%;left:50%;border-radius:50%;
+    background:rgba(60,140,255,0.2);transform:translate(-50%,-50%);
+    animation:pulse-ring 2s ease-out infinite;pointer-events:none;
+  }
+  .general-ch-badge{
+    position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+    background:rgba(0,0,20,0.92);border:1.5px solid #60b0ff;border-radius:3px;
+    font-family:'Cinzel',serif;font-size:11px;font-weight:600;
+    color:#a0d0ff;padding:1px 5px;pointer-events:none;
+    white-space:nowrap;line-height:1.5;text-shadow:0 0 6px rgba(60,140,255,0.8);
+    box-shadow:0 0 6px rgba(0,0,0,0.8);
+  }
+
+  /* GENERAL SIDEBAR ITEM */
+  .general-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(30,60,120,0.4);transition:background 0.2s;}
+  .general-item:hover{background:rgba(60,140,255,0.05);}
+  .general-dot-small{width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 0 5px rgba(60,140,255,0.7));}
+  .general-dot-small img{width:32px;height:32px;object-fit:contain;}
+  .general-ch{font-family:'Cinzel',serif;font-size:11px;color:#a0d0ff;letter-spacing:1px;}
+  .general-time{font-family:'Cinzel',serif;font-size:13px;color:#6090d0;margin-top:2px;letter-spacing:1px;}
+  .general-remove{font-size:9px;color:#304060;background:none;font-family:'Cinzel',serif;letter-spacing:1px;padding:4px 8px;border:1px solid rgba(60,100,180,0.2);border-radius:2px;cursor:pointer;transition:all 0.2s;}
+  .general-remove:hover{color:#60b0ff;border-color:rgba(60,140,255,0.6);background:rgba(20,60,140,0.15);}
+
+  /* SIDEBAR SECTIONS */
+  .sidebar-section-title{
+    padding:10px 14px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;
+    text-transform:uppercase;color:var(--gold-dark);background:rgba(0,0,0,0.25);
+    border-bottom:1px solid var(--border);border-top:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .sidebar-section-title.blue{color:#6090d0;border-color:rgba(60,100,180,0.3);}
+
+  /* SNAPSHOT PANEL */
+  .snap-panel{padding:10px 14px;border-bottom:1px solid var(--border);}
+  .snap-save-row{display:flex;gap:6px;margin-bottom:8px;}
+  .snap-input{
+    flex:1;background:rgba(0,0,0,0.5);border:1px solid rgba(201,168,76,0.2);
+    color:var(--text);font-family:'Crimson Text',serif;font-size:13px;
+    padding:5px 8px;border-radius:2px;outline:none;
+  }
+  .snap-input:focus{border-color:rgba(201,168,76,0.5);}
+  .snap-save-btn{
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;
+    padding:5px 12px;border-radius:2px;cursor:pointer;transition:all 0.2s;
+    border:1px solid rgba(201,168,76,0.3);color:var(--gold-dark);background:rgba(201,168,76,0.07);
+    white-space:nowrap;
+  }
+  .snap-save-btn:hover{color:var(--gold);border-color:var(--gold);background:rgba(201,168,76,0.16);}
+  .snap-item{
+    display:flex;align-items:center;gap:8px;padding:6px 0;
+    border-bottom:1px solid rgba(58,46,26,0.3);
+  }
+  .snap-info{flex:1;min-width:0;}
+  .snap-name{font-family:'Cinzel',serif;font-size:11px;color:var(--gold-light);letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .snap-meta{font-size:11px;color:var(--text-dim);font-style:italic;margin-top:1px;}
+  .snap-load-btn{
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;
+    padding:4px 8px;border-radius:2px;cursor:pointer;transition:all 0.2s;
+    border:1px solid rgba(201,168,76,0.25);color:var(--text-dim);background:rgba(201,168,76,0.05);
+  }
+  .snap-load-btn:hover{color:var(--gold);border-color:rgba(201,168,76,0.6);}
+  .snap-del-btn{
+    font-size:10px;color:#804040;background:none;border:none;cursor:pointer;padding:3px 5px;transition:color 0.2s;
+  }
+  .snap-del-btn:hover{color:#ff6060;}
+
+  .popup-overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);}
+  .popup-overlay.hidden{display:none;}
+  .popup-box{
+    background:linear-gradient(160deg,#1e1810,#100d08);
+    border:1px solid var(--gold-dark);border-radius:4px;
+    padding:28px 32px;min-width:280px;text-align:center;
+    box-shadow:0 0 60px rgba(0,0,0,0.9),0 0 30px rgba(201,168,76,0.07);
+    position:relative;
+  }
+  .popup-box::before,.popup-box::after{content:'';position:absolute;width:14px;height:14px;border-color:rgba(201,168,76,0.5);border-style:solid;}
+  .popup-box::before{top:7px;left:7px;border-width:1px 0 0 1px;}
+  .popup-box::after{bottom:7px;right:7px;border-width:0 1px 1px 0;}
+  .popup-title{font-family:'Cinzel',serif;font-size:12px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;}
+  .popup-sub{font-size:13px;color:var(--text-dim);font-style:italic;margin-bottom:20px;}
+  .ch-buttons{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px;}
+  .ch-btn{
+    font-family:'Cinzel',serif;font-size:11px;letter-spacing:1px;
+    width:44px;height:44px;border-radius:3px;cursor:pointer;transition:all 0.2s;
+    border:1px solid rgba(201,168,76,0.3);color:var(--gold-dark);background:rgba(201,168,76,0.07);
+  }
+  .ch-btn:hover{color:var(--gold-light);border-color:var(--gold);background:rgba(201,168,76,0.2);transform:scale(1.08);box-shadow:0 0 12px rgba(201,168,76,0.2);}
+  .popup-cancel{
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--text-dim);background:none;border:1px solid rgba(255,255,255,0.08);
+    border-radius:2px;padding:7px 20px;cursor:pointer;transition:all 0.2s;width:100%;
+  }
+  .popup-cancel:hover{color:var(--text);border-color:rgba(255,255,255,0.2);}
+  /* WŁASNE TRASY */
+  .crt-item{padding:9px 12px;border-bottom:1px solid rgba(58,46,26,0.3);display:flex;align-items:center;gap:8px;transition:background 0.15s;}
+  .crt-item:hover{background:rgba(201,168,76,0.04);}
+  .crt-item.active{background:rgba(201,168,76,0.08);border-left:2px solid rgba(201,168,76,0.5);}
+  .crt-name{flex:1;font-family:'Crimson Text',serif;font-size:14px;color:var(--text);cursor:pointer;}
+  .crt-name:hover{color:var(--gold);}
+  .crt-btn{font-size:10px;padding:3px 8px;border-radius:2px;cursor:pointer;border:1px solid rgba(58,46,26,0.5);background:none;color:var(--text-dim);font-family:'Cinzel',serif;transition:all 0.15s;}
+  .crt-btn:hover{color:var(--gold);border-color:rgba(201,168,76,0.4);}
+  .crt-btn.danger:hover{color:#e06060;border-color:rgba(180,50,50,0.5);}
+  /* Tryb rysowania */
+  .draw-active #mapContainer{cursor:crosshair!important;}
+  #drawPanel kbd{font-family:monospace;}
+  /* LICZNIKI CH + HISTORIA ZBITYCH */
+  .ch-ctr{display:flex;flex-direction:column;align-items:center;padding:7px 4px;border-radius:3px;border:1px solid rgba(58,46,26,0.4);background:rgba(0,0,0,0.25);}
+  .ch-ctr-num{font-family:'Cinzel',serif;font-size:9px;color:var(--text-dim);letter-spacing:1px;}
+  .ch-ctr-val{font-family:'Cinzel',serif;font-size:18px;font-weight:700;line-height:1.2;}
+  .ch-ctr-val.c-full{color:#50d070;} .ch-ctr-val.c-mid{color:#d4b030;} .ch-ctr-val.c-low{color:#d07030;} .ch-ctr-val.c-empty{color:#c04040;}
+  .ch-ctr-sub{font-size:10px;color:var(--text-dim);}
+  .dead-grp{border-bottom:1px solid rgba(30,22,10,0.4);}
+  .dead-grp-hdr{padding:5px 12px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--gold-dark);background:rgba(0,0,0,0.2);display:flex;justify-content:space-between;}
+  .dead-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid rgba(30,22,10,0.2);}
+  .dead-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .dead-timer{font-family:'Cinzel',serif;font-size:13px;}
+  .dead-timer.t-fresh{color:var(--text-dim);} .dead-timer.t-yellow{color:#d4b030;} .dead-timer.t-green{color:#50c060;}
+  .dead-hint{font-size:11px;color:var(--text-dim);margin-top:2px;}
+  /* RESET MODAL */
+  .reset-overlay{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.75);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;}
+  .reset-overlay.hidden{display:none;}
+  .reset-box{background:linear-gradient(160deg,#1e1810,#100d08);border:1px solid rgba(200,80,80,0.4);border-radius:4px;padding:24px 28px;min-width:320px;max-width:420px;position:relative;}
+  .reset-box::before,.reset-box::after{content:'';position:absolute;width:12px;height:12px;border-color:rgba(200,80,80,0.3);border-style:solid;}
+  .reset-box::before{top:6px;left:6px;border-width:1px 0 0 1px;}
+  .reset-box::after{bottom:6px;right:6px;border-width:0 1px 1px 0;}
+  .reset-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e07070;text-align:center;margin-bottom:16px;}
+  .reset-option{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:3px;border:1px solid rgba(58,46,26,0.3);margin-bottom:6px;cursor:pointer;transition:all 0.15s;}
+  .reset-option:hover{background:rgba(200,80,80,0.06);border-color:rgba(200,80,80,0.3);}
+  .reset-option input[type=checkbox]{width:16px;height:16px;accent-color:#c07070;cursor:pointer;flex-shrink:0;}
+  .reset-option-label{flex:1;}
+  .reset-option-name{font-family:'Cinzel',serif;font-size:11px;color:var(--text);letter-spacing:1px;}
+  .reset-option-desc{font-size:10px;color:var(--text-dim);margin-top:2px;}
+  .reset-btns{display:flex;gap:8px;margin-top:16px;}
+  .reset-confirm{flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:2px;cursor:pointer;background:rgba(200,60,60,0.15);border:1px solid rgba(200,80,80,0.5);color:#e07070;}
+  .reset-confirm:hover{background:rgba(200,60,60,0.25);}
+  .reset-cancel{flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:2px;cursor:pointer;background:none;border:1px solid rgba(58,46,26,0.4);color:var(--text-dim);}
+  .reset-cancel:hover{border-color:rgba(201,168,76,0.3);color:var(--text);}
+</style>
+</head>
+<body>
+<div class="bg-layer"></div>
+
+<!-- POPUP -->
+<div class="popup-overlay hidden" id="popup">
+  <div class="popup-box">
+    <div class="popup-title">Pinguj Metina</div>
+    <div class="popup-sub">Wybierz kanał</div>
+    <div class="ch-buttons" id="chButtons"></div>
+    <button class="popup-cancel" onclick="closePopup()">Anuluj</button>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <a class="nav-btn" href="/">⬅ Powrót</a>
+    <div class="page-title">Grota Wygnańców</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div class="mode-bar">
+      <button class="mode-btn active-metin" id="btnMetin"   onclick="setMode('metin')">⚔ Metin</button>
+      <button class="mode-btn"              id="btnGeneral" onclick="setMode('general')">🔵 Generał</button>
+    </div>
+    <div class="vol-wrap">
+      <span style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;">Mapa</span>
+      <input type="range" id="mapSize" min="30" max="100" step="1" style="width:80px;">
+      <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);min-width:28px;text-align:right;" id="mapSizeVal">100%</span>
+    </div>
+    <div class="vol-wrap">
+      <span style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;">Pingi</span>
+      <input type="range" id="pingSize" min="6" max="40" step="1" style="width:80px;">
+      <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);min-width:24px;text-align:right;" id="pingSizeVal">14</span>
+    </div>
+    <button class="heat-btn" id="heatBtn" onclick="toggleHeat()">🔥 Heatmapa OFF</button>
+    <button class="heat-btn" id="routesMenuBtn" onclick="toggleRoutesMenu()" style="color:#60c8ff;border-color:rgba(60,180,255,0.5);background:rgba(40,120,200,0.08);">🗺 Trasy ▾</button>
+    <button class="heat-btn" onclick="openResetModal()" style="color:#c07070;border-color:rgba(200,80,80,0.4);padding:6px 10px;" title="Reset groty">⟳</button>
+
+  </div>
+</div>
+
+<div class="layout">
+
+  <div class="map-wrap">
+    <div class="map-container" id="mapContainer">
+      <img src="/grota_mapa.png" id="mapImg" alt="Mapa Groty" draggable="false">
+      <canvas id="heatCanvas"></canvas>
+      <canvas id="routeCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;"></canvas>
+      <div id="pingLayer"></div>
+      <div id="generalLayer"></div>
+      <div class="map-hint" id="mapHint">Kliknij na mapę aby pingować metina</div>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <!-- SNAPSHOTS -->
+    <div class="snap-panel">
+      <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--gold-dark);text-transform:uppercase;margin-bottom:8px;">📸 Snapshoty</div>
+      <div class="snap-save-row">
+        <input class="snap-input" id="snapNameInput" placeholder="Nazwa snapshotu...">
+        <button class="snap-save-btn" onclick="saveSnapshot()">Zapisz</button>
+      </div>
+      <div id="snapList"></div>
+    </div>
+
+    <div class="sidebar-section-title">⚔ Metiny</div>
+    <div id="pingList"><div class="sidebar-empty">Brak aktywnych pingów</div></div>
+
+    <div class="sidebar-section-title" style="border-color:rgba(200,60,60,0.3);color:#c07070;">💀 Zbite (respawn 20-30min)</div>
+    <div id="chCounters" style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px 10px;border-bottom:1px solid var(--border);"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 10px 3px;border-bottom:1px solid var(--border);">
+      <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold-dark);text-transform:uppercase;">Historia</span>
+      <button onclick="undoLastKill()" style="font-family:'Cinzel',serif;font-size:10px;padding:3px 10px;border-radius:2px;cursor:pointer;border:1px solid rgba(201,168,76,0.25);color:var(--text-dim);background:none;">↩ Cofnij</button>
+    </div>
+    <div id="deadList"></div>
+
+    <div class="sidebar-section-title blue">🔵 Generałowie</div>
+    <div id="generalList"><div class="sidebar-empty">Brak aktywnych generałów</div></div>
+
+    <div class="hotspot-section" id="hotspotSection" style="display:none">
+      <div class="hotspot-title">🔥 Gorące miejsca</div>
+      <div id="hotspotList"></div>
+    </div>
+
+
+  </div>
+
+</div>
+
+<script>
+const socket = io();
+
+/* PING SIZE */
+let pingSize   = parseInt(localStorage.getItem('pingSize')) || 14;
+let mapSizePct = parseInt(localStorage.getItem('mapSize'))  || 100;
+
+function applyPingSize() {
+  const sz = pingSize + 'px';
+  document.querySelectorAll('.ping-dot').forEach(el => {
+    el.style.width = sz; el.style.height = sz;
+  });
+  document.querySelectorAll('.ping-dot img').forEach(el => {
+    el.style.width = sz; el.style.height = sz;
+  });
+  document.querySelectorAll('.ping-pulse').forEach(el => {
+    el.style.width = sz; el.style.height = sz;
+  });
+}
+
+/* STATE */
+let pings    = {};
+let generals = {};
+let snapshots = [];
+let history  = [];
+let heatOn   = localStorage.getItem('heat') === '1';
+let pingMode = 'metin'; // 'metin' | 'general'
+let pendingClick = null;
+let timerRafs = {};
+let generalRafs = {};
+
+/* MAP ELEMENTS */
+const mapContainer  = document.getElementById('mapContainer');
+const mapImg        = document.getElementById('mapImg');
+const pingLayer     = document.getElementById('pingLayer');
+const generalLayer  = document.getElementById('generalLayer');
+const heatCanvas    = document.getElementById('heatCanvas');
+const heatCtx       = heatCanvas.getContext('2d');
+const heatBtn       = document.getElementById('heatBtn');
+
+/* SLIDERS INIT — po deklaracji elementów DOM */
+(function() {
+  const pingSizeSlider = document.getElementById('pingSize');
+  const pingSizeVal    = document.getElementById('pingSizeVal');
+  const mapSizeSlider  = document.getElementById('mapSize');
+  const mapSizeValEl   = document.getElementById('mapSizeVal');
+
+  pingSizeSlider.value = pingSize;
+  pingSizeVal.innerText = pingSize;
+  pingSizeSlider.oninput = () => {
+    pingSize = parseInt(pingSizeSlider.value);
+    pingSizeVal.innerText = pingSize;
+    localStorage.setItem('pingSize', pingSize);
+    applyPingSize();
+  };
+
+  mapSizeSlider.value = mapSizePct;
+  mapSizeValEl.innerText = mapSizePct + '%';
+  applyMapSize();
+  mapSizeSlider.oninput = () => {
+    mapSizePct = parseInt(mapSizeSlider.value);
+    mapSizeValEl.innerText = mapSizePct + '%';
+    localStorage.setItem('mapSize', mapSizePct);
+    applyMapSize();
+  };
+})();
+
+function applyMapSize() {
+  mapImg.style.width = Math.round(1080 * mapSizePct / 100) + 'px';
+  if (heatOn) syncCanvas();
+}
+
+function setMode(mode) {
+  pingMode = mode;
+  document.getElementById('btnMetin').className   = 'mode-btn' + (mode==='metin'   ? ' active-metin'   : '');
+  document.getElementById('btnGeneral').className = 'mode-btn' + (mode==='general' ? ' active-general' : '');
+  document.getElementById('mapHint').innerText = mode === 'metin'
+    ? 'Kliknij na mapę aby pingować metina'
+    : 'Kliknij na mapę aby oznaczyć generała';
+  mapContainer.style.cursor = mode === 'general' ? 'crosshair' : 'crosshair';
+}
+
+/* Apply initial heat state */
+updateHeatBtn();
+
+/* Click on map */
+mapContainer.addEventListener('click', e => {
+  if (e.target.closest('.ping-dot') || e.target.closest('.general-dot')) return;
+  const rect = mapImg.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top)  / rect.height;
+  if (x < 0 || x > 1 || y < 0 || y > 1) return;
+  pendingClick = { x, y };
+  openPopup();
+});
+
+/* POPUP */
+const popup    = document.getElementById('popup');
+const chBtns   = document.getElementById('chButtons');
+const MAX_CH   = 8;
+
+function openPopup() {
+  chBtns.innerHTML = '';
+  for (let i = 1; i <= MAX_CH; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'ch-btn'; btn.innerText = i;
+    btn.onclick = () => confirmPing(i);
+    chBtns.appendChild(btn);
+  }
+  // Update popup style by mode
+  const titleEl = popup.querySelector('.popup-title');
+  const subEl   = popup.querySelector('.popup-sub');
+  if (pingMode === 'general') {
+    titleEl.innerHTML = '🔵 Oznacz Generała';
+    titleEl.style.color = '#a0d0ff';
+    subEl.innerText = 'Wybierz kanał';
+  } else {
+    titleEl.innerHTML = '⚔ Pinguj Metina';
+    titleEl.style.color = '';
+    subEl.innerText = 'Wybierz kanał';
+  }
+  popup.classList.remove('hidden');
+}
+function closePopup() { popup.classList.add('hidden'); pendingClick = null; }
+popup.addEventListener('click', e => { if (e.target === popup) closePopup(); });
+
+function confirmPing(ch) {
+  if (!pendingClick) return;
+  if (pingMode === 'general') {
+    socket.emit('grotaAddGeneral', { x: pendingClick.x, y: pendingClick.y, ch });
+  } else {
+    socket.emit('grotaAddPing', { x: pendingClick.x, y: pendingClick.y, ch });
+  }
+  closePopup();
+}
+
+/* Popup title updates by mode */
+const origOpenPopup = openPopup;
+
+/* FORMAT */
+function fmt(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+}
+
+/* RENDER PINGS */
+function renderPings() {
+  for (const id in timerRafs) cancelAnimationFrame(timerRafs[id]);
+  timerRafs = {};
+  pingLayer.innerHTML = '';
+  const list = document.getElementById('pingList');
+
+  const ids = Object.keys(pings);
+  if (ids.length === 0) {
+    list.innerHTML = '<div class="sidebar-empty">Brak aktywnych pingów</div>';
+  } else {
+    list.innerHTML = '';
+    for (const id of ids) { placeMarker(pings[id]); addSidebarItem(pings[id]); startTicking(pings[id]); }
   }
 }
+
+function placeMarker(p) {
+  const m = document.createElement('div');
+  m.className = 'ping-marker'; m.id = 'marker_' + p.id;
+  m.style.left = (p.x * 100) + '%';
+  m.style.top  = (p.y * 100) + '%';
+  const sz = pingSize + 'px';
+  m.innerHTML = `
+    <div class="ping-dot" onclick="removePing('${p.id}')" title="Kliknij aby usunąć (zbity)"
+         style="width:${sz};height:${sz}">
+      <div class="ping-pulse" style="width:${sz};height:${sz}"></div>
+      <img src="/metin_icon.png" alt="metin" style="width:${sz};height:${sz}">
+      <div class="ping-ch-badge">${p.ch}</div>
+    </div>`;
+  pingLayer.appendChild(m);
+}
+
+function addSidebarItem(p) {
+  const item = document.createElement('div');
+  item.className = 'ping-item'; item.id = 'sitem_' + p.id;
+  item.innerHTML = `
+    <div class="ping-dot-small"><img src="/metin_icon.png" alt="metin"></div>
+    <div class="ping-info">
+      <div class="ping-ch">CH ${p.ch}</div>
+      <div class="ping-time" id="st_${p.id}">00:00</div>
+    </div>
+    <button class="ping-remove" onclick="removePing('${p.id}')">✕ Zbity</button>`;
+  document.getElementById('pingList').appendChild(item);
+}
+
+function startTicking(p) {
+  function tick() {
+    const str = fmt(Date.now() - p.startedAt);
+    const st = document.getElementById('st_' + p.id);
+    if (st) st.innerText = str;
+    timerRafs[p.id] = requestAnimationFrame(tick);
+  }
+  timerRafs[p.id] = requestAnimationFrame(tick);
+}
+
+function removePing(id) { socket.emit('grotaRemovePing', id); }
+
+/* GENERALS */
+function placeGeneral(g) {
+  const m = document.createElement('div');
+  m.className = 'general-marker'; m.id = 'gmarker_' + g.id;
+  m.style.left = (g.x * 100) + '%';
+  m.style.top  = (g.y * 100) + '%';
+  const sz = pingSize + 'px';
+  m.innerHTML = `
+    <div class="general-dot" onclick="removeGeneral('${g.id}')" title="Kliknij aby usunąć"
+         style="width:${sz};height:${sz}">
+      <div class="general-pulse" style="width:${sz};height:${sz}"></div>
+      <img src="/metin_icon.png" alt="general" style="width:${sz};height:${sz};filter:hue-rotate(180deg) saturate(1.5);">
+      <div class="general-ch-badge">${g.ch}</div>
+    </div>`;
+  generalLayer.appendChild(m);
+}
+
+function addGeneralSidebarItem(g) {
+  const item = document.createElement('div');
+  item.className = 'general-item'; item.id = 'gitem_' + g.id;
+  item.innerHTML = `
+    <div class="general-dot-small"><img src="/metin_icon.png" alt="gen" style="filter:hue-rotate(180deg) saturate(1.5)"></div>
+    <div class="ping-info">
+      <div class="general-ch">CH ${g.ch}</div>
+      <div class="general-time" id="gt_${g.id}">00:00</div>
+    </div>
+    <button class="general-remove" onclick="removeGeneral('${g.id}')">✕ Zbity</button>`;
+  document.getElementById('generalList').appendChild(item);
+}
+
+function startGeneralTick(g) {
+  function tick() {
+    const el = document.getElementById('gt_' + g.id);
+    if (el) el.innerText = fmt(Date.now() - g.startedAt);
+    generalRafs[g.id] = requestAnimationFrame(tick);
+  }
+  generalRafs[g.id] = requestAnimationFrame(tick);
+}
+
+function removeGeneral(id) { socket.emit('grotaRemoveGeneral', id); }
+
+function renderGenerals() {
+  for (const id in generalRafs) cancelAnimationFrame(generalRafs[id]);
+  generalRafs = {};
+  generalLayer.innerHTML = '';
+  const list = document.getElementById('generalList');
+  const ids = Object.keys(generals);
+  if (ids.length === 0) {
+    list.innerHTML = '<div class="sidebar-empty">Brak aktywnych generałów</div>';
+    return;
+  }
+  list.innerHTML = '';
+  for (const id of ids) { placeGeneral(generals[id]); addGeneralSidebarItem(generals[id]); startGeneralTick(generals[id]); }
+}
+
+/* SNAPSHOTS */
+function saveSnapshot() {
+  const name = document.getElementById('snapNameInput').value.trim() || 'Snapshot';
+  socket.emit('grotaSaveSnapshot', { name });
+  document.getElementById('snapNameInput').value = '';
+}
+
+function renderSnapshots() {
+  const list = document.getElementById('snapList');
+  if (!snapshots.length) { list.innerHTML = '<div style="font-size:12px;color:var(--text-dim);font-style:italic;padding:4px 0">Brak zapisanych snapshotów</div>'; return; }
+  list.innerHTML = '';
+  snapshots.forEach(snap => {
+    const d = new Date(snap.ts);
+    const time = d.toLocaleDateString('pl-PL',{day:'2-digit',month:'2-digit'}) + ' ' +
+                 d.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
+    const metinCount   = Object.keys(snap.pings||{}).length;
+    const generalCount = Object.keys(snap.generals||{}).length;
+    const row = document.createElement('div');
+    row.className = 'snap-item';
+    row.innerHTML = `
+      <div class="snap-info">
+        <div class="snap-name">${snap.name}</div>
+        <div class="snap-meta">${time} &nbsp;•&nbsp; ${metinCount}⚔ ${generalCount}🔵</div>
+      </div>
+      <button class="snap-load-btn" onclick="loadSnapshot('${snap.id}')">Wczytaj</button>
+      <button class="snap-del-btn"  onclick="deleteSnapshot('${snap.id}')">✕</button>`;
+    list.appendChild(row);
+  });
+}
+
+function loadSnapshot(id) {
+  if (!confirm('Wczytać snapshot? Nadpisze aktywne pingi i generałów.')) return;
+  socket.emit('grotaLoadSnapshot', id);
+}
+function deleteSnapshot(id) { socket.emit('grotaDeleteSnapshot', id); }
+
+/* =====================
+   HEATMAPA
+===================== */
+
+/* Cluster history points with radius 4% of map */
+const CLUSTER_R = 0.04;
+
+function clusterPoints(pts) {
+  const clusters = [];
+  for (const pt of pts) {
+    let found = false;
+    for (const cl of clusters) {
+      const dx = cl.x - pt.x, dy = cl.y - pt.y;
+      if (Math.sqrt(dx*dx + dy*dy) < CLUSTER_R) {
+        cl.count++;
+        // moving centroid
+        cl.x = (cl.x * (cl.count-1) + pt.x) / cl.count;
+        cl.y = (cl.y * (cl.count-1) + pt.y) / cl.count;
+        found = true; break;
+      }
+    }
+    if (!found) clusters.push({ x: pt.x, y: pt.y, count: 1 });
+  }
+  return clusters.sort((a,b) => b.count - a.count);
+}
+
+function drawHeatmap() {
+  const w = heatCanvas.width;
+  const h = heatCanvas.height;
+  heatCtx.clearRect(0, 0, w, h);
+  if (!heatOn || history.length === 0) return;
+
+  const clusters = clusterPoints(history);
+  if (clusters.length === 0) return;
+
+  const maxCount = clusters[0].count;
+
+  for (const cl of clusters) {
+    const cx = cl.x * w;
+    const cy = cl.y * h;
+    const intensity = cl.count / maxCount;  // 0..1
+    const radius = (0.04 + intensity * 0.04) * w;  // 4–8% of map width
+
+    // Radial gradient: hot center → transparent edge
+    const grad = heatCtx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+
+    // Color: dim orange at low intensity, bright yellow-orange at high
+    const alpha = 0.25 + intensity * 0.55;  // 0.25 → 0.8
+    if (intensity > 0.7) {
+      grad.addColorStop(0,   `rgba(255,220,40,${alpha})`);
+      grad.addColorStop(0.4, `rgba(255,140,20,${alpha * 0.7})`);
+      grad.addColorStop(1,   'rgba(255,80,0,0)');
+    } else if (intensity > 0.35) {
+      grad.addColorStop(0,   `rgba(255,140,30,${alpha})`);
+      grad.addColorStop(0.5, `rgba(200,80,10,${alpha * 0.6})`);
+      grad.addColorStop(1,   'rgba(180,40,0,0)');
+    } else {
+      grad.addColorStop(0,   `rgba(180,80,20,${alpha})`);
+      grad.addColorStop(0.5, `rgba(120,40,10,${alpha * 0.5})`);
+      grad.addColorStop(1,   'rgba(80,20,0,0)');
+    }
+
+    heatCtx.beginPath();
+    heatCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+    heatCtx.fillStyle = grad;
+    heatCtx.fill();
+  }
+
+  // Update sidebar hotspot list
+  updateHotspots(clusters.slice(0, 5), maxCount);
+}
+
+function updateHotspots(top, maxCount) {
+  const sec  = document.getElementById('hotspotSection');
+  const list = document.getElementById('hotspotList');
+  if (!heatOn || top.length === 0) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  list.innerHTML = top.map((cl, i) => {
+    const intensity = cl.count / maxCount;
+    const color = intensity > 0.7 ? '#ffda28' : intensity > 0.35 ? '#ff8c1e' : '#b45014';
+    return `<div class="hotspot-item">
+      <div class="hotspot-dot" style="background:${color};box-shadow:0 0 6px ${color}66"></div>
+      <span style="color:${color}">Miejsce ${i+1}</span>
+      <span class="hotspot-count">&nbsp;— ${cl.count}× pingowano</span>
+    </div>`;
+  }).join('');
+}
+
+function syncCanvas() {
+  const rect = mapImg.getBoundingClientRect();
+  heatCanvas.width  = rect.width;
+  heatCanvas.height = rect.height;
+  drawHeatmap();
+}
+
+function toggleHeat() {
+  heatOn = !heatOn;
+  localStorage.setItem('heat', heatOn ? '1' : '0');
+  updateHeatBtn();
+  syncCanvas();
+  if (heatOn) heatCanvas.classList.add('visible');
+  else { heatCanvas.classList.remove('visible'); document.getElementById('hotspotSection').style.display='none'; }
+}
+
+function updateHeatBtn() {
+  if (heatOn) {
+    heatBtn.textContent = '🔥 Heatmapa ON';
+    heatBtn.classList.add('on');
+    heatCanvas.classList.add('visible');
+  } else {
+    heatBtn.textContent = '🔥 Heatmapa OFF';
+    heatBtn.classList.remove('on');
+    heatCanvas.classList.remove('visible');
+  }
+}
+
+/* Resize observer — keep canvas in sync with image size */
+const resizeObs = new ResizeObserver(() => { if (heatOn) syncCanvas(); });
+resizeObs.observe(mapImg);
+mapImg.addEventListener('load', () => { if (heatOn) syncCanvas(); });
+
+/* SOCKET */
+socket.on('grotaGeneralsUpdate', data => {
+  generals = data;
+  renderGenerals();
+});
+
+socket.on('grotaSnapshotsUpdate', data => {
+  snapshots = data;
+  renderSnapshots();
+});
+
+socket.on('grotaPingsUpdate', data => {
+  pings = data;
+  renderPings();
+});
+
+socket.on('grotaHistoryUpdate', data => {
+  history = data;
+  if (heatOn) syncCanvas();
+});
+
+// Dead history — przeżywa refresh
+socket.on('grotaDeadHistoryUpdate', data => {
+  deadHistory = Array.isArray(data) ? data : [];
+  renderDead();
+});
+
+/* ═══ HISTORIA ZBITYCH METINÓW ═══ */
+const METIN_PER_CH = 6;
+const YELLOW_MS    = 20 * 60 * 1000;
+const GREEN_MS     = 30 * 60 * 1000;
+const EXPIRE_MS    = 35 * 60 * 1000;
+
+let deadHistory = []; // [{id, ch, killedAt}]
+let undoStack   = []; // max 3 ostatnich
+
+// Nadpisz removePing żeby zapisywał historię NA SERWERZE
+const _origRemovePing = removePing;
+window.removePing = function(id) {
+  const p = pings[id];
+  if (p) {
+    const dead = { id: 'dead_' + Date.now() + '_' + id, ch: p.ch, killedAt: Date.now(), px: p.x, py: p.y };
+    undoStack.push({ pingData: { x: p.x, y: p.y, ch: p.ch }, dead });
+    if (undoStack.length > 3) undoStack.shift();
+    socket.emit('grotaAddDead', dead); // zapisz na serwerze — przyjdzie z powrotem przez grotaDeadHistoryUpdate
+  }
+  socket.emit('grotaRemovePing', id);
+};
+
+function undoLastKill() {
+  if (!undoStack.length) return;
+  const last = undoStack.pop();
+  socket.emit('grotaRemoveDead', last.dead.id); // usuń z serwera
+  socket.emit('grotaAddPing', { x: last.pingData.x, y: last.pingData.y, ch: last.pingData.ch });
+}
+
+function renderDead() {
+  const now = Date.now();
+  // Odfiltruj lokalnie wygasłe (serwer też to robi przy połączeniu)
+  const active = deadHistory.filter(d => now - d.killedAt < EXPIRE_MS);
+
+  // Liczniki
+  const wrap = document.getElementById('chCounters');
+  if (wrap) {
+    const deadPer = {};
+    for (let i = 1; i <= 8; i++) deadPer[i] = 0;
+    active.forEach(d => { if (d.ch >= 1 && d.ch <= 8) deadPer[d.ch]++; });
+    wrap.innerHTML = '';
+    for (let ch = 1; ch <= 8; ch++) {
+      const avail = Math.max(0, METIN_PER_CH - deadPer[ch]);
+      const cls   = avail >= 5 ? 'c-full' : avail >= 3 ? 'c-mid' : avail >= 1 ? 'c-low' : 'c-empty';
+      const el = document.createElement('div');
+      el.className = 'ch-ctr';
+      el.title = `CH${ch}: ${avail} dostępnych`;
+      el.innerHTML = `<div class="ch-ctr-num">CH${ch}</div><div class="ch-ctr-val ${cls}">${avail}</div><div class="ch-ctr-sub">/${METIN_PER_CH}</div>`;
+      wrap.appendChild(el);
+    }
+  }
+
+  // Historia
+  const list = document.getElementById('deadList');
+  if (!list) return;
+  if (!active.length) {
+    list.innerHTML = '<div class="sidebar-empty">Brak zbitych</div>';
+    return;
+  }
+  const byCh = {};
+  active.forEach(d => { (byCh[d.ch] = byCh[d.ch] || []).push(d); });
+  list.innerHTML = '';
+  Object.keys(byCh).sort((a,b) => a-b).forEach(ch => {
+    const grp = document.createElement('div');
+    grp.className = 'dead-grp';
+    const hdr = document.createElement('div');
+    hdr.className = 'dead-grp-hdr';
+    hdr.innerHTML = `<span>Kanał ${ch}</span><span>${byCh[ch].length} zbitych</span>`;
+    grp.appendChild(hdr);
+    byCh[ch].sort((a,b) => b.killedAt - a.killedAt).forEach(d => {
+      const el   = now - d.killedAt;
+      const mins = Math.floor(el / 60000);
+      const secs = Math.floor((el % 60000) / 1000);
+      const cls  = el >= GREEN_MS ? 't-green' : el >= YELLOW_MS ? 't-yellow' : 't-fresh';
+      const col  = el >= GREEN_MS ? '#409040' : el >= YELLOW_MS ? '#907030' : '#604040';
+      const hint = el >= GREEN_MS ? '✓ Można szukać' : el >= YELLOW_MS ? '⚡ Może być' : '✗ Świeżo zbity';
+      const row  = document.createElement('div');
+      row.className = 'dead-row';
+      row.innerHTML = `<div class="dead-dot" style="background:${col}"></div>
+        <div><div class="dead-timer ${cls}">${mins}m ${secs}s temu</div>
+        <div class="dead-hint">${hint}</div></div>`;
+      grp.appendChild(row);
+    });
+    list.appendChild(grp);
+  });
+}
+
+// Odświeżaj co sekundę
+setInterval(renderDead, 1000);
+renderDead();
+
+
+/* ═══════════════════════════════
+   SUGEROWANA TRASA — LED glow
+═══════════════════════════════ */
+
+// Graf komnat i korytarzy (dane z edytora)
+const GRAPH_NODES = [
+  [0.0373,0.0374],[0.2256,0.0392],[0.405,0.041],[0.6874,0.0428],[0.8153,0.041],
+  [0.968,0.041],[0.9698,0.4084],[0.8153,0.412],[0.7531,0.4084],[0.7513,0.2889],
+  [0.8082,0.2907],[0.8153,0.1948],[0.8881,0.1948],[0.8206,0.1007],[0.6856,0.0971],
+  [0.6892,0.1948],[0.7567,0.1985],[0.6004,0.1948],[0.4973,0.1948],[0.5027,0.1007],
+  [0.4085,0.0989],[0.3179,0.0989],[0.3215,0.1948],[0.405,0.2003],[0.2291,0.1007],
+  [0.1332,0.0953],[0.1368,0.2184],[0.0409,0.2238],[0.2291,0.2238],[0.1314,0.3577],
+  [0.3179,0.3595],[0.3197,0.4174],[0.3233,0.4771],[0.3783,0.4771],[0.2309,0.421],
+  [0.1385,0.4826],[0.0337,0.4808],[0.0409,0.7142],[0.0391,0.8101],[0.1794,0.8192],
+  [0.1847,0.716],[0.2522,0.7214],[0.3215,0.7124],[0.3268,0.5984],[0.1332,0.5948],
+  [0.2522,0.8879],[0.0675,0.8952],[0.3144,0.8734],[0.3197,0.944],[0.405,0.9422],
+  [0.4156,0.8734],[0.4387,0.8029],[0.4352,0.7124],[0.3766,0.593],[0.4387,0.5966],
+  [0.5417,0.4735],[0.5915,0.4699],[0.6625,0.4753],[0.6661,0.4174],[0.6021,0.412],
+  [0.5933,0.3468],[0.5027,0.3468],[0.5009,0.2944],[0.4103,0.2926],[0.8135,0.4681],
+  [0.8153,0.5314],[0.8135,0.5857],[0.9414,0.535],[0.9467,0.7052],[0.8597,0.707],
+  [0.7691,0.7033],[0.7584,0.8011],[0.8419,0.8047],[0.929,0.8047],[0.9254,0.8662],
+  [0.8259,0.8734],[0.7655,0.868],[0.833,0.9404],[0.6625,0.6563],[0.6679,0.5911],
+  [0.6004,0.5893]
+];
+
+const GRAPH_EDGES = [
+  [0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,10],[10,11],[11,13],[13,4],[12,11],
+  [11,16],[16,15],[10,9],[9,16],[15,14],[14,3],[14,13],[15,17],[17,18],[18,19],
+  [19,20],[20,23],[23,18],[20,2],[20,21],[23,22],[21,24],[24,25],[25,26],[26,28],
+  [28,24],[24,1],[22,21],[0,27],[27,26],[26,29],[29,35],[35,36],[36,37],[37,38],
+  [38,39],[39,40],[40,41],[41,42],[40,37],[41,45],[45,46],[42,43],[43,44],[43,32],
+  [32,31],[31,34],[31,30],[30,29],[30,22],[32,33],[33,53],[53,43],[53,54],[54,52],
+  [52,51],[42,47],[47,50],[50,49],[49,77],[50,76],[76,75],[77,75],[75,74],[76,71],
+  [71,72],[72,73],[72,69],[71,70],[69,70],[69,68],[70,52],[71,51],[68,67],[67,65],
+  [65,66],[65,64],[64,7],[7,8],[8,58],[58,59],[59,60],[60,17],[60,61],[61,62],
+  [62,63],[63,23],[59,56],[56,55],[56,57],[57,79],[79,78],[79,80],[79,66],[80,54],
+  [49,48],[64,57]
+];
+
+// Buduj graf sąsiedztwa
+const GRAPH = {};
+GRAPH_NODES.forEach((_,i) => GRAPH[i] = []);
+GRAPH_EDGES.forEach(([a,b]) => { GRAPH[a].push(b); GRAPH[b].push(a); });
+
+// BFS między węzłami
+function bfsPath(start, end) {
+  if (start === end) return [start];
+  const visited = {[start]: null};
+  const queue = [start];
+  while (queue.length) {
+    const n = queue.shift();
+    for (const nb of (GRAPH[n] || [])) {
+      if (!(nb in visited)) {
+        visited[nb] = n;
+        if (nb === end) {
+          const path = [];
+          let cur = end;
+          while (cur !== null) { path.push(cur); cur = visited[cur]; }
+          return path.reverse();
+        }
+        queue.push(nb);
+      }
+    }
+  }
+  return null;
+}
+
+// Temperatura heatmapy w węźle
+
+// ══════════════════════════════════════════════════════
+// WŁASNE TRASY — kolory, ON/OFF, rysowanie w sidebarze
+// ══════════════════════════════════════════════════════
+
+// Paleta kolorów dla tras
+const ROUTE_COLORS = [
+  { name: 'Złota',    main: '#f0c040', glow: '240,192,64',  r:240,g:192,b:64  },
+  { name: 'Cyjan',    main: '#00e5ff', glow: '0,229,255',   r:0,  g:229,b:255 },
+  { name: 'Zielona',  main: '#50e080', glow: '80,224,128',  r:80, g:224,b:128 },
+  { name: 'Różowa',   main: '#ff60b0', glow: '255,96,176',  r:255,g:96, b:176 },
+  { name: 'Fioletowa',main: '#c060ff', glow: '192,96,255',  r:192,g:96, b:255 },
+  { name: 'Pomarań.', main: '#ff8030', glow: '255,128,48',  r:255,g:128,b:48  },
+  { name: 'Biała',    main: '#e0e0ff', glow: '220,220,255', r:220,g:220,b:255 },
+  { name: 'Czerwona', main: '#ff4040', glow: '255,64,64',   r:255,g:64, b:64  },
+];
+
+let customRoutes = [];     // [{name, points:[{x,y}], colorIdx, visible}]
+let drawingMode   = false;
+let drawingPoints = [];
+let activeAnims   = {};    // idx -> animId
+let routePulses   = {};    // idx -> pulse value
+
+function loadCustomRoutes() {
+  try { customRoutes = JSON.parse(localStorage.getItem('crt_grota2') || '[]'); } catch(e) { customRoutes = []; }
+  // Ensure colorIdx and visible
+  customRoutes.forEach((r, i) => {
+    if (r.colorIdx === undefined) r.colorIdx = i % ROUTE_COLORS.length;
+    if (r.visible === undefined) r.visible = false;
+  });
+  renderRoutesList();
+}
+
+function saveRoutesStorage() {
+  localStorage.setItem('crt_grota2', JSON.stringify(customRoutes));
+}
+
+// ── Render listy tras w sidebarze ──
+function renderRoutesList() {
+  const list = document.getElementById('customRoutesList');
+  if (!list) return;
+  if (!customRoutes.length) {
+    list.innerHTML = '<div class="sidebar-empty" style="font-size:12px;padding:16px;">Brak zapisanych tras.<br><span style="font-size:10px;color:var(--text-dim);">Kliknij "Rysuj nową trasę"</span></div>';
+    return;
+  }
+  list.innerHTML = customRoutes.map((r, i) => {
+    const col = ROUTE_COLORS[r.colorIdx % ROUTE_COLORS.length];
+    const isOn = r.visible;
+    return `
+    <div class="crt-item" style="border-left:3px solid ${col.main};">
+      <div style="display:flex;flex-direction:column;flex:1;gap:3px;min-width:0;">
+        <div class="crt-name" style="color:${col.main};font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.name}">
+          ${r.name}
+        </div>
+        <div style="font-size:9px;color:var(--text-dim);font-family:'Cinzel',serif;letter-spacing:1px;">
+          ● ${col.name} &nbsp;·&nbsp; ${r.points.length} pkt
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+        <button class="crt-btn${isOn?' crt-on':''}" onclick="toggleRouteVisible(${i})" style="
+          font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;
+          padding:4px 8px;border-radius:2px;cursor:pointer;border:1px solid;
+          ${isOn
+            ? `background:rgba(${col.glow},0.2);border-color:${col.main};color:${col.main};`
+            : 'background:none;border-color:rgba(100,80,40,0.4);color:var(--text-dim);'
+          }
+          transition:all 0.2s;white-space:nowrap;
+        ">${isOn ? '◉ ON' : '○ OFF'}</button>
+        <button class="crt-btn danger" onclick="deleteRoute(${i})" style="
+          font-size:9px;padding:3px 8px;border-radius:2px;cursor:pointer;
+          border:1px solid rgba(150,50,50,0.3);background:none;color:#906060;
+          font-family:'Cinzel',serif;letter-spacing:1px;
+        ">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Toggle widoczności trasy ──
+function toggleRouteVisible(idx) {
+  customRoutes[idx].visible = !customRoutes[idx].visible;
+  saveRoutesStorage();
+  renderRoutesList();
+  if (customRoutes[idx].visible) {
+    startRouteAnim(idx);
+  } else {
+    stopRouteAnim(idx);
+    redrawAllRoutes();
+  }
+}
+
+function startRouteAnim(idx) {
+  if (activeAnims[idx]) cancelAnimationFrame(activeAnims[idx]);
+  routePulses[idx] = 0;
+  const route = customRoutes[idx];
+  const pts = buildPixelPts(route.points);
+  const col = ROUTE_COLORS[route.colorIdx % ROUTE_COLORS.length];
+
+  function frame() {
+    if (!customRoutes[idx] || !customRoutes[idx].visible) return;
+    routePulses[idx] = (routePulses[idx] || 0) + 0.055;
+    redrawAllRoutes();
+    activeAnims[idx] = requestAnimationFrame(frame);
+  }
+  activeAnims[idx] = requestAnimationFrame(frame);
+}
+
+function stopRouteAnim(idx) {
+  if (activeAnims[idx]) cancelAnimationFrame(activeAnims[idx]);
+  delete activeAnims[idx];
+}
+
+function clearRouteCanvas() {
+  const cv = document.getElementById('routeCanvas');
+  if (cv) { const ctx = cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height); }
+}
+
+function redrawAllRoutes() {
+  const cv = document.getElementById('routeCanvas');
+  if (!cv) return;
+  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
+  if (!W || !H) return;
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  customRoutes.forEach((route, idx) => {
+    if (!route.visible) return;
+    const pts = buildPixelPts(route.points);
+    if (pts.length < 2) return;
+    const col = ROUTE_COLORS[route.colorIdx % ROUTE_COLORS.length];
+    const pulse = routePulses[idx] || 0;
+    drawLEDRoute(ctx, pts, col, pulse);
+  });
+
+  // Rysowanie w toku — przerywana linia
+  if (drawingMode && drawingPoints.length > 0) {
+    drawInProgressOnCtx(ctx, W, H);
+  }
+}
+
+function drawLEDRoute(ctx, pts, col, pulse) {
+  const n = pts.length;
+  const {r, g, b} = col;
+
+  for (let i = 1; i < n; i++) {
+    const p1 = pts[i-1], p2 = pts[i];
+    const t = i / n;
+    const wave = Math.sin(pulse * 2.5 - t * 22) * 0.5 + 0.5;
+    const bright = 0.5 + wave * 0.5;
+
+    // Glow zewnętrzny
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+    ctx.strokeStyle = `rgba(${r},${g},${b},${0.15 + wave*0.2})`;
+    ctx.lineWidth = 16; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+
+    // Glow środkowy
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+    ctx.strokeStyle = `rgba(${r},${g},${b},${0.4 + wave*0.35})`;
+    ctx.lineWidth = 6; ctx.stroke();
+
+    // Linia rdzeniowa
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+    ctx.strokeStyle = `rgba(${Math.min(255,r+40)},${Math.min(255,g+40)},${Math.min(255,b+40)},${0.85 + wave*0.15})`;
+    ctx.lineWidth = 2.5; ctx.stroke();
+
+    // Biały błysk przy szczycie fali
+    if (wave > 0.65) {
+      ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y);
+      ctx.strokeStyle = `rgba(255,255,255,${(wave-0.65)*2.0})`;
+      ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+
+  // Pulsujące kółka na start/end
+  const pulse3 = Math.sin(pulse * 3) * 0.5 + 0.5;
+  [pts[0], pts[n-1]].forEach(pt => {
+    const rad = 10 + pulse3 * 5;
+    const grd = ctx.createRadialGradient(pt.x,pt.y,0, pt.x,pt.y,rad);
+    grd.addColorStop(0,   `rgba(255,255,255,${0.9+pulse3*0.1})`);
+    grd.addColorStop(0.35,`rgba(${r},${g},${b},${0.85+pulse3*0.1})`);
+    grd.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+    ctx.beginPath(); ctx.arc(pt.x,pt.y,rad,0,Math.PI*2);
+    ctx.fillStyle = grd; ctx.fill();
+  });
+}
+
+// ── Rysowanie nowej trasy ──
+function toggleCustomRoute() {
+  if (drawingMode) cancelDrawing();
+  else startDrawing();
+}
+
+function startDrawing() {
+  drawingMode = true;
+  drawingPoints = [];
+  const btn = document.getElementById('customRouteBtn');
+  btn.innerText = '✏️ Zakończ rysowanie';
+  btn.style.background = 'rgba(255,140,40,0.15)';
+  btn.style.borderColor = 'rgba(255,140,40,0.5)';
+  btn.style.color = '#ff9040';
+  document.getElementById('drawPanel').style.display = 'flex';
+  document.getElementById('drawRouteName').value = '';
+  document.getElementById('drawPointCount').textContent = 'Klikaj punkty na mapie… (0 punktów)';
+  document.getElementById('mapHint').textContent = 'Tryb rysowania — klikaj punkty trasy';
+  document.body.classList.add('draw-active');
+}
+
+function cancelDrawing() {
+  drawingMode = false;
+  drawingPoints = [];
+  const btn = document.getElementById('customRouteBtn');
+  btn.innerText = '✏️ Rysuj nową trasę';
+  btn.style.background = 'rgba(201,168,76,0.1)';
+  btn.style.borderColor = 'rgba(201,168,76,0.35)';
+  btn.style.color = 'var(--gold-light)';
+  document.getElementById('drawPanel').style.display = 'none';
+  document.getElementById('mapHint').textContent = 'Kliknij na mapę aby pingować metina';
+  document.body.classList.remove('draw-active');
+  redrawAllRoutes();
+}
+
+function saveDrawing() {
+  if (drawingPoints.length < 2) {
+    document.getElementById('drawPointCount').textContent = '⚠ Dodaj co najmniej 2 punkty!';
+    document.getElementById('drawPointCount').style.color = '#e07070';
+    return;
+  }
+  const nameEl = document.getElementById('drawRouteName');
+  const name = nameEl.value.trim() || ('Trasa ' + (customRoutes.length + 1));
+  const colorIdx = customRoutes.length % ROUTE_COLORS.length;
+
+  customRoutes.push({ name, points: [...drawingPoints], colorIdx, visible: true });
+  saveRoutesStorage();
+
+  const newIdx = customRoutes.length - 1;
+  drawingMode = false;
+  drawingPoints = [];
+  const btn = document.getElementById('customRouteBtn');
+  btn.innerText = '✏️ Rysuj nową trasę';
+  btn.style.background = 'rgba(201,168,76,0.1)';
+  btn.style.borderColor = 'rgba(201,168,76,0.35)';
+  btn.style.color = 'var(--gold-light)';
+  document.getElementById('drawPanel').style.display = 'none';
+  document.getElementById('mapHint').textContent = 'Kliknij na mapę aby pingować metina';
+  document.body.classList.remove('draw-active');
+
+  renderRoutesList();
+  startRouteAnim(newIdx);
+}
+
+function deleteRoute(idx) {
+  stopRouteAnim(idx);
+  customRoutes.splice(idx, 1);
+  saveRoutesStorage();
+  // Przebuduj activeAnims z nowymi indeksami
+  const newAnims = {}, newPulses = {};
+  Object.keys(activeAnims).forEach(k => {
+    const ki = parseInt(k);
+    if (ki < idx) { newAnims[ki] = activeAnims[ki]; newPulses[ki] = routePulses[ki]; }
+    else if (ki > idx) { newAnims[ki-1] = activeAnims[ki]; newPulses[ki-1] = routePulses[ki]; }
+  });
+  Object.assign(activeAnims, newAnims);
+  Object.assign(routePulses, newPulses);
+  renderRoutesList();
+  redrawAllRoutes();
+}
+
+// ── Kliknięcia mapy w trybie rysowania ──
+mapContainer.addEventListener('click', function(e) {
+  if (!drawingMode) return;
+  if (e.target.closest('#drawPanel')) return;
+  e.stopImmediatePropagation();
+  const rect = mapImg.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top)  / rect.height;
+  if (x < 0 || x > 1 || y < 0 || y > 1) return;
+  drawingPoints.push({ x, y });
+  const cnt = drawingPoints.length;
+  document.getElementById('drawPointCount').textContent = `${cnt} punkt${cnt===1?'':'ów'} — klikaj dalej lub Zapisz`;
+  document.getElementById('drawPointCount').style.color = cnt >= 2 ? '#80c080' : 'var(--text-dim)';
+  redrawAllRoutes();
+}, true);
+
+document.addEventListener('keydown', e => {
+  if (!drawingMode) return;
+  if (e.key === 'Backspace' || (e.key==='z' && e.ctrlKey)) {
+    e.preventDefault();
+    drawingPoints.pop();
+    const cnt = drawingPoints.length;
+    document.getElementById('drawPointCount').textContent = cnt > 0
+      ? `${cnt} punkt${cnt===1?'':'ów'} — klikaj dalej lub Zapisz`
+      : 'Klikaj punkty na mapie… (0 punktów)';
+    document.getElementById('drawPointCount').style.color = cnt >= 2 ? '#80c080' : 'var(--text-dim)';
+    redrawAllRoutes();
+  }
+  if (e.key === 'Escape') cancelDrawing();
+  if (e.key === 'Enter') saveDrawing();
+});
+
+function drawInProgressOnCtx(ctx, W, H) {
+  const pts = drawingPoints.map(p => ({ x: p.x*W, y: p.y*H }));
+  if (!pts.length) return;
+  ctx.save();
+  ctx.setLineDash([8, 5]);
+  ctx.strokeStyle = 'rgba(255,160,50,0.8)';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  pts.forEach((p, i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  pts.forEach((p, i) => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, i===0 ? 8 : 5, 0, Math.PI*2);
+    ctx.fillStyle = i===0 ? 'rgba(255,140,40,0.95)' : 'rgba(255,180,80,0.85)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 1.5; ctx.stroke();
+  });
+  ctx.restore();
+}
+
+function buildPixelPts(points) {
+  const W = mapImg.offsetWidth, H = mapImg.offsetHeight;
+  const result = [];
+  for (let i = 1; i < points.length; i++) {
+    const ax=points[i-1].x*W, ay=points[i-1].y*H;
+    const bx=points[i].x*W,   by=points[i].y*H;
+    const dist = Math.hypot(bx-ax, by-ay);
+    const steps = Math.max(2, Math.ceil(dist/3));
+    for (let s=(i===1?0:1); s<=steps; s++) {
+      const t=s/steps;
+      result.push({ x: ax+(bx-ax)*t, y: ay+(by-ay)*t });
+    }
+  }
+  return result;
+}
+
+window.addEventListener('resize', () => redrawAllRoutes());
+
+loadCustomRoutes();
+// Uruchom animacje tras które były włączone
+customRoutes.forEach((r, i) => { if (r.visible) startRouteAnim(i); });
+
+
+// ── Dropdown menu tras w topbarze ──
+let routesMenuOpen = false;
+
+function toggleRoutesMenu() {
+  routesMenuOpen = !routesMenuOpen;
+  const dd = document.getElementById('routesMenuDropdown');
+  const btn = document.getElementById('routesMenuBtn');
+  if (routesMenuOpen) {
+    // Pozycjonuj dropdown pod przyciskiem (fixed)
+    const rect = btn.getBoundingClientRect();
+    dd.style.top  = (rect.bottom + 6) + 'px';
+    dd.style.right = (window.innerWidth - rect.right) + 'px';
+    dd.style.display = 'block';
+    btn.style.color = '#a0e8ff';
+    btn.style.borderColor = 'rgba(60,180,255,0.8)';
+    btn.style.background = 'rgba(40,120,200,0.18)';
+    renderRoutesMenu();
+  } else {
+    dd.style.display = 'none';
+    btn.style.color = '#60c8ff';
+    btn.style.borderColor = 'rgba(60,180,255,0.5)';
+    btn.style.background = 'rgba(40,120,200,0.08)';
+  }
+}
+
+// Zamknij dropdown przy kliknięciu poza nim
+document.addEventListener('click', e => {
+  if (!e.target.closest('#routesMenuBtn') && !e.target.closest('#routesMenuDropdown')) {
+    const dd = document.getElementById('routesMenuDropdown');
+    if (dd && dd.style.display !== 'none') {
+      routesMenuOpen = false;
+      dd.style.display = 'none';
+      const btn = document.getElementById('routesMenuBtn');
+      if (btn) { btn.style.color='#60c8ff'; btn.style.borderColor='rgba(60,180,255,0.5)'; btn.style.background='rgba(40,120,200,0.08)'; }
+    }
+  }
+});
+
+function renderRoutesMenu() {
+  const list = document.getElementById('routesMenuList');
+  if (!list) return;
+  if (!customRoutes.length) {
+    list.innerHTML = '<div style="padding:14px 12px;font-size:12px;color:var(--text-dim);text-align:center;">Brak tras.<br>Kliknij "Rysuj nową trasę"</div>';
+    return;
+  }
+  list.innerHTML = customRoutes.map((r, i) => {
+    const col = ROUTE_COLORS[r.colorIdx % ROUTE_COLORS.length];
+    const isOn = r.visible;
+    return `<div style="
+      display:flex;align-items:center;gap:8px;padding:8px 12px;
+      border-bottom:1px solid rgba(30,22,10,0.4);
+      border-left:3px solid ${isOn ? col.main : 'rgba(58,46,26,0.3)'};
+      background:${isOn ? `rgba(${col.glow},0.06)` : 'transparent'};
+      transition:all 0.15s;
+    ">
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:'Crimson Text',serif;font-size:14px;color:${isOn ? col.main : 'var(--text)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name}</div>
+        <div style="font-size:9px;color:var(--text-dim);font-family:'Cinzel',serif;letter-spacing:1px;margin-top:1px;">● ${col.name} · ${r.points.length} pkt</div>
+      </div>
+      <button onclick="toggleRouteVisible(${i});renderRoutesMenu();" style="
+        font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;
+        padding:4px 10px;border-radius:2px;cursor:pointer;
+        border:1px solid ${isOn ? col.main : 'rgba(100,80,40,0.4)'};
+        background:${isOn ? `rgba(${col.glow},0.15)` : 'none'};
+        color:${isOn ? col.main : 'var(--text-dim)'};
+        white-space:nowrap;transition:all 0.2s;
+      ">${isOn ? '◉ ON' : '○ OFF'}</button>
+      <button onclick="deleteRoute(${i});renderRoutesMenu();" style="
+        font-size:11px;padding:3px 7px;border-radius:2px;cursor:pointer;
+        border:1px solid rgba(150,50,50,0.3);background:none;color:#806060;
+        font-family:'Cinzel',serif;transition:all 0.2s;
+      " title="Usuń">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// Nadpisz renderRoutesList żeby też odświeżało menu
+const _origRenderRoutesList = renderRoutesList;
+function renderRoutesList() {
+  _origRenderRoutesList();
+  if (routesMenuOpen) renderRoutesMenu();
+}
+
+// Start rysowania z menu (nie zamykaj dropdown od razu)
+function startDrawingFromMenu() {
+  // Zamknij dropdown
+  routesMenuOpen = false;
+  const dd = document.getElementById('routesMenuDropdown');
+  if (dd) dd.style.display = 'none';
+  const btn = document.getElementById('routesMenuBtn');
+  if (btn) { btn.style.color='#c8a84c'; btn.style.borderColor='rgba(201,168,76,0.4)'; btn.style.background=''; }
+  // Start rysowania
+  startDrawing();
+}
+
+// Nadpisz toggleCustomRoute żeby działało z topbara
+function toggleCustomRoute() {
+  if (drawingMode) cancelDrawing();
+  else startDrawingFromMenu();
+}
+
+
+/* ══ RESET GROTY ══ */
+function toggleCheck(id) {
+  const el = document.getElementById(id);
+  el.checked = !el.checked;
+}
+function openResetModal() {
+  const el = document.getElementById('resetOverlay');
+  // Wypełnij opcje resetu
+  el.querySelector('#resetOptions').innerHTML = [
+    ['r_dead',     'Historia zbitych & timery',  'Czyści liczniki CH i historię zbitych metinów', true],
+    ['r_pings',    'Aktywne pingi metinów',       'Usuwa wszystkie znaczniki metinów z mapy',      true],
+    ['r_generals', 'Generałowie',                 'Usuwa wszystkie znaczniki generałów',           false],
+    ['r_heat',     'Heatmapa',                    'Usuwa historię pingów (heatmapa → zero)',        false],
+    ['r_routes',   'Moje trasy',                  'Usuwa wszystkie zapisane własne trasy',          false],
+    ['r_snaps',    'Snapshoty',                   'Usuwa wszystkie zapisane snapshoty mapy',        false],
+  ].map(([id,name,desc,checked]) => `
+    <div onclick="document.getElementById('${id}').checked=!document.getElementById('${id}').checked" style="
+      display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:3px;
+      border:1px solid rgba(58,46,26,0.3);margin-bottom:6px;cursor:pointer;
+      transition:all 0.15s;
+    " onmouseover="this.style.background='rgba(200,80,80,0.06)';this.style.borderColor='rgba(200,80,80,0.3)'"
+       onmouseout="this.style.background='';this.style.borderColor='rgba(58,46,26,0.3)'">
+      <input type="checkbox" id="${id}" ${checked?'checked':''} onclick="event.stopPropagation()"
+        style="width:16px;height:16px;accent-color:#c07070;cursor:pointer;flex-shrink:0;">
+      <div style="flex:1;">
+        <div style="font-family:'Cinzel',serif;font-size:11px;color:var(--text);letter-spacing:1px;">${name}</div>
+        <div style="font-size:10px;color:var(--text-dim);margin-top:2px;">${desc}</div>
+      </div>
+    </div>`).join('');
+  el.style.display = 'flex';
+}
+function closeResetModal() { document.getElementById('resetOverlay').style.display = 'none'; }
+
+function doReset() {
+  const dead     = document.getElementById('r_dead').checked;
+  const pings    = document.getElementById('r_pings').checked;
+  const generals = document.getElementById('r_generals').checked;
+  const heat     = document.getElementById('r_heat').checked;
+  const routes   = document.getElementById('r_routes').checked;
+  const snaps    = document.getElementById('r_snaps').checked;
+
+  if (dead) {
+    // Wyczyść historię zbitych na serwerze
+    deadHistory.forEach(d => socket.emit('grotaRemoveDead', d.id));
+    deadHistory = [];
+    renderDead();
+  }
+  if (pings) {
+    Object.keys(pings).forEach(id => socket.emit('grotaRemovePing', id));
+  }
+  if (generals) {
+    Object.keys(generals_data || {}).forEach(id => socket.emit('grotaRemoveGeneral', id));
+  }
+  if (heat) {
+    socket.emit('grotaResetHistory');
+  }
+  if (routes) {
+    // Zatrzymaj wszystkie animacje
+    customRoutes.forEach((_, i) => stopRouteAnim(i));
+    customRoutes = [];
+    saveRoutesStorage();
+    renderRoutesMenu();
+    clearRouteCanvas();
+  }
+  if (snaps) {
+    socket.emit('grotaClearSnapshots');
+  }
+
+  closeResetModal();
+}
+
+/* ══ FIX DROPDOWN — otwieranie ══ */
+// Nadpisz toggleRoutesMenu żeby działało poprawnie
+const _baseToggleMenu = toggleRoutesMenu;
+
+</script>
+
+<!-- DROPDOWN TRAS — fixed position żeby nie był clipowany -->
+<div id="routesMenuDropdown" style="
+  display:none;position:fixed;z-index:9999;
+  background:linear-gradient(160deg,#1a1208,#0c0906);
+  border:1px solid rgba(60,180,255,0.4);border-radius:4px;
+  min-width:260px;max-width:320px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.9),0 0 0 1px rgba(60,180,255,0.1);
+  overflow:hidden;
+">
+  <div style="padding:8px 12px 6px;border-bottom:1px solid rgba(40,80,120,0.4);">
+    <button onclick="startDrawingFromMenu()" style="
+      width:100%;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+      padding:8px;border-radius:2px;cursor:pointer;
+      background:rgba(60,180,255,0.08);border:1px solid rgba(60,180,255,0.3);color:#80d0ff;
+    ">✏️ Rysuj nową trasę</button>
+  </div>
+  <div id="routesMenuList" style="max-height:340px;overflow-y:auto;"></div>
+</div>
+
+<!-- PANEL RYSOWANIA — modal -->
+<div id="drawPanel" style="
+  display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:10001;background:linear-gradient(160deg,#1e1810,#100d08);
+  border:1px solid rgba(201,168,76,0.5);border-radius:4px;
+  padding:20px 22px;min-width:300px;
+  box-shadow:0 0 60px rgba(0,0,0,0.95);
+  flex-direction:column;gap:10px;
+">
+  <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;text-align:center;">✏️ Rysowanie trasy</div>
+  <div style="font-size:11px;color:var(--text-dim);text-align:center;">Klikaj punkty na mapie &nbsp;·&nbsp; <kbd style="background:#1a1410;padding:1px 5px;border-radius:2px;font-size:10px;border:1px solid #333;">Backspace</kbd> cofnij</div>
+  <input id="drawRouteName" placeholder="Nazwa trasy..." style="
+    background:#0e0b07;border:1px solid rgba(201,168,76,0.3);
+    color:var(--text);font-family:'Crimson Text',serif;font-size:14px;
+    padding:7px 10px;border-radius:2px;outline:none;
+  ">
+  <div id="drawPointCount" style="font-size:11px;color:var(--text-dim);text-align:center;">Klikaj punkty na mapie… (0 punktów)</div>
+  <div style="display:flex;gap:8px;">
+    <button onmousedown="event.preventDefault();event.stopPropagation();saveDrawing();" style="
+      flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+      padding:8px;border-radius:2px;cursor:pointer;
+      background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.5);color:var(--gold);
+    ">💾 Zapisz trasę</button>
+    <button onmousedown="event.preventDefault();event.stopPropagation();cancelDrawing();" style="
+      flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+      padding:8px;border-radius:2px;cursor:pointer;
+      background:rgba(100,40,40,0.15);border:1px solid rgba(180,60,60,0.3);color:#c07070;
+    ">✕ Anuluj</button>
+  </div>
+</div>
+
+<!-- RESET MODAL -->
+<div id="resetOverlay" style="
+  display:none;position:fixed;inset:0;z-index:10000;
+  background:rgba(0,0,0,0.75);backdrop-filter:blur(3px);
+  align-items:center;justify-content:center;
+" onclick="if(event.target===this)closeResetModal()">
+  <div style="
+    background:linear-gradient(160deg,#1e1810,#100d08);
+    border:1px solid rgba(200,80,80,0.4);border-radius:4px;
+    padding:24px 28px;min-width:320px;max-width:420px;
+    position:relative;box-shadow:0 0 60px rgba(0,0,0,0.9);
+  ">
+    <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e07070;text-align:center;margin-bottom:16px;">⟳ Reset groty wygnańców</div>
+    <div id="resetOptions"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button onclick="closeResetModal()" style="flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:2px;cursor:pointer;background:none;border:1px solid rgba(58,46,26,0.4);color:var(--text-dim);">Anuluj</button>
+      <button onclick="doReset()" style="flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:2px;cursor:pointer;background:rgba(200,60,60,0.15);border:1px solid rgba(200,80,80,0.5);color:#e07070;">⟳ Resetuj zaznaczone</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

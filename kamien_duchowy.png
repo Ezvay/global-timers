@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skarbiec Gildii</title>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/metin2_items.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#c9a84c;--gold-light:#f0d080;--gold-dark:#7a5f1e;--bg:#090806;--border:#3a2e1a;--text:#d4c4a0;--text-dim:#7a6a50;--green-bright:#60e080;--red-bright:#ff6060;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.bg-layer{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(201,168,76,0.08) 0%,transparent 60%),#090806;}
+
+/* AUTH */
+.auth-overlay{position:fixed;inset:0;z-index:1000;background:rgba(5,4,3,0.95);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);transition:opacity 0.4s;}
+.auth-overlay.hidden{opacity:0;pointer-events:none;}
+.auth-box{position:relative;background:linear-gradient(160deg,#1e1810,#100d08);border:1px solid var(--gold-dark);border-radius:4px;padding:40px 44px;width:360px;text-align:center;box-shadow:0 0 80px rgba(0,0,0,0.9);}
+.auth-box::before,.auth-box::after{content:'';position:absolute;width:18px;height:18px;border-color:rgba(201,168,76,0.5);border-style:solid;}
+.auth-box::before{top:8px;left:8px;border-width:1px 0 0 1px;}
+.auth-box::after{bottom:8px;right:8px;border-width:0 1px 1px 0;}
+.auth-logo{width:80px;height:80px;object-fit:contain;margin-bottom:16px;filter:drop-shadow(0 0 12px rgba(201,168,76,0.4));}
+.auth-title{font-family:'Cinzel',serif;font-size:13px;letter-spacing:4px;color:var(--gold-light);text-transform:uppercase;margin-bottom:6px;}
+.auth-sub{font-size:14px;color:var(--text-dim);font-style:italic;margin-bottom:24px;}
+.auth-input{width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(201,168,76,0.25);border-radius:2px;color:var(--text);font-family:'Cinzel',serif;font-size:16px;letter-spacing:4px;text-align:center;padding:12px 16px;outline:none;transition:border-color 0.25s;margin-bottom:10px;}
+.auth-input:focus{border-color:rgba(201,168,76,0.6);}
+.auth-input.error{border-color:rgba(200,50,50,0.8);animation:shake 0.35s ease;}
+@keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-8px);}60%{transform:translateX(8px);}}
+.auth-error{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:#cc4444;height:16px;margin-bottom:14px;}
+.auth-btn{width:100%;font-family:'Cinzel',serif;font-size:11px;letter-spacing:4px;text-transform:uppercase;padding:12px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.4);border-radius:2px;color:var(--gold);cursor:pointer;transition:all 0.25s;}
+.auth-btn:hover{background:rgba(201,168,76,0.2);}
+
+/* TOPBAR */
+.topbar{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;max-width:1300px;margin:0 auto;padding:14px 20px;border-bottom:1px solid var(--border);background:linear-gradient(to bottom,rgba(17,14,9,0.96),rgba(9,8,6,0.8));}
+.topbar-left{display:flex;align-items:center;gap:12px;}
+.page-title{font-family:'Cinzel',serif;font-size:18px;font-weight:600;color:var(--gold-light);letter-spacing:2px;text-shadow:0 0 20px rgba(201,168,76,0.4);}
+.nav-btn{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold-dark);background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:2px;padding:7px 14px;cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.2s;}
+.nav-btn:hover{color:var(--gold);border-color:rgba(201,168,76,0.6);}
+
+/* SUMMARY */
+.summary{position:relative;z-index:1;max-width:1300px;margin:20px auto 0;padding:0 20px;}
+.summary-inner{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;background:rgba(17,14,9,0.7);border:1px solid var(--border);border-radius:3px;padding:16px 20px;}
+.summary-item{text-align:center;}
+.summary-label{font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--text-dim);text-transform:uppercase;margin-bottom:6px;}
+.summary-value{font-family:'Cinzel',serif;font-size:20px;font-weight:600;color:var(--gold-light);}
+.summary-value.green{color:var(--green-bright);}
+.summary-value.red{color:var(--red-bright);}
+
+/* MAIN GRID */
+.main{position:relative;z-index:1;max-width:1300px;margin:24px auto 60px;padding:0 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+@media(max-width:1000px){.main{grid-template-columns:1fr 1fr;}}
+@media(max-width:640px){.main{grid-template-columns:1fr;}}
+.full-width{grid-column:1/-1;}
+
+/* SECTION CARD */
+.section-card{background:linear-gradient(160deg,#1c1510,#0e0b07);border:1px solid var(--border);border-radius:3px;overflow:hidden;display:flex;flex-direction:column;}
+.section-card::before{content:'';display:block;height:1px;background:linear-gradient(to right,transparent,rgba(201,168,76,0.2),transparent);}
+.section-header{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.3);}
+.section-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;}
+.section-body{flex:1;overflow-y:auto;max-height:340px;}
+
+/* ROWS */
+.inv-row{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid rgba(58,46,26,0.3);transition:background 0.15s;}
+.inv-row:hover{background:rgba(201,168,76,0.03);}
+.inv-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid rgba(201,168,76,0.25);flex-shrink:0;}
+.inv-nick{font-family:'Cinzel',serif;font-size:12px;color:var(--gold-light);letter-spacing:1px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.inv-edit{background:rgba(0,0,0,0.4);border:1px solid rgba(201,168,76,0.2);color:var(--text);font-family:'Cinzel',serif;font-size:12px;padding:3px 6px;border-radius:2px;outline:none;width:75px;text-align:right;}
+.inv-edit:focus{border-color:rgba(201,168,76,0.5);}
+.unit-label{font-size:11px;color:var(--text-dim);flex-shrink:0;}
+.save-btn{font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:4px 8px;border-radius:2px;cursor:pointer;border:1px solid rgba(201,168,76,0.3);color:var(--gold-dark);background:rgba(201,168,76,0.07);transition:all 0.2s;flex-shrink:0;}
+.save-btn:hover{color:var(--gold);border-color:rgba(201,168,76,0.6);}
+.del-btn{font-size:10px;color:#604040;background:none;border:none;cursor:pointer;padding:2px 5px;transition:color 0.2s;flex-shrink:0;}
+.del-btn:hover{color:#ff6060;}
+
+/* ADD ROW */
+.add-row{display:flex;gap:6px;padding:10px 14px;align-items:center;border-top:1px solid rgba(58,46,26,0.3);flex-wrap:wrap;}
+.add-input{flex:1;min-width:80px;background:rgba(0,0,0,0.5);border:1px solid rgba(201,168,76,0.2);color:var(--text);font-family:'Crimson Text',serif;font-size:13px;padding:5px 8px;border-radius:2px;outline:none;transition:border-color 0.2s;}
+.add-input:focus{border-color:rgba(201,168,76,0.5);}
+.add-input.num{width:85px;flex:none;font-family:'Cinzel',serif;text-align:right;}
+.add-input.wide{min-width:140px;}
+.add-select{background:rgba(0,0,0,0.5);border:1px solid rgba(201,168,76,0.2);color:var(--text);font-family:'Crimson Text',serif;font-size:13px;padding:5px 8px;border-radius:2px;outline:none;}
+.add-btn{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;text-transform:uppercase;padding:6px 12px;border-radius:2px;cursor:pointer;border:1px solid rgba(201,168,76,0.3);color:var(--gold-dark);background:rgba(201,168,76,0.08);transition:all 0.2s;white-space:nowrap;flex-shrink:0;}
+.add-btn:hover{color:var(--gold);border-color:rgba(201,168,76,0.6);background:rgba(201,168,76,0.16);}
+
+/* SPRZEDAŻ */
+.sp-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid rgba(58,46,26,0.3);}
+.sp-info{flex:1;min-width:0;}
+.sp-opis{font-size:14px;color:var(--text);}
+.sp-meta{font-size:11px;color:var(--text-dim);margin-top:2px;}
+.sp-kwota{font-family:'Cinzel',serif;font-size:14px;color:var(--green-bright);flex-shrink:0;}
+
+/* ZAKUPY */
+.buy-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid rgba(58,46,26,0.3);}
+.buy-info{flex:1;min-width:0;}
+.buy-opis{font-size:14px;color:var(--text);}
+.buy-meta{font-size:11px;color:var(--text-dim);margin-top:2px;}
+.buy-kwota{font-family:'Cinzel',serif;font-size:14px;color:var(--red-bright);flex-shrink:0;}
+
+/* PODZIAŁ ZYSKU */
+.profit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:14px;}
+.profit-item{background:rgba(0,0,0,0.3);border:1px solid rgba(58,46,26,0.5);border-radius:3px;padding:12px;text-align:center;}
+.profit-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid rgba(201,168,76,0.3);margin:0 auto 8px;}
+.profit-nick{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;}
+.profit-line{font-size:12px;color:var(--text-dim);margin-bottom:3px;}
+.profit-zysk{font-family:'Cinzel',serif;font-size:15px;font-weight:600;margin-top:6px;}
+.profit-zysk.plus{color:var(--green-bright);}
+.profit-zysk.minus{color:var(--red-bright);}
+.profit-udz{font-size:11px;color:var(--text-dim);margin-top:2px;}
+
+.empty-info{padding:20px 14px;text-align:center;font-size:13px;color:var(--text-dim);font-style:italic;}
+.page-content{transition:opacity 0.4s;}
+.page-content.locked{opacity:0;pointer-events:none;user-select:none;}
+
+  /* DARK INPUTS OVERRIDE */
+  .item-input, .item-input:focus, .item-input:hover,
+  .add-input, .add-input:focus,
+  .inv-edit, .inv-edit:focus,
+  .item-lvl-select, .item-lvl-select:focus,
+  .add-select, .add-select:focus {
+    background-color: #0e0b07 !important;
+    background: #0e0b07 !important;
+    color: #d4c4a0 !important;
+    -webkit-text-fill-color: #d4c4a0 !important;
+    border-color: rgba(201,168,76,0.3) !important;
+    -webkit-box-shadow: 0 0 0 1000px #0e0b07 inset !important;
+    box-shadow: none;
+    border-radius: 2px;
+    outline: none;
+    font-family: 'Crimson Text', serif;
+  }
+  .item-input:focus, .add-input:focus, .inv-edit:focus {
+    border-color: rgba(201,168,76,0.6) !important;
+    box-shadow: 0 0 8px rgba(201,168,76,0.12) !important;
+  }
+  .item-lvl-select, .add-select {
+    font-family: 'Cinzel', serif !important;
+    color: #c9a84c !important;
+    -webkit-text-fill-color: #c9a84c !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a5f1e'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 6px center !important;
+    padding-right: 22px !important;
+  }
+  .item-lvl-select option, .add-select option {
+    background: #1a1410 !important;
+    color: #d4c4a0 !important;
+  }
+  input::placeholder { color: #7a6a50 !important; opacity: 1 !important; }
+  input:-webkit-autofill, input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus, input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #0e0b07 inset !important;
+    -webkit-text-fill-color: #d4c4a0 !important;
+  }
+</style>
+</head>
+<body>
+<div class="bg-layer"></div>
+
+<!-- AUTH -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <img class="auth-logo" src="/skarbiec_logo.png" alt="">
+    <div class="auth-title">Skarbiec Gildii</div>
+    <div class="auth-sub">Dostęp chroniony</div>
+    <input class="auth-input" id="authInput" type="password" placeholder="••••••••" autocomplete="off">
+    <div class="auth-error" id="authError"></div>
+    <button class="auth-btn" onclick="submitPassword()">Wejdź</button>
+  </div>
+</div>
+
+<div class="page-content locked" id="pageContent">
+
+<div class="topbar">
+  <div class="topbar-left">
+    <a class="nav-btn" href="/">⬅ Powrót</a>
+    <div class="page-title">⚜ Skarbiec Gildii</div>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div class="summary">
+  <div class="summary-inner">
+    <div class="summary-item">
+      <div class="summary-label">Łączne zainwestowane</div>
+      <div class="summary-value" id="sumInw">0,00 zł</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">Łączna sprzedaż</div>
+      <div class="summary-value green" id="sumSp">0,00 zł</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">Łączne zakupy</div>
+      <div class="summary-value red" id="sumBuy">0,00 zł</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">Bilans netto</div>
+      <div class="summary-value" id="sumBilans">0,00 zł</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- INWESTYCJE -->
+  <div class="section-card">
+    <div class="section-header"><span class="section-title">💰 Gracze & Udziały</span></div>
+    <div class="section-body" id="invList"></div>
+    <div class="add-row">
+      <input class="add-input wide" id="invNick" placeholder="Nick gracza..." maxlength="30">
+      <button class="add-btn" onclick="addNick()">+ Dodaj</button>
+    </div>
+  </div>
+
+  <!-- SPRZEDAŻ -->
+  <div class="section-card">
+    <div class="section-header"><span class="section-title">📦 Sprzedaż</span></div>
+    <div class="section-body" id="spList"></div>
+    <div class="add-row">
+      <div class="item-input-wrap">
+        <span class="item-input-icon">⚔</span>
+        <input class="item-input" id="spOpis" type="text" placeholder="Nazwa przedmiotu..." autocomplete="off">
+      </div>
+      <select class="item-lvl-select" id="spLvl">
+        <option value="">bez +</option>
+        <option>+1</option><option>+2</option><option>+3</option>
+        <option>+4</option><option>+5</option><option>+6</option>
+        <option>+7</option><option>+8</option><option>+9</option>
+      </select>
+      <input class="add-input num" id="spKwota" type="number" placeholder="zł" min="0" step="0.01">
+      <button class="add-btn" onclick="addSprzedaz()">+ Dodaj</button>
+    </div>
+  </div>
+
+  <!-- ZAKUPY -->
+  <div class="section-card">
+    <div class="section-header"><span class="section-title">🛒 Zakupy</span></div>
+    <div class="section-body" id="buyList"></div>
+    <div class="add-row" style="flex-wrap:wrap;">
+      <div class="item-input-wrap">
+        <span class="item-input-icon">⚔</span>
+        <input class="item-input" id="buyOpis" type="text" placeholder="Nazwa przedmiotu..." autocomplete="off">
+      </div>
+      <select class="item-lvl-select" id="buyLvl">
+        <option value="">bez +</option>
+        <option>+1</option><option>+2</option><option>+3</option>
+        <option>+4</option><option>+5</option><option>+6</option>
+        <option>+7</option><option>+8</option><option>+9</option>
+      </select>
+      <input class="add-input num" id="buyKwota" type="number" placeholder="zł" min="0" step="0.01">
+      <select class="add-select" id="buyKto"></select>
+      <button class="add-btn" onclick="addZakup()">+ Dodaj</button>
+    </div>
+  </div>
+
+  <!-- PODZIAŁ ZYSKU -->
+  <div class="section-card full-width">
+    <div class="section-header">
+      <span class="section-title">⚖ Podział zysku</span>
+      <span style="font-size:11px;color:var(--text-dim);font-style:italic;">proporcjonalnie do udziałów</span>
+    </div>
+    <div class="profit-grid" id="profitGrid"></div>
+  </div>
+
+</div>
+</div>
+
+<script>
+const socket = io();
+
+/* AUTH */
+const authOverlay = document.getElementById('authOverlay');
+const pageContent  = document.getElementById('pageContent');
+const authInput    = document.getElementById('authInput');
+const authError    = document.getElementById('authError');
+if (localStorage.getItem('auth_skarbiec') === '1') unlock();
+authInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitPassword(); });
+setTimeout(() => authInput.focus(), 100);
+function submitPassword() {
+  socket.emit('checkPassword', authInput.value, ok => {
+    if (ok) { localStorage.setItem('auth_skarbiec','1'); unlock(); }
+    else {
+      authInput.classList.add('error');
+      authError.innerText = 'Nieprawidłowe hasło';
+      setTimeout(() => { authInput.classList.remove('error'); authError.innerText = ''; authInput.value = ''; authInput.focus(); }, 1500);
+    }
+  });
+}
+function unlock() {
+  authOverlay.classList.add('hidden');
+  pageContent.classList.remove('locked');
+  setTimeout(() => authOverlay.style.display = 'none', 400);
+}
+
+/* AVATARY */
+const AVATARS = {
+  'Judaszek':'/avatar_judaszek.png','Bieluch':'/avatar_bieluch.png',
+  'Ezvay':'/avatar_ezvay.png','Marco':'/avatar_marco.png','Yodasz':'/avatar_yodasz.png'
+};
+function getAvatar(nick) { return AVATARS[nick] || ''; }
+function avImg(nick, cls) {
+  const src = getAvatar(nick);
+  return src ? `<img class="${cls}" src="${src}" alt="${nick}">` : '';
+}
+
+/* FORMAT */
+function fmt(v) { return v.toLocaleString('pl-PL',{minimumFractionDigits:2,maximumFractionDigits:2})+' zł'; }
+function fmtDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('pl-PL')+' '+d.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
+}
+
+/* STATE */
+let data = { inwestycje:{}, udzialy:{}, sprzedaz:[], zakupy:[] };
+
+/* RENDER INWESTYCJE */
+function renderInwestycje() {
+  const list  = document.getElementById('invList');
+  const nicks = Object.keys(data.inwestycje);
+  if (!nicks.length) { list.innerHTML = '<div class="empty-info">Brak graczy</div>'; return; }
+  list.innerHTML = nicks.map(nick => {
+    const udzial = data.udzialy?.[nick] ?? 1;
+    const buyOwn = (data.zakupy||[]).filter(b=>b.kto===nick).reduce((s,b)=>s+b.kwota,0);
+    return `<div class="inv-row">
+      ${avImg(nick,'inv-avatar')}
+      <span class="inv-nick">${nick}</span>
+      <span style="font-family:'Cinzel',serif;font-size:13px;color:var(--green-bright);min-width:90px;text-align:right;">${fmt(buyOwn)}</span>
+      <input class="inv-edit" id="udz_${nick}" type="number" value="${udzial}" min="0" max="100" step="1" style="width:48px" title="Udział %">
+      <span class="unit-label">%</span>
+      <button class="save-btn" onclick="saveUdz('${nick}')">💾</button>
+      <button class="del-btn" onclick="delNick('${nick}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function saveInw(nick) {
+  const val = parseFloat(document.getElementById('inv_'+nick)?.value)||0;
+  socket.emit('skarbiecSetInwestycja',{nick,kwota:val});
+}
+function saveUdz(nick) {
+  const val = parseFloat(document.getElementById('udz_'+nick)?.value)||1;
+  socket.emit('skarbiecSetUdzial',{nick,udzial:val});
+}
+function addNick() {
+  const nick = document.getElementById('invNick').value.trim();
+  if (!nick) return;
+  socket.emit('skarbiecAddNick', nick);
+  document.getElementById('invNick').value = '';
+}
+function delNick(nick) {
+  if (!confirm('Usunąć gracza '+nick+'?')) return;
+  socket.emit('skarbiecRemoveNick', nick);
+}
+
+/* RENDER SPRZEDAŻ */
+function renderSprzedaz() {
+  const list  = document.getElementById('spList');
+  const items = data.sprzedaz || [];
+  if (!items.length) { list.innerHTML = '<div class="empty-info">Brak wpisów</div>'; return; }
+  list.innerHTML = items.map(sp => `
+    <div class="sp-row">
+      <div class="sp-info">
+        <div class="sp-opis">${sp.opis}</div>
+        <div class="sp-meta">${fmtDate(sp.ts)}</div>
+      </div>
+      <span class="sp-kwota">+${fmt(sp.kwota)}</span>
+      <button class="del-btn" onclick="delSp('${sp.id}')">✕</button>
+    </div>`).join('');
+}
+/* ITEM SEARCH DROPDOWN */
+function buildItemName(prefix) {
+  const el   = document.getElementById(prefix+'Opis');
+  const opis = (el.value || '').trim();
+  const lvl  = document.getElementById(prefix+'Lvl').value;
+  if (!opis) return '';
+  return lvl ? opis + ' ' + lvl : opis;
+}
+
+function onItemSelect(prefix) {
+  // nic dodatkowego — select.value jest gotowe
+}
+
+function populateItemSelects() {
+  ['sp','buy'].forEach(prefix => {
+    const sel = document.getElementById(prefix+'Opis');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— wybierz przedmiot —</option>';
+    for (const grpName in METIN2_GROUPS) {
+      const grp = document.createElement('optgroup');
+      grp.label = grpName;
+      METIN2_GROUPS[grpName].forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        grp.appendChild(opt);
+      });
+      sel.appendChild(grp);
+    }
+  });
+}
+
+
+
+const selectedItemImg = {};
+function selectItem(prefix, name, imgUrl) {
+  document.getElementById(prefix+'Opis').value = name;
+  selectedItemImg[prefix] = imgUrl || '';
+  document.getElementById(prefix+'Dropdown').classList.remove('open');
+  document.getElementById(prefix+'Kwota').focus();
+}
+
+function addSprzedaz() {
+  const opis  = buildItemName('sp');
+  const kwota = parseFloat(document.getElementById('spKwota').value)||0;
+  if (!opis||kwota<=0) return;
+  socket.emit('skarbiecAddSprzedaz',{opis,kwota,imgUrl:selectedItemImg['sp']||''});
+  document.getElementById('spOpis').value='';
+  document.getElementById('spLvl').value='';
+  document.getElementById('spKwota').value='';
+}
+function delSp(id) {
+  if (!confirm('Usunąć ten wpis?')) return;
+  socket.emit('skarbiecRemoveSprzedaz',id);
+}
+
+/* RENDER ZAKUPY */
+function renderZakupy() {
+  const list  = document.getElementById('buyList');
+  const items = data.zakupy || [];
+  if (!items.length) { list.innerHTML = '<div class="empty-info">Brak zakupów</div>'; return; }
+  list.innerHTML = items.map(b => `
+    <div class="buy-row">
+      <div class="buy-info">
+        <div class="buy-opis">${b.opis}</div>
+        <div class="buy-meta">${b.kto ? '🧑 '+b.kto+' &nbsp;•&nbsp; ' : ''}${fmtDate(b.ts)}</div>
+      </div>
+      <span class="buy-kwota">-${fmt(b.kwota)}</span>
+      <button class="del-btn" onclick="delBuy('${b.id}')">✕</button>
+    </div>`).join('');
+}
+function updateBuySelect() {
+  const sel   = document.getElementById('buyKto');
+  const nicks = Object.keys(data.inwestycje);
+  sel.innerHTML = '<option value="">— kto kupił —</option>' +
+    nicks.map(n => `<option value="${n}">${n}</option>`).join('');
+}
+function addZakup() {
+  const opis  = buildItemName('buy');
+  const kwota = parseFloat(document.getElementById('buyKwota').value)||0;
+  const kto   = document.getElementById('buyKto').value;
+  if (!opis||kwota<=0) return;
+  socket.emit('skarbiecAddZakup',{opis,kwota,kto,imgUrl:selectedItemImg['buy']||''});
+  document.getElementById('buyOpis').value='';
+  document.getElementById('buyLvl').value='';
+  document.getElementById('buyKwota').value='';
+}
+function delBuy(id) {
+  if (!confirm('Usunąć ten zakup?')) return;
+  socket.emit('skarbiecRemoveZakup',id);
+}
+
+/* RENDER PODZIAŁ */
+function renderProfit() {
+  const nicks  = Object.keys(data.inwestycje);
+  const sumSp  = (data.sprzedaz||[]).reduce((s,sp)=>s+sp.kwota,0);
+  const sumBuy = (data.zakupy||[]).reduce((s,b)=>s+b.kwota,0);
+
+  // Inwestycja każdego = suma jego zakupów
+  const invTotal = nick => (data.zakupy||[]).filter(b=>b.kto===nick).reduce((s,b)=>s+b.kwota,0);
+  const sumInwAll = nicks.reduce((s,n)=>s+invTotal(n),0);
+  const bilans    = sumSp - sumInwAll;
+
+  document.getElementById('sumInw').innerText  = fmt(sumInwAll);
+  document.getElementById('sumSp').innerText   = fmt(sumSp);
+  document.getElementById('sumBuy').innerText  = fmt(sumBuy);
+  const bil = document.getElementById('sumBilans');
+  bil.innerText = fmt(bilans);
+  bil.className = 'summary-value '+(bilans>=0?'green':'red');
+
+  const grid = document.getElementById('profitGrid');
+  if (!nicks.length) { grid.innerHTML='<div class="empty-info" style="grid-column:1/-1">Dodaj graczy</div>'; return; }
+
+  // Udziały w % — jeśli suma != 100 to normalizuj proporcjonalnie
+  const getRawPct = n => parseFloat(data.udzialy?.[n] ?? (100/nicks.length));
+  const totalPct  = nicks.reduce((s,n)=>s+getRawPct(n),0)||100;
+
+  grid.innerHTML = nicks.map(nick => {
+    const buyOwn  = invTotal(nick);
+    const rawPct  = getRawPct(nick);
+    const fraction= rawPct / totalPct;
+    const zysk    = sumSp * fraction;
+    const netto   = zysk - buyOwn;
+    const pctDisp = rawPct.toFixed(1);
+
+    return `<div class="profit-item">
+      ${avImg(nick,'profit-avatar')}
+      <div class="profit-nick">${nick}</div>
+      <div class="profit-line">Zainwestowano: ${fmt(buyOwn)}</div>
+      <div class="profit-line">Udział: ${pctDisp}%</div>
+      <div class="profit-line">Ze sprzedaży: ${fmt(zysk)}</div>
+      <div class="profit-zysk ${netto>=0?'plus':'minus'}">${netto>=0?'+':''}${fmt(netto)}</div>
+      <div class="profit-udz">netto</div>
+    </div>`;
+  }).join('');
+}
+
+function render() {
+  renderInwestycje();
+  renderSprzedaz();
+  renderZakupy();
+  renderProfit();
+  updateBuySelect();
+}
+
+/* SOCKET */
+socket.on('skarbiecUpdate', d => { data = d; render(); });
+
+
+/* ENTER */
+document.addEventListener('keydown', e => {
+  if (e.key!=='Enter') return;
+  const id = document.activeElement?.id;
+  if (id==='invNick') addNick();
+  if (['spOpis','spKwota','spLvl'].includes(id)) addSprzedaz();
+  if (['buyOpis','buyKwota','buyLvl'].includes(id)) addZakup();
+});
+</script>
+
+</body>
+</html>
