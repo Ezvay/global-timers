@@ -14,7 +14,7 @@
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
-  .bg-layer{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(20,20,70,0.18) 0%,transparent 60%),#090806;}
+  .bg-layer{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(40,20,80,0.15) 0%,transparent 60%),#090806;}
 
   /* TOP BAR */
   .topbar{
@@ -364,32 +364,6 @@
   </div>
 
   <div class="sidebar">
-    <!-- PANEL RYSOWANIA — wewnątrz sidebara, nie zasłania mapy -->
-    <div id="drawPanel" style="display:none;flex-direction:column;gap:8px;padding:12px 14px;border-bottom:2px solid rgba(201,168,76,0.25);background:rgba(0,0,0,0.25);">
-      <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;">✏️ Rysowanie trasy</div>
-      <div style="font-size:11px;color:var(--text-dim);">
-        Klikaj punkty na mapie<br>
-        <span style="font-size:10px;"><kbd style="background:#1a1410;padding:1px 5px;border-radius:2px;border:1px solid #333;">Backspace</kbd> cofa punkt &nbsp;·&nbsp; <kbd style="background:#1a1410;padding:1px 5px;border-radius:2px;border:1px solid #333;">Enter</kbd> zapisuje</span>
-      </div>
-      <input id="drawRouteName" placeholder="Nazwa trasy..." style="
-        background:#0e0b07;border:1px solid rgba(201,168,76,0.3);
-        color:var(--text);font-family:'Crimson Text',serif;font-size:14px;
-        padding:7px 10px;border-radius:2px;outline:none;width:100%;
-      ">
-      <div id="drawPointCount" style="font-size:11px;color:var(--text-dim);">Klikaj punkty na mapie… (0 punktów)</div>
-      <div style="display:flex;gap:6px;">
-        <button onmousedown="event.preventDefault();event.stopPropagation();saveDrawing();" style="
-          flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;
-          padding:8px;border-radius:2px;cursor:pointer;
-          background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.5);color:var(--gold);
-        ">💾 Zapisz</button>
-        <button onmousedown="event.preventDefault();event.stopPropagation();cancelDrawing();" style="
-          flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;
-          padding:8px;border-radius:2px;cursor:pointer;
-          background:rgba(100,40,40,0.15);border:1px solid rgba(180,60,60,0.3);color:#c07070;
-        ">✕ Anuluj</button>
-      </div>
-    </div>
     <!-- SNAPSHOTS -->
     <div class="snap-panel">
       <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--gold-dark);text-transform:uppercase;margin-bottom:8px;">📸 Snapshoty</div>
@@ -400,7 +374,7 @@
       <div id="snapList"></div>
     </div>
 
-    <div class="sidebar-section-title">⚔ Metiny <span style="font-size:10px;color:var(--text-dim);letter-spacing:1px;font-family:'Crimson Text',serif;">(55 / 65 lvl)</span></div>
+    <div class="sidebar-section-title">⚔ Metiny <span style="font-size:10px;color:var(--text-dim);letter-spacing:0;font-family:'Crimson Text',serif;font-style:italic;">(55 lvl / 65 lvl)</span></div>
     <div id="pingList"><div class="sidebar-empty">Brak aktywnych pingów</div></div>
 
     <div class="sidebar-section-title" style="border-color:rgba(200,60,60,0.3);color:#c07070;">💀 Zbite (respawn 20-30min)</div>
@@ -424,55 +398,12 @@
 
 </div>
 
-<!-- DROPDOWN TRAS — fixed position żeby nie był clipowany -->
-<div id="routesMenuDropdown" style="
-  display:none;position:fixed;z-index:9999;
-  background:linear-gradient(160deg,#1a1208,#0c0906);
-  border:1px solid rgba(60,180,255,0.4);border-radius:4px;
-  min-width:260px;max-width:320px;
-  box-shadow:0 8px 32px rgba(0,0,0,0.9),0 0 0 1px rgba(60,180,255,0.1);
-  overflow:hidden;
-">
-  <div style="padding:8px 12px 6px;border-bottom:1px solid rgba(40,80,120,0.4);">
-    <button onclick="startDrawingFromMenu()" style="
-      width:100%;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
-      padding:8px;border-radius:2px;cursor:pointer;
-      background:rgba(60,180,255,0.08);border:1px solid rgba(60,180,255,0.3);color:#80d0ff;
-    ">✏️ Rysuj nową trasę</button>
-  </div>
-  <div id="routesMenuList" style="max-height:340px;overflow-y:auto;"></div>
-</div>
-
-<!-- RESET MODAL -->
-<div id="resetOverlay" style="
-  display:none;position:fixed;inset:0;z-index:10000;
-  background:rgba(0,0,0,0.75);backdrop-filter:blur(3px);
-  align-items:center;justify-content:center;
-" onclick="if(event.target===this)closeResetModal()">
-  <div style="
-    background:linear-gradient(160deg,#1e1810,#100d08);
-    border:1px solid rgba(200,80,80,0.4);border-radius:4px;
-    padding:24px 28px;min-width:320px;max-width:420px;
-    position:relative;box-shadow:0 0 60px rgba(0,0,0,0.9);
-  ">
-    <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e07070;text-align:center;margin-bottom:16px;">⟳ Reset groty wygnańców</div>
-    <div id="resetOptions"></div>
-    <div style="display:flex;gap:8px;margin-top:16px;">
-      <button onclick="closeResetModal()" style="flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:2px;cursor:pointer;background:none;border:1px solid rgba(58,46,26,0.4);color:var(--text-dim);">Anuluj</button>
-      <button onclick="doReset()" style="flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:2px;cursor:pointer;background:rgba(200,60,60,0.15);border:1px solid rgba(200,80,80,0.5);color:#e07070;">⟳ Resetuj zaznaczone</button>
-    </div>
-  </div>
-</div>
-
-</body>
-</html>
-
-<script>>
+<script>
 const socket = io();
 
 /* PING SIZE */
-let pingSize   = parseInt(localStorage.getItem('sohan_pingSize')) || 14;
-let mapSizePct = parseInt(localStorage.getItem('sohan_mapSize'))  || 100;
+let pingSize   = parseInt(localStorage.getItem('pingSize_sohan')) || 14;
+let mapSizePct = parseInt(localStorage.getItem('mapSize_sohan'))  || 100;
 
 function applyPingSize() {
   const sz = pingSize + 'px';
@@ -492,7 +423,7 @@ let pings    = {};
 let generals = {};
 let snapshots = [];
 let history  = [];
-let heatOn   = localStorage.getItem('sohan_heat') === '1';
+let heatOn   = localStorage.getItem('heat_sohan') === '1';
 let pingMode = 'metin'; // 'metin' | 'general'
 let pendingClick = null;
 let timerRafs = {};
@@ -509,9 +440,9 @@ const heatBtn       = document.getElementById('heatBtn');
 
 /* SLIDERS INIT — po deklaracji elementów DOM */
 (function() {
-  const pingSizeSlider = document.getElementById('pingSize');
+  const pingSizeSlider = document.getElementById('pingSize_sohan');
   const pingSizeVal    = document.getElementById('pingSizeVal');
-  const mapSizeSlider  = document.getElementById('mapSize');
+  const mapSizeSlider  = document.getElementById('mapSize_sohan');
   const mapSizeValEl   = document.getElementById('mapSizeVal');
 
   pingSizeSlider.value = pingSize;
@@ -519,7 +450,7 @@ const heatBtn       = document.getElementById('heatBtn');
   pingSizeSlider.oninput = () => {
     pingSize = parseInt(pingSizeSlider.value);
     pingSizeVal.innerText = pingSize;
-    localStorage.setItem('sohan_pingSize', pingSize);
+    localStorage.setItem('pingSize_sohan', pingSize);
     applyPingSize();
   };
 
@@ -529,7 +460,7 @@ const heatBtn       = document.getElementById('heatBtn');
   mapSizeSlider.oninput = () => {
     mapSizePct = parseInt(mapSizeSlider.value);
     mapSizeValEl.innerText = mapSizePct + '%';
-    localStorage.setItem('sohan_mapSize', mapSizePct);
+    localStorage.setItem('mapSize_sohan', mapSizePct);
     applyMapSize();
   };
 })();
@@ -731,7 +662,7 @@ function renderGenerals() {
 /* SNAPSHOTS */
 function saveSnapshot() {
   const name = document.getElementById('snapNameInput').value.trim() || 'Snapshot';
-  socket.emit('grotaSaveSnapshot', { name });
+  socket.emit('sohanSaveSnapshot', { name });
   document.getElementById('snapNameInput').value = '';
 }
 
@@ -760,9 +691,9 @@ function renderSnapshots() {
 
 function loadSnapshot(id) {
   if (!confirm('Wczytać snapshot? Nadpisze aktywne pingi i generałów.')) return;
-  socket.emit('grotaLoadSnapshot', id);
+  socket.emit('sohanLoadSnapshot', id);
 }
-function deleteSnapshot(id) { socket.emit('grotaDeleteSnapshot', id); }
+function deleteSnapshot(id) { socket.emit('sohanDeleteSnapshot', id); }
 
 /* =====================
    HEATMAPA
@@ -861,7 +792,7 @@ function syncCanvas() {
 
 function toggleHeat() {
   heatOn = !heatOn;
-  localStorage.setItem('sohan_heat', heatOn ? '1' : '0');
+  localStorage.setItem('heat_sohan', heatOn ? '1' : '0');
   updateHeatBtn();
   syncCanvas();
   if (heatOn) heatCanvas.classList.add('visible');
@@ -929,7 +860,7 @@ window.removePing = function(id) {
     const dead = { id: 'dead_' + Date.now() + '_' + id, ch: p.ch, killedAt: Date.now(), px: p.x, py: p.y };
     undoStack.push({ pingData: { x: p.x, y: p.y, ch: p.ch }, dead });
     if (undoStack.length > 3) undoStack.shift();
-    socket.emit('sohanAddDead', dead); // zapisz na serwerze — przyjdzie z powrotem przez sohanDeadHistoryUpdate
+    socket.emit('sohanAddDead', dead); // zapisz na serwerze — przyjdzie z powrotem przez grotaDeadHistoryUpdate
   }
   socket.emit('sohanRemovePing', id);
 };
@@ -1099,14 +1030,14 @@ let rtPoints   = [];   // punkty rysowanej trasy
 
 // ── LocalStorage ──
 function rtLoad() {
-  try { rtRoutes = JSON.parse(localStorage.getItem('sohan_rt_v3') || '[]'); } catch(e) { rtRoutes = []; }
+  try { rtRoutes = JSON.parse(localStorage.getItem('rt_v3_sohan') || '[]'); } catch(e) { rtRoutes = []; }
   rtRoutes.forEach((r,i) => {
     if (r.colorIdx == null) r.colorIdx = i % RT_COLORS.length;
     if (r.visible  == null) r.visible  = false;
   });
   rtRenderMenu();
 }
-function rtSave() { localStorage.setItem('sohan_rt_v3', JSON.stringify(rtRoutes)); }
+function rtSave() { localStorage.setItem('rt_v3_sohan', JSON.stringify(rtRoutes)); }
 
 // ── Dropdown menu ──
 let rtMenuOpen = false;
@@ -1463,12 +1394,81 @@ function doReset() {
 }
 
 // ── INIT ──
-document.addEventListener('DOMContentLoaded', () => {
-  rtLoad();
-  rtRoutes.forEach((r,i) => { if (r.visible) rtStartAnim(i); });
-});
+rtLoad();
+rtRoutes.forEach((r,i) => { if (r.visible) rtStartAnim(i); });
 
 </script>
+
+<!-- DROPDOWN TRAS — fixed position żeby nie był clipowany -->
+<div id="routesMenuDropdown" style="
+  display:none;position:fixed;z-index:9999;
+  background:linear-gradient(160deg,#1a1208,#0c0906);
+  border:1px solid rgba(60,180,255,0.4);border-radius:4px;
+  min-width:260px;max-width:320px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.9),0 0 0 1px rgba(60,180,255,0.1);
+  overflow:hidden;
+">
+  <div style="padding:8px 12px 6px;border-bottom:1px solid rgba(40,80,120,0.4);">
+    <button onclick="startDrawingFromMenu()" style="
+      width:100%;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+      padding:8px;border-radius:2px;cursor:pointer;
+      background:rgba(60,180,255,0.08);border:1px solid rgba(60,180,255,0.3);color:#80d0ff;
+    ">✏️ Rysuj nową trasę</button>
+  </div>
+  <div id="routesMenuList" style="max-height:340px;overflow-y:auto;"></div>
+</div>
+
+<!-- PANEL RYSOWANIA — modal -->
+<div id="drawPanel" style="
+  display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:10001;background:linear-gradient(160deg,#1e1810,#100d08);
+  border:1px solid rgba(201,168,76,0.5);border-radius:4px;
+  padding:20px 22px;min-width:300px;
+  box-shadow:0 0 60px rgba(0,0,0,0.95);
+  flex-direction:column;gap:10px;
+">
+  <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;text-align:center;">✏️ Rysowanie trasy</div>
+  <div style="font-size:11px;color:var(--text-dim);text-align:center;">Klikaj punkty na mapie &nbsp;·&nbsp; <kbd style="background:#1a1410;padding:1px 5px;border-radius:2px;font-size:10px;border:1px solid #333;">Backspace</kbd> cofnij</div>
+  <input id="drawRouteName" placeholder="Nazwa trasy..." style="
+    background:#0e0b07;border:1px solid rgba(201,168,76,0.3);
+    color:var(--text);font-family:'Crimson Text',serif;font-size:14px;
+    padding:7px 10px;border-radius:2px;outline:none;
+  ">
+  <div id="drawPointCount" style="font-size:11px;color:var(--text-dim);text-align:center;">Klikaj punkty na mapie… (0 punktów)</div>
+  <div style="display:flex;gap:8px;">
+    <button onmousedown="event.preventDefault();event.stopPropagation();saveDrawing();" style="
+      flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+      padding:8px;border-radius:2px;cursor:pointer;
+      background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.5);color:var(--gold);
+    ">💾 Zapisz trasę</button>
+    <button onmousedown="event.preventDefault();event.stopPropagation();cancelDrawing();" style="
+      flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+      padding:8px;border-radius:2px;cursor:pointer;
+      background:rgba(100,40,40,0.15);border:1px solid rgba(180,60,60,0.3);color:#c07070;
+    ">✕ Anuluj</button>
+  </div>
+</div>
+
+<!-- RESET MODAL -->
+<div id="resetOverlay" style="
+  display:none;position:fixed;inset:0;z-index:10000;
+  background:rgba(0,0,0,0.75);backdrop-filter:blur(3px);
+  align-items:center;justify-content:center;
+" onclick="if(event.target===this)closeResetModal()">
+  <div style="
+    background:linear-gradient(160deg,#1e1810,#100d08);
+    border:1px solid rgba(200,80,80,0.4);border-radius:4px;
+    padding:24px 28px;min-width:320px;max-width:420px;
+    position:relative;box-shadow:0 0 60px rgba(0,0,0,0.9);
+  ">
+    <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e07070;text-align:center;margin-bottom:16px;">⟳ Reset groty wygnańców</div>
+    <div id="resetOptions"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button onclick="closeResetModal()" style="flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:2px;cursor:pointer;background:none;border:1px solid rgba(58,46,26,0.4);color:var(--text-dim);">Anuluj</button>
+      <button onclick="doReset()" style="flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:9px;border-radius:2px;cursor:pointer;background:rgba(200,60,60,0.15);border:1px solid rgba(200,80,80,0.5);color:#e07070;">⟳ Resetuj zaznaczone</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
