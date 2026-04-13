@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grota Wygnańców</title>
+<title>Świątynia Hwang</title>
 <script src="/socket.io/socket.io.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   body{font-family:'Crimson Text',serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
-  .bg-layer{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(40,20,80,0.15) 0%,transparent 60%),#090806;}
+  .bg-layer{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(60,20,80,0.15) 0%,transparent 60%),#090806;}
 
   /* TOP BAR */
   .topbar{
@@ -326,7 +326,7 @@
 <div class="topbar">
   <div class="topbar-left">
     <a class="nav-btn" href="/">⬅ Powrót</a>
-    <div class="page-title">Grota Wygnańców</div>
+    <div class="page-title">Świątynia Hwang</div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
     <div class="mode-bar">
@@ -354,7 +354,7 @@
 
   <div class="map-wrap">
     <div class="map-container" id="mapContainer">
-      <img src="/grota_mapa.png" id="mapImg" alt="Mapa Groty" draggable="false">
+      <img src="/swiatynia_mapa.png" id="mapImg" alt="Mapa Groty" draggable="false">
       <canvas id="heatCanvas"></canvas>
       <canvas id="routeCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;"></canvas>
       <div id="pingLayer"></div>
@@ -471,8 +471,8 @@
 const socket = io();
 
 /* PING SIZE */
-let pingSize   = parseInt(localStorage.getItem('pingSize')) || 14;
-let mapSizePct = parseInt(localStorage.getItem('mapSize'))  || 100;
+let pingSize   = parseInt(localStorage.getItem('swiatynia_pingSize')) || 14;
+let mapSizePct = parseInt(localStorage.getItem('swiatynia_mapSize'))  || 100;
 
 function applyPingSize() {
   const sz = pingSize + 'px';
@@ -492,7 +492,7 @@ let pings    = {};
 let generals = {};
 let snapshots = [];
 let history  = [];
-let heatOn   = localStorage.getItem('heat') === '1';
+let heatOn   = localStorage.getItem('swiatynia_heat') === '1';
 let pingMode = 'metin'; // 'metin' | 'general'
 let pendingClick = null;
 let timerRafs = {};
@@ -519,7 +519,7 @@ const heatBtn       = document.getElementById('heatBtn');
   pingSizeSlider.oninput = () => {
     pingSize = parseInt(pingSizeSlider.value);
     pingSizeVal.innerText = pingSize;
-    localStorage.setItem('pingSize', pingSize);
+    localStorage.setItem('swiatynia_pingSize', pingSize);
     applyPingSize();
   };
 
@@ -529,7 +529,7 @@ const heatBtn       = document.getElementById('heatBtn');
   mapSizeSlider.oninput = () => {
     mapSizePct = parseInt(mapSizeSlider.value);
     mapSizeValEl.innerText = mapSizePct + '%';
-    localStorage.setItem('mapSize', mapSizePct);
+    localStorage.setItem('swiatynia_mapSize', mapSizePct);
     applyMapSize();
   };
 })();
@@ -596,9 +596,9 @@ popup.addEventListener('click', e => { if (e.target === popup) closePopup(); });
 function confirmPing(ch) {
   if (!pendingClick) return;
   if (pingMode === 'general') {
-    socket.emit('grotaAddGeneral', { x: pendingClick.x, y: pendingClick.y, ch });
+    socket.emit('swiatyniaAddGeneral', { x: pendingClick.x, y: pendingClick.y, ch });
   } else {
-    socket.emit('grotaAddPing', { x: pendingClick.x, y: pendingClick.y, ch });
+    socket.emit('swiatyniaAddPing', { x: pendingClick.x, y: pendingClick.y, ch });
   }
   closePopup();
 }
@@ -671,7 +671,7 @@ function startTicking(p) {
   timerRafs[p.id] = requestAnimationFrame(tick);
 }
 
-function removePing(id) { socket.emit('grotaRemovePing', id); }
+function removePing(id) { socket.emit('swiatyniaRemovePing', id); }
 
 /* GENERALS */
 function placeGeneral(g) {
@@ -712,7 +712,7 @@ function startGeneralTick(g) {
   generalRafs[g.id] = requestAnimationFrame(tick);
 }
 
-function removeGeneral(id) { socket.emit('grotaRemoveGeneral', id); }
+function removeGeneral(id) { socket.emit('swiatyniaRemoveGeneral', id); }
 
 function renderGenerals() {
   for (const id in generalRafs) cancelAnimationFrame(generalRafs[id]);
@@ -861,7 +861,7 @@ function syncCanvas() {
 
 function toggleHeat() {
   heatOn = !heatOn;
-  localStorage.setItem('heat', heatOn ? '1' : '0');
+  localStorage.setItem('swiatynia_heat', heatOn ? '1' : '0');
   updateHeatBtn();
   syncCanvas();
   if (heatOn) heatCanvas.classList.add('visible');
@@ -886,28 +886,28 @@ resizeObs.observe(mapImg);
 mapImg.addEventListener('load', () => { if (heatOn) syncCanvas(); });
 
 /* SOCKET */
-socket.on('grotaGeneralsUpdate', data => {
+socket.on('swiatyniaGeneralsUpdate', data => {
   generals = data;
   renderGenerals();
 });
 
-socket.on('grotaSnapshotsUpdate', data => {
+socket.on('swiatyniaSnapshotsUpdate', data => {
   snapshots = data;
   renderSnapshots();
 });
 
-socket.on('grotaPingsUpdate', data => {
+socket.on('swiatyniaPingsUpdate', data => {
   pings = data;
   renderPings();
 });
 
-socket.on('grotaHistoryUpdate', data => {
+socket.on('swiatyniaHistoryUpdate', data => {
   history = data;
   if (heatOn) syncCanvas();
 });
 
 // Dead history — przeżywa refresh
-socket.on('grotaDeadHistoryUpdate', data => {
+socket.on('swiatyniaDeadHistoryUpdate', data => {
   deadHistory = Array.isArray(data) ? data : [];
   renderDead();
 });
@@ -929,16 +929,16 @@ window.removePing = function(id) {
     const dead = { id: 'dead_' + Date.now() + '_' + id, ch: p.ch, killedAt: Date.now(), px: p.x, py: p.y };
     undoStack.push({ pingData: { x: p.x, y: p.y, ch: p.ch }, dead });
     if (undoStack.length > 3) undoStack.shift();
-    socket.emit('grotaAddDead', dead); // zapisz na serwerze — przyjdzie z powrotem przez grotaDeadHistoryUpdate
+    socket.emit('swiatyniaAddDead', dead); // zapisz na serwerze — przyjdzie z powrotem przez swiatyniaDeadHistoryUpdate
   }
-  socket.emit('grotaRemovePing', id);
+  socket.emit('swiatyniaRemovePing', id);
 };
 
 function undoLastKill() {
   if (!undoStack.length) return;
   const last = undoStack.pop();
-  socket.emit('grotaRemoveDead', last.dead.id); // usuń z serwera
-  socket.emit('grotaAddPing', { x: last.pingData.x, y: last.pingData.y, ch: last.pingData.ch });
+  socket.emit('swiatyniaRemoveDead', last.dead.id); // usuń z serwera
+  socket.emit('swiatyniaAddPing', { x: last.pingData.x, y: last.pingData.y, ch: last.pingData.ch });
 }
 
 function renderDead() {
@@ -1099,14 +1099,14 @@ let rtPoints   = [];   // punkty rysowanej trasy
 
 // ── LocalStorage ──
 function rtLoad() {
-  try { rtRoutes = JSON.parse(localStorage.getItem('rt_v3') || '[]'); } catch(e) { rtRoutes = []; }
+  try { rtRoutes = JSON.parse(localStorage.getItem('swiatynia_rt_v3') || '[]'); } catch(e) { rtRoutes = []; }
   rtRoutes.forEach((r,i) => {
     if (r.colorIdx == null) r.colorIdx = i % RT_COLORS.length;
     if (r.visible  == null) r.visible  = false;
   });
   rtRenderMenu();
 }
-function rtSave() { localStorage.setItem('rt_v3', JSON.stringify(rtRoutes)); }
+function rtSave() { localStorage.setItem('swiatynia_rt_v3', JSON.stringify(rtRoutes)); }
 
 // ── Dropdown menu ──
 let rtMenuOpen = false;
@@ -1453,12 +1453,12 @@ function doReset() {
   const doHeat     = document.getElementById('r_heat')    ?.checked;
   const doRoutes   = document.getElementById('r_routes')  ?.checked;
   const doSnaps    = document.getElementById('r_snaps')   ?.checked;
-  if (doDead)     { deadHistory.forEach(d => socket.emit('grotaRemoveDead', d.id)); deadHistory=[]; renderDead(); }
-  if (doPings)    { Object.keys(pings).forEach(id => socket.emit('grotaRemovePing', id)); }
-  if (doGenerals) { Object.keys(generals||{}).forEach(id => socket.emit('grotaRemoveGeneral', id)); }
-  if (doHeat)     { socket.emit('grotaResetHistory'); }
+  if (doDead)     { deadHistory.forEach(d => socket.emit('swiatyniaRemoveDead', d.id)); deadHistory=[]; renderDead(); }
+  if (doPings)    { Object.keys(pings).forEach(id => socket.emit('swiatyniaRemovePing', id)); }
+  if (doGenerals) { Object.keys(generals||{}).forEach(id => socket.emit('swiatyniaRemoveGeneral', id)); }
+  if (doHeat)     { socket.emit('swiatyniaResetHistory'); }
   if (doRoutes)   { rtResetAll(); }
-  if (doSnaps)    { socket.emit('grotaClearSnapshots'); }
+  if (doSnaps)    { socket.emit('swiatyniaClearSnapshots'); }
   closeResetModal();
 }
 

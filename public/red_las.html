@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grota Wygnańców</title>
+<title>Red Las</title>
 <script src="/socket.io/socket.io.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
@@ -326,7 +326,7 @@
 <div class="topbar">
   <div class="topbar-left">
     <a class="nav-btn" href="/">⬅ Powrót</a>
-    <div class="page-title">Grota Wygnańców</div>
+    <div class="page-title">Red Las</div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
     <div class="mode-bar">
@@ -354,7 +354,7 @@
 
   <div class="map-wrap">
     <div class="map-container" id="mapContainer">
-      <img src="/grota_mapa.png" id="mapImg" alt="Mapa Groty" draggable="false">
+      <img src="/red_las_mapa.png" id="mapImg" alt="Mapa Groty" draggable="false">
       <canvas id="heatCanvas"></canvas>
       <canvas id="routeCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;"></canvas>
       <div id="pingLayer"></div>
@@ -471,8 +471,8 @@
 const socket = io();
 
 /* PING SIZE */
-let pingSize   = parseInt(localStorage.getItem('pingSize')) || 14;
-let mapSizePct = parseInt(localStorage.getItem('mapSize'))  || 100;
+let pingSize   = parseInt(localStorage.getItem('pingSize_red_las')) || 14;
+let mapSizePct = parseInt(localStorage.getItem('mapSize_red_las'))  || 100;
 
 function applyPingSize() {
   const sz = pingSize + 'px';
@@ -492,7 +492,7 @@ let pings    = {};
 let generals = {};
 let snapshots = [];
 let history  = [];
-let heatOn   = localStorage.getItem('heat') === '1';
+let heatOn   = localStorage.getItem('heat_red_las') === '1';
 let pingMode = 'metin'; // 'metin' | 'general'
 let pendingClick = null;
 let timerRafs = {};
@@ -519,7 +519,7 @@ const heatBtn       = document.getElementById('heatBtn');
   pingSizeSlider.oninput = () => {
     pingSize = parseInt(pingSizeSlider.value);
     pingSizeVal.innerText = pingSize;
-    localStorage.setItem('pingSize', pingSize);
+    localStorage.setItem('pingSize_red_las', pingSize);
     applyPingSize();
   };
 
@@ -529,7 +529,7 @@ const heatBtn       = document.getElementById('heatBtn');
   mapSizeSlider.oninput = () => {
     mapSizePct = parseInt(mapSizeSlider.value);
     mapSizeValEl.innerText = mapSizePct + '%';
-    localStorage.setItem('mapSize', mapSizePct);
+    localStorage.setItem('mapSize_red_las', mapSizePct);
     applyMapSize();
   };
 })();
@@ -596,9 +596,9 @@ popup.addEventListener('click', e => { if (e.target === popup) closePopup(); });
 function confirmPing(ch) {
   if (!pendingClick) return;
   if (pingMode === 'general') {
-    socket.emit('grotaAddGeneral', { x: pendingClick.x, y: pendingClick.y, ch });
+    socket.emit('red_lasAddGeneral', { x: pendingClick.x, y: pendingClick.y, ch });
   } else {
-    socket.emit('grotaAddPing', { x: pendingClick.x, y: pendingClick.y, ch });
+    socket.emit('red_lasAddPing', { x: pendingClick.x, y: pendingClick.y, ch });
   }
   closePopup();
 }
@@ -671,7 +671,7 @@ function startTicking(p) {
   timerRafs[p.id] = requestAnimationFrame(tick);
 }
 
-function removePing(id) { socket.emit('grotaRemovePing', id); }
+function removePing(id) { socket.emit('red_lasRemovePing', id); }
 
 /* GENERALS */
 function placeGeneral(g) {
@@ -712,7 +712,7 @@ function startGeneralTick(g) {
   generalRafs[g.id] = requestAnimationFrame(tick);
 }
 
-function removeGeneral(id) { socket.emit('grotaRemoveGeneral', id); }
+function removeGeneral(id) { socket.emit('red_lasRemoveGeneral', id); }
 
 function renderGenerals() {
   for (const id in generalRafs) cancelAnimationFrame(generalRafs[id]);
@@ -861,7 +861,7 @@ function syncCanvas() {
 
 function toggleHeat() {
   heatOn = !heatOn;
-  localStorage.setItem('heat', heatOn ? '1' : '0');
+  localStorage.setItem('heat_red_las', heatOn ? '1' : '0');
   updateHeatBtn();
   syncCanvas();
   if (heatOn) heatCanvas.classList.add('visible');
@@ -886,28 +886,28 @@ resizeObs.observe(mapImg);
 mapImg.addEventListener('load', () => { if (heatOn) syncCanvas(); });
 
 /* SOCKET */
-socket.on('grotaGeneralsUpdate', data => {
+socket.on('red_lasGeneralsUpdate', data => {
   generals = data;
   renderGenerals();
 });
 
-socket.on('grotaSnapshotsUpdate', data => {
+socket.on('red_lasSnapshotsUpdate', data => {
   snapshots = data;
   renderSnapshots();
 });
 
-socket.on('grotaPingsUpdate', data => {
+socket.on('red_lasPingsUpdate', data => {
   pings = data;
   renderPings();
 });
 
-socket.on('grotaHistoryUpdate', data => {
+socket.on('red_lasHistoryUpdate', data => {
   history = data;
   if (heatOn) syncCanvas();
 });
 
 // Dead history — przeżywa refresh
-socket.on('grotaDeadHistoryUpdate', data => {
+socket.on('red_lasDeadHistoryUpdate', data => {
   deadHistory = Array.isArray(data) ? data : [];
   renderDead();
 });
@@ -929,16 +929,16 @@ window.removePing = function(id) {
     const dead = { id: 'dead_' + Date.now() + '_' + id, ch: p.ch, killedAt: Date.now(), px: p.x, py: p.y };
     undoStack.push({ pingData: { x: p.x, y: p.y, ch: p.ch }, dead });
     if (undoStack.length > 3) undoStack.shift();
-    socket.emit('grotaAddDead', dead); // zapisz na serwerze — przyjdzie z powrotem przez grotaDeadHistoryUpdate
+    socket.emit('red_lasAddDead', dead); // zapisz na serwerze — przyjdzie z powrotem przez red_lasDeadHistoryUpdate
   }
-  socket.emit('grotaRemovePing', id);
+  socket.emit('red_lasRemovePing', id);
 };
 
 function undoLastKill() {
   if (!undoStack.length) return;
   const last = undoStack.pop();
-  socket.emit('grotaRemoveDead', last.dead.id); // usuń z serwera
-  socket.emit('grotaAddPing', { x: last.pingData.x, y: last.pingData.y, ch: last.pingData.ch });
+  socket.emit('red_lasRemoveDead', last.dead.id); // usuń z serwera
+  socket.emit('red_lasAddPing', { x: last.pingData.x, y: last.pingData.y, ch: last.pingData.ch });
 }
 
 function renderDead() {
@@ -1099,14 +1099,14 @@ let rtPoints   = [];   // punkty rysowanej trasy
 
 // ── LocalStorage ──
 function rtLoad() {
-  try { rtRoutes = JSON.parse(localStorage.getItem('rt_v3') || '[]'); } catch(e) { rtRoutes = []; }
+  try { rtRoutes = JSON.parse(localStorage.getItem('rt_red_las') || '[]'); } catch(e) { rtRoutes = []; }
   rtRoutes.forEach((r,i) => {
     if (r.colorIdx == null) r.colorIdx = i % RT_COLORS.length;
     if (r.visible  == null) r.visible  = false;
   });
   rtRenderMenu();
 }
-function rtSave() { localStorage.setItem('rt_v3', JSON.stringify(rtRoutes)); }
+function rtSave() { localStorage.setItem('rt_red_las', JSON.stringify(rtRoutes)); }
 
 // ── Dropdown menu ──
 let rtMenuOpen = false;
@@ -1453,12 +1453,12 @@ function doReset() {
   const doHeat     = document.getElementById('r_heat')    ?.checked;
   const doRoutes   = document.getElementById('r_routes')  ?.checked;
   const doSnaps    = document.getElementById('r_snaps')   ?.checked;
-  if (doDead)     { deadHistory.forEach(d => socket.emit('grotaRemoveDead', d.id)); deadHistory=[]; renderDead(); }
-  if (doPings)    { Object.keys(pings).forEach(id => socket.emit('grotaRemovePing', id)); }
-  if (doGenerals) { Object.keys(generals||{}).forEach(id => socket.emit('grotaRemoveGeneral', id)); }
-  if (doHeat)     { socket.emit('grotaResetHistory'); }
+  if (doDead)     { deadHistory.forEach(d => socket.emit('red_lasRemoveDead', d.id)); deadHistory=[]; renderDead(); }
+  if (doPings)    { Object.keys(pings).forEach(id => socket.emit('red_lasRemovePing', id)); }
+  if (doGenerals) { Object.keys(generals||{}).forEach(id => socket.emit('red_lasRemoveGeneral', id)); }
+  if (doHeat)     { socket.emit('red_lasResetHistory'); }
   if (doRoutes)   { rtResetAll(); }
-  if (doSnaps)    { socket.emit('grotaClearSnapshots'); }
+  if (doSnaps)    { socket.emit('red_lasClearSnapshots'); }
   closeResetModal();
 }
 
