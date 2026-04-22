@@ -843,6 +843,23 @@ socket.on('grotaDeadHistoryUpdate', data => {
   renderDead();
 });
 
+// Synchronizacja tras przez socket
+socket.on('grotaRoutesUpdate', data => {
+  // Zatrzymaj wszystkie animacje
+  Object.keys(rtAnims).forEach(i => rtStopAnim(parseInt(i)));
+  rtAnims = {}; rtPulses = {};
+  // Zaktualizuj trasy
+  rtRoutes = Array.isArray(data) ? data : [];
+  rtRoutes.forEach((r, i) => {
+    if (r.colorIdx == null) r.colorIdx = i % RT_COLORS.length;
+    if (r.visible == null) r.visible = false;
+  });
+  rtRenderMenu();
+  // Uruchom animacje dla widocznych
+  rtRoutes.forEach((r, i) => { if (r.visible) rtStartAnim(i); });
+  rtRedraw();
+});
+
 /* ═══ HISTORIA ZBITYCH METINÓW ═══ */
 const METIN_PER_CH = 6;
 const YELLOW_MS    = 20 * 60 * 1000;
@@ -1030,14 +1047,12 @@ let rtPoints   = [];   // punkty rysowanej trasy
 
 // ── LocalStorage ──
 function rtLoad() {
-  try { rtRoutes = JSON.parse(localStorage.getItem('rt_v3') || '[]'); } catch(e) { rtRoutes = []; }
-  rtRoutes.forEach((r,i) => {
-    if (r.colorIdx == null) r.colorIdx = i % RT_COLORS.length;
-    if (r.visible  == null) r.visible  = false;
-  });
+  // Trasy są ładowane przez socket (grotaRoutesUpdate) — nic tu nie robimy
   rtRenderMenu();
 }
-function rtSave() { localStorage.setItem('rt_v3', JSON.stringify(rtRoutes)); }
+function rtSave() {
+  // Nie używamy localStorage — trasy są synchronizowane przez socket
+}
 
 // ── Dropdown menu ──
 let rtMenuOpen = false;
@@ -1101,28 +1116,19 @@ function rtRenderMenu() {
 
 // ── Toggle widoczności ──
 function rtToggleVisible(idx) {
-  rtRoutes[idx].visible = !rtRoutes[idx].visible;
-  rtSave();
+  const r = rtRoutes[idx];
+  if (!r) return;
+  r.visible = !r.visible;
+  socket.emit('grotaUpdateRouteVisible', {id: r.id, visible: r.visible});
   rtRenderMenu();
-  if (rtRoutes[idx].visible) rtStartAnim(idx);
+  if (r.visible) rtStartAnim(idx);
   else { rtStopAnim(idx); rtRedraw(); }
 }
 
 // ── Usuń trasę ──
 function rtDelete(idx) {
-  rtStopAnim(idx);
-  rtRoutes.splice(idx, 1);
-  rtSave();
-  // Przeindeksuj animacje
-  const na = {}, np = {};
-  Object.keys(rtAnims).forEach(k => {
-    const ki = parseInt(k);
-    if (ki < idx) { na[ki] = rtAnims[ki]; np[ki] = rtPulses[ki]; }
-    else if (ki > idx) { na[ki-1] = rtAnims[ki]; np[ki-1] = rtPulses[ki]; }
-  });
-  rtAnims = na; rtPulses = np;
-  rtRenderMenu();
-  rtRedraw();
+  const routeToDelete = rtRoutes[idx];
+  if (routeToDelete) socket.emit('grotaDeleteRoute', routeToDelete.id);
 }
 
 // ── Animacja LED ──
@@ -1279,8 +1285,11 @@ function rtSaveDrawing() {
   const inp  = document.getElementById('drawRouteName');
   const name = inp ? (inp.value.trim() || 'Trasa '+(rtRoutes.length+1)) : 'Trasa '+(rtRoutes.length+1);
   const colorIdx = rtRoutes.length % RT_COLORS.length;
-  rtRoutes.push({name, points:[...rtPoints], colorIdx, visible:true});
-  rtSave();
+  const newRoute = {
+    id: 'rt_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+    name, points:[...rtPoints], colorIdx, visible:true
+  };
+  socket.emit('grotaAddRoute', newRoute);
   rtDrawing = false;
   rtPoints  = [];
   const panel = document.getElementById('drawPanel');
@@ -1336,12 +1345,8 @@ function saveDrawing() { rtSaveDrawing(); }
 
 // Reset tras (wywoływany z doReset)
 function rtResetAll() {
-  rtRoutes.forEach((_,i) => rtStopAnim(i));
-  rtAnims = {}; rtPulses = {};
-  rtRoutes = [];
-  rtSave();
-  rtRenderMenu();
-  rtClearCanvas();
+  // Usuń wszystkie trasy przez socket
+  [...rtRoutes].forEach(r => socket.emit('grotaDeleteRoute', r.id));
 }
 
 window.addEventListener('resize', () => rtRedraw());
@@ -1420,12 +1425,13 @@ rtRoutes.forEach((r,i) => { if (r.visible) rtStartAnim(i); });
 
 <!-- PANEL RYSOWANIA — modal -->
 <div id="drawPanel" style="
-  display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  display:none;position:fixed;bottom:0;right:0;width:280px;
   z-index:10001;background:linear-gradient(160deg,#1e1810,#100d08);
-  border:1px solid rgba(201,168,76,0.5);border-radius:4px;
-  padding:20px 22px;min-width:300px;
-  box-shadow:0 0 60px rgba(0,0,0,0.95);
-  flex-direction:column;gap:10px;
+  border-top:1px solid rgba(201,168,76,0.4);border-left:1px solid rgba(201,168,76,0.4);
+  border-radius:4px 0 0 0;
+  padding:14px 16px;
+  box-shadow:-4px -4px 30px rgba(0,0,0,0.8);
+  flex-direction:column;gap:8px;
 ">
   <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;text-align:center;">✏️ Rysowanie trasy</div>
   <div style="font-size:11px;color:var(--text-dim);text-align:center;">Klikaj punkty na mapie &nbsp;·&nbsp; <kbd style="background:#1a1410;padding:1px 5px;border-radius:2px;font-size:10px;border:1px solid #333;">Backspace</kbd> cofnij</div>

@@ -68,6 +68,7 @@ let grotaHistory  = []
 let grotaGenerals = {}
 let grotaSnapshots= []
 let grotaDeadHistory = []  // historia zbitych metinów z timerami
+let grotaRoutes      = []  // wspólne trasy
 let swiatyniaPings={}, swiatyniaHistory=[], swiatyniaGenerals={}, swiatyniaSnapshots=[], swiatyniaDeadHistory=[]
 let lasPings={}, lasHistory=[], lasGenerals={}, lasSnapshots=[], lasDeadHistory=[]
 let pustyniaPings={}, pustyniaHistory=[], pustyniaGenerals={}, pustyniaSnapshots=[], pustyniaDeadHistory=[]
@@ -105,6 +106,7 @@ async function connectDB() {
     grotaSnapshots = doc.grotaSnapshots || []
     // Wczytaj dead history, odfiltruj wygasłe (>35min)
     grotaDeadHistory = (doc.grotaDeadHistory || []).filter(d => Date.now() - d.killedAt < 35*60*1000)
+    grotaRoutes      = doc.grotaRoutes      || []
     swiatyniaPings=doc.swiatyniaPings||{};swiatyniaHistory=doc.swiatyniaHistory||[];swiatyniaGenerals=doc.swiatyniaGenerals||{};swiatyniaSnapshots=doc.swiatyniaSnapshots||[];swiatyniaDeadHistory=(doc.swiatyniaDeadHistory||[]).filter(d=>Date.now()-d.killedAt<35*60*1000)
     lasPings=doc.lasPings||{};lasHistory=doc.lasHistory||[];lasGenerals=doc.lasGenerals||{};lasSnapshots=doc.lasSnapshots||[];lasDeadHistory=(doc.lasDeadHistory||[]).filter(d=>Date.now()-d.killedAt<35*60*1000)
     pustyniaPings=doc.pustyniaPings||{};pustyniaHistory=doc.pustyniaHistory||[];pustyniaGenerals=doc.pustyniaGenerals||{};pustyniaSnapshots=doc.pustyniaSnapshots||[];pustyniaDeadHistory=(doc.pustyniaDeadHistory||[]).filter(d=>Date.now()-d.killedAt<35*60*1000)
@@ -174,7 +176,7 @@ async function saveNow() {
       { _id: DOC_ID },
       { _id: DOC_ID, timers, characters, tasks, resetHour, resetMinute,
         customPlaces, customTimers, grotaPings, grotaHistory,
-        grotaGenerals, grotaSnapshots, grotaDeadHistory, charOrder, charsList, skarbiec,
+        grotaGenerals, grotaSnapshots, grotaDeadHistory, grotaRoutes, charOrder, charsList, skarbiec,
         swiatyniaPings,swiatyniaHistory,swiatyniaGenerals,swiatyniaSnapshots,swiatyniaDeadHistory,
         lasPings,lasHistory,lasGenerals,lasSnapshots,lasDeadHistory,
         pustyniaPings,pustyniaHistory,pustyniaGenerals,pustyniaSnapshots,pustyniaDeadHistory,
@@ -624,7 +626,27 @@ io.on("connection",(socket)=>{
     saveData()
     io.emit("grotaGeneralsUpdate",grotaGenerals)
   })
-  socket.on("grotaRemoveGeneral",(id)=>{
+  // Wspólne trasy
+  socket.on("grotaAddRoute",(route)=>{
+    if(!route||!route.id) return
+    grotaRoutes = grotaRoutes.filter(r => r.id !== route.id)
+    grotaRoutes.push(route)
+    io.emit("grotaRoutesUpdate", grotaRoutes)
+    saveData()
+  })
+  socket.on("grotaDeleteRoute",(id)=>{
+    grotaRoutes = grotaRoutes.filter(r => r.id !== id)
+    io.emit("grotaRoutesUpdate", grotaRoutes)
+    saveData()
+  })
+  socket.on("grotaUpdateRouteVisible",(data)=>{
+    const r = grotaRoutes.find(r => r.id === data.id)
+    if(r) r.visible = data.visible
+    io.emit("grotaRoutesUpdate", grotaRoutes)
+    saveData()
+  })
+
+    socket.on("grotaRemoveGeneral",(id)=>{
     delete grotaGenerals[id]
     saveData()
     io.emit("grotaGeneralsUpdate",grotaGenerals)
@@ -677,6 +699,7 @@ io.on("connection",(socket)=>{
   // Wyślij dead history (odfiltruj wygasłe)
   grotaDeadHistory = grotaDeadHistory.filter(d => Date.now() - d.killedAt < 35*60*1000)
   socket.emit("grotaDeadHistoryUpdate", grotaDeadHistory)
+  socket.emit("grotaRoutesUpdate", grotaRoutes)
   // === swiatynia ===
   socket.on('swiatyniaAddPing',(data)=>{ const id=Date.now()+'-'+Math.random(); swiatyniaPings[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}; swiatyniaHistory.push({x:data.x,y:data.y,ts:Date.now()}); if(swiatyniaHistory.length>2000) swiatyniaHistory=swiatyniaHistory.slice(-2000); io.emit('swiatyniaPingsUpdate',swiatyniaPings); io.emit('swiatyniaHistoryUpdate',swiatyniaHistory); saveData() })
   socket.on('swiatyniaRemovePing',(id)=>{ delete swiatyniaPings[id]; io.emit('swiatyniaPingsUpdate',swiatyniaPings); saveData() })
