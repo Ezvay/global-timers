@@ -69,6 +69,7 @@ let grotaGenerals = {}
 let grotaSnapshots= []
 let grotaDeadHistory = []  // historia zbitych metinów z timerami
 let grotaRoutes      = []  // wspólne trasy
+let grotaGenState    = {}  // stan generałów per CH {ch: [{found,killed,id}]}
 let swiatyniaPings={}, swiatyniaHistory=[], swiatyniaGenerals={}, swiatyniaSnapshots=[], swiatyniaDeadHistory=[]
 let lasPings={}, lasHistory=[], lasGenerals={}, lasSnapshots=[], lasDeadHistory=[]
 let pustyniaPings={}, pustyniaHistory=[], pustyniaGenerals={}, pustyniaSnapshots=[], pustyniaDeadHistory=[]
@@ -107,6 +108,7 @@ async function connectDB() {
     // Wczytaj dead history, odfiltruj wygasłe (>35min)
     grotaDeadHistory = (doc.grotaDeadHistory || []).filter(d => Date.now() - d.killedAt < 35*60*1000)
     grotaRoutes      = doc.grotaRoutes      || []
+    grotaGenState    = doc.grotaGenState    || {}
     swiatyniaPings=doc.swiatyniaPings||{};swiatyniaHistory=doc.swiatyniaHistory||[];swiatyniaGenerals=doc.swiatyniaGenerals||{};swiatyniaSnapshots=doc.swiatyniaSnapshots||[];swiatyniaDeadHistory=(doc.swiatyniaDeadHistory||[]).filter(d=>Date.now()-d.killedAt<35*60*1000)
     lasPings=doc.lasPings||{};lasHistory=doc.lasHistory||[];lasGenerals=doc.lasGenerals||{};lasSnapshots=doc.lasSnapshots||[];lasDeadHistory=(doc.lasDeadHistory||[]).filter(d=>Date.now()-d.killedAt<35*60*1000)
     pustyniaPings=doc.pustyniaPings||{};pustyniaHistory=doc.pustyniaHistory||[];pustyniaGenerals=doc.pustyniaGenerals||{};pustyniaSnapshots=doc.pustyniaSnapshots||[];pustyniaDeadHistory=(doc.pustyniaDeadHistory||[]).filter(d=>Date.now()-d.killedAt<35*60*1000)
@@ -176,7 +178,7 @@ async function saveNow() {
       { _id: DOC_ID },
       { _id: DOC_ID, timers, characters, tasks, resetHour, resetMinute,
         customPlaces, customTimers, grotaPings, grotaHistory,
-        grotaGenerals, grotaSnapshots, grotaDeadHistory, grotaRoutes, charOrder, charsList, skarbiec,
+        grotaGenerals, grotaSnapshots, grotaDeadHistory, grotaRoutes, grotaGenState, charOrder, charsList, skarbiec,
         swiatyniaPings,swiatyniaHistory,swiatyniaGenerals,swiatyniaSnapshots,swiatyniaDeadHistory,
         lasPings,lasHistory,lasGenerals,lasSnapshots,lasDeadHistory,
         pustyniaPings,pustyniaHistory,pustyniaGenerals,pustyniaSnapshots,pustyniaDeadHistory,
@@ -626,7 +628,38 @@ io.on("connection",(socket)=>{
     saveData()
     io.emit("grotaGeneralsUpdate",grotaGenerals)
   })
-  // Wspólne trasy
+  // Stan generałów
+  socket.on("grotaClickGenSlot",(data)=>{
+    if(!data||data.ch==null||data.idx==null) return
+    const ch = String(data.ch)
+    if(!grotaGenState[ch]) {
+      grotaGenState[ch] = [{found:false,killed:false,id:null},{found:false,killed:false,id:null}]
+    }
+    const slot = grotaGenState[ch][data.idx]
+    if(!slot) return
+    // Cykl: nieznany → znaleziony → zbity → nieznany
+    if(!slot.found && !slot.killed) { slot.found = true; slot.killed = false; }
+    else if(slot.found && !slot.killed) { slot.found = true; slot.killed = true; }
+    else { slot.found = false; slot.killed = false; }
+    io.emit("grotaGenStateUpdate", grotaGenState)
+    saveData()
+  })
+
+  socket.on("grotaResetGenState",()=>{
+    grotaGenState = {}
+    io.emit("grotaGenStateUpdate", grotaGenState)
+    saveData()
+  })
+
+  socket.on("grotaToggleGeneralKilled",(id)=>{
+    if(grotaGenerals[id]) {
+      grotaGenerals[id].killed = !grotaGenerals[id].killed
+      io.emit("grotaGeneralsUpdate", grotaGenerals)
+      saveData()
+    }
+  })
+
+    // Wspólne trasy
   socket.on("grotaAddRoute",(route)=>{
     if(!route||!route.id) return
     grotaRoutes = grotaRoutes.filter(r => r.id !== route.id)
@@ -700,6 +733,7 @@ io.on("connection",(socket)=>{
   grotaDeadHistory = grotaDeadHistory.filter(d => Date.now() - d.killedAt < 35*60*1000)
   socket.emit("grotaDeadHistoryUpdate", grotaDeadHistory)
   socket.emit("grotaRoutesUpdate", grotaRoutes)
+  socket.emit("grotaGenStateUpdate", grotaGenState)
   // === swiatynia ===
   socket.on('swiatyniaAddPing',(data)=>{ const id=Date.now()+'-'+Math.random(); swiatyniaPings[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}; swiatyniaHistory.push({x:data.x,y:data.y,ts:Date.now()}); if(swiatyniaHistory.length>2000) swiatyniaHistory=swiatyniaHistory.slice(-2000); io.emit('swiatyniaPingsUpdate',swiatyniaPings); io.emit('swiatyniaHistoryUpdate',swiatyniaHistory); saveData() })
   socket.on('swiatyniaRemovePing',(id)=>{ delete swiatyniaPings[id]; io.emit('swiatyniaPingsUpdate',swiatyniaPings); saveData() })

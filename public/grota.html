@@ -189,6 +189,27 @@
   .general-item:hover{background:rgba(60,140,255,0.05);}
   .general-dot-small{width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 0 5px rgba(60,140,255,0.7));}
   .general-dot-small img{width:32px;height:32px;object-fit:contain;}
+  /* Nowe style generałów */
+  .gen-ch-block{padding:10px 14px;border-bottom:1px solid rgba(30,40,60,0.5);display:flex;flex-direction:column;gap:6px;}
+  .gen-ch-header{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .gen-ch-label{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:#6090d0;}
+  .gen-countdown{font-family:'Cinzel',serif;font-size:14px;font-weight:600;color:#a0c0ff;letter-spacing:1px;min-width:52px;text-align:right;}
+  .gen-countdown.soon{color:#ffd060;animation:gen-pulse 1s ease-in-out infinite;}
+  .gen-countdown.now{color:#ff6060;animation:gen-pulse 0.5s ease-in-out infinite;}
+  @keyframes gen-pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+  .gen-slots{display:flex;gap:8px;}
+  .gen-slot{flex:1;display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:3px;border:1px solid rgba(40,60,100,0.4);background:rgba(20,30,50,0.3);cursor:pointer;transition:all 0.2s;}
+  .gen-slot:hover{border-color:rgba(60,140,255,0.5);background:rgba(30,50,90,0.4);}
+  .gen-slot.found{border-color:rgba(60,200,100,0.5);background:rgba(20,60,30,0.3);}
+  .gen-slot.killed{border-color:rgba(200,60,60,0.3);background:rgba(50,15,15,0.3);opacity:0.7;}
+  .gen-slot-icon{width:28px;height:28px;flex-shrink:0;object-fit:contain;filter:drop-shadow(0 0 4px rgba(60,140,255,0.6));}
+  .gen-slot.found .gen-slot-icon{filter:drop-shadow(0 0 4px rgba(60,200,100,0.7));}
+  .gen-slot.killed .gen-slot-icon{filter:grayscale(1) opacity(0.5);}
+  .gen-slot-info{flex:1;display:flex;flex-direction:column;gap:1px;}
+  .gen-slot-name{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:#8090b0;}
+  .gen-slot-status{font-size:11px;color:#a0c0ff;}
+  .gen-slot.found .gen-slot-status{color:#60c060;}
+  .gen-slot.killed .gen-slot-status{color:#c06060;}
   .general-ch{font-family:'Cinzel',serif;font-size:11px;color:#a0d0ff;letter-spacing:1px;}
   .general-time{font-family:'Cinzel',serif;font-size:13px;color:#6090d0;margin-top:2px;letter-spacing:1px;}
   .general-remove{font-size:9px;color:#304060;background:none;font-family:'Cinzel',serif;letter-spacing:1px;padding:4px 8px;border:1px solid rgba(60,100,180,0.2);border-radius:2px;cursor:pointer;transition:all 0.2s;}
@@ -385,8 +406,8 @@
     </div>
     <div id="deadList"></div>
 
-    <div class="sidebar-section-title blue">🔵 Generałowie</div>
-    <div id="generalList"><div class="sidebar-empty">Brak aktywnych generałów</div></div>
+    <div class="sidebar-section-title blue">🔵 Generałowie <span style="font-size:9px;color:var(--text-dim);letter-spacing:0;font-family:'Crimson Text',serif;">(respy: 0:00 / 6:00 / 12:00 / 18:00)</span></div>
+    <div id="generalList"></div>
 
     <div class="hotspot-section" id="hotspotSection" style="display:none">
       <div class="hotspot-title">🔥 Gorące miejsca</div>
@@ -605,59 +626,154 @@ function startTicking(p) {
 function removePing(id) { socket.emit('grotaRemovePing', id); }
 
 /* GENERALS */
+// ═══════════════════════════════════════════
+// GENERAŁOWIE — stały timer 6h (0:00/6:00/12:00/18:00)
+// ═══════════════════════════════════════════
+
+const MAX_CH = 8;
+const GEN_PER_CH = 2;
+
+// Stan generałów per CH: {ch: [{found:bool, killed:bool, id:string|null}]}
+// "found" = widziany na mapie (zaznaczony), "killed" = zbity
+let genState = {}; // wczytywane z serwera
+
+function getNextRespawnMs() {
+  // Polska strefa czasowa (Europe/Warsaw)
+  const now = new Date();
+  const plNow = new Date(now.toLocaleString('en-US', {timeZone:'Europe/Warsaw'}));
+  const h = plNow.getHours(), m = plNow.getMinutes(), s = plNow.getSeconds();
+  const secNow = h * 3600 + m * 60 + s;
+  // Respy o 0:00, 6:00, 12:00, 18:00
+  const spawns = [0, 6*3600, 12*3600, 18*3600, 24*3600];
+  let next = spawns.find(t => t > secNow) ?? 24*3600;
+  return (next - secNow) * 1000;
+}
+
+function getTimeToNextRespawn() {
+  const ms = getNextRespawnMs();
+  const totalSec = Math.ceil(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const mn = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return { h, mn, s, totalSec };
+}
+
+// Timer globalny dla odliczania
+let genTimerRaf = null;
+
 function placeGeneral(g) {
   const m = document.createElement('div');
   m.className = 'general-marker'; m.id = 'gmarker_' + g.id;
   m.style.left = (g.x * 100) + '%';
   m.style.top  = (g.y * 100) + '%';
   const sz = pingSize + 'px';
+  const isKilled = g.killed;
   m.innerHTML = `
-    <div class="general-dot" onclick="removeGeneral('${g.id}')" title="Kliknij aby usunąć"
-         style="width:${sz};height:${sz}">
-      <div class="general-pulse" style="width:${sz};height:${sz}"></div>
-      <img src="/metin_icon.png" alt="general" style="width:${sz};height:${sz};filter:hue-rotate(180deg) saturate(1.5);">
+    <div class="general-dot" onclick="toggleGeneralKilled('${g.id}')" title="${isKilled ? 'Zbity — kliknij aby przywrócić' : 'Kliknij aby oznaczyć jako zbity'}"
+         style="width:${sz};height:${sz};${isKilled ? 'filter:grayscale(1) opacity(0.5);' : ''}">
+      <div class="general-pulse" style="width:${sz};height:${sz}${isKilled ? ';display:none' : ''}"></div>
+      <img src="/general.png" alt="general" style="width:${sz};height:${sz};">
       <div class="general-ch-badge">${g.ch}</div>
     </div>`;
   generalLayer.appendChild(m);
 }
 
-function addGeneralSidebarItem(g) {
-  const item = document.createElement('div');
-  item.className = 'general-item'; item.id = 'gitem_' + g.id;
-  item.innerHTML = `
-    <div class="general-dot-small"><img src="/metin_icon.png" alt="gen" style="filter:hue-rotate(180deg) saturate(1.5)"></div>
-    <div class="ping-info">
-      <div class="general-ch">CH ${g.ch}</div>
-      <div class="general-time" id="gt_${g.id}">00:00</div>
-    </div>
-    <button class="general-remove" onclick="removeGeneral('${g.id}')">✕ Zbity</button>`;
-  document.getElementById('generalList').appendChild(item);
+function toggleGeneralKilled(id) {
+  socket.emit('grotaToggleGeneralKilled', id);
 }
 
-function startGeneralTick(g) {
-  function tick() {
-    const el = document.getElementById('gt_' + g.id);
-    if (el) el.innerText = fmt(Date.now() - g.startedAt);
-    generalRafs[g.id] = requestAnimationFrame(tick);
-  }
-  generalRafs[g.id] = requestAnimationFrame(tick);
+function removeGeneralFromMap(id) {
+  socket.emit('grotaRemoveGeneral', id);
 }
 
 function removeGeneral(id) { socket.emit('grotaRemoveGeneral', id); }
 
 function renderGenerals() {
+  if (genTimerRaf) cancelAnimationFrame(genTimerRaf);
   for (const id in generalRafs) cancelAnimationFrame(generalRafs[id]);
   generalRafs = {};
   generalLayer.innerHTML = '';
+
   const list = document.getElementById('generalList');
-  const ids = Object.keys(generals);
-  if (ids.length === 0) {
-    list.innerHTML = '<div class="sidebar-empty">Brak aktywnych generałów</div>';
-    return;
-  }
   list.innerHTML = '';
-  for (const id of ids) { placeGeneral(generals[id]); addGeneralSidebarItem(generals[id]); startGeneralTick(generals[id]); }
+
+  // Renderuj blok per CH
+  for (let ch = 1; ch <= MAX_CH; ch++) {
+    const slots = genState[ch] || [{found:false,killed:false,id:null},{found:false,killed:false,id:null}];
+
+    const block = document.createElement('div');
+    block.className = 'gen-ch-block';
+    block.id = 'gen_ch_' + ch;
+
+    const {h, mn, s, totalSec} = getTimeToNextRespawn();
+    const timeStr = h > 0
+      ? `${h}:${String(mn).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+      : `${mn}:${String(s).padStart(2,'0')}`;
+    const urgencyClass = totalSec < 300 ? 'now' : totalSec < 1800 ? 'soon' : '';
+
+    block.innerHTML = `
+      <div class="gen-ch-header">
+        <span class="gen-ch-label">KANAŁ ${ch}</span>
+        <span class="gen-countdown ${urgencyClass}" id="gen_timer_${ch}">${timeStr}</span>
+      </div>
+      <div class="gen-slots">
+        ${slots.map((sl, idx) => `
+          <div class="gen-slot ${sl.killed ? 'killed' : sl.found ? 'found' : ''}" id="gen_slot_${ch}_${idx}"
+               onclick="clickGenSlot(${ch}, ${idx})">
+            <img src="/general.png" class="gen-slot-icon" alt="gen">
+            <div class="gen-slot-info">
+              <div class="gen-slot-name">Generał ${idx+1}</div>
+              <div class="gen-slot-status">${sl.killed ? '💀 Zbity' : sl.found ? '✓ Znaleziony' : '? Nieznany'}</div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+
+    list.appendChild(block);
+  }
+
+  // Rysuj markery na mapie
+  for (const id in generals) {
+    placeGeneral(generals[id]);
+  }
+
+  // Uruchom odliczanie
+  startGenTimers();
 }
+
+function clickGenSlot(ch, idx) {
+  socket.emit('grotaClickGenSlot', {ch, idx});
+}
+
+function startGenTimers() {
+  if (genTimerRaf) cancelAnimationFrame(genTimerRaf);
+  function tick() {
+    const {h, mn, s, totalSec} = getTimeToNextRespawn();
+    const timeStr = h > 0
+      ? `${h}:${String(mn).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+      : `${mn}:${String(s).padStart(2,'0')}`;
+    const urgencyClass = totalSec < 300 ? 'now' : totalSec < 1800 ? 'soon' : '';
+
+    for (let ch = 1; ch <= MAX_CH; ch++) {
+      const el = document.getElementById('gen_timer_' + ch);
+      if (el) {
+        el.textContent = timeStr;
+        el.className = 'gen-countdown ' + urgencyClass;
+      }
+    }
+    genTimerRaf = requestAnimationFrame(tick);
+  }
+  genTimerRaf = requestAnimationFrame(tick);
+}
+
+// Gdy minie respy — resetuj stan zabitych
+function checkGenRespawn() {
+  const {totalSec} = getTimeToNextRespawn();
+  if (totalSec < 2) {
+    // Wyślij reset do serwera
+    setTimeout(() => socket.emit('grotaResetGenState'), 1500);
+  }
+}
+setInterval(checkGenRespawn, 1000);
 
 /* SNAPSHOTS */
 function saveSnapshot() {
@@ -819,6 +935,11 @@ mapImg.addEventListener('load', () => { if (heatOn) syncCanvas(); });
 /* SOCKET */
 socket.on('grotaGeneralsUpdate', data => {
   generals = data;
+  renderGenerals();
+});
+
+socket.on('grotaGenStateUpdate', data => {
+  genState = data || {};
   renderGenerals();
 });
 
