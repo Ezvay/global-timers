@@ -437,6 +437,16 @@ function applyPingSize() {
   document.querySelectorAll('.ping-pulse').forEach(el => {
     el.style.width = sz; el.style.height = sz;
   });
+  // Generałowie też skalują się ze sliderem
+  document.querySelectorAll('.general-dot').forEach(el => {
+    el.style.width = sz; el.style.height = sz;
+  });
+  document.querySelectorAll('.general-dot img').forEach(el => {
+    el.style.width = sz; el.style.height = sz;
+  });
+  document.querySelectorAll('.general-pulse').forEach(el => {
+    el.style.width = sz; el.style.height = sz;
+  });
 }
 
 /* STATE */
@@ -662,14 +672,56 @@ function placeGeneral(g) {
   m.style.left = (g.x * 100) + '%';
   m.style.top  = (g.y * 100) + '%';
   const sz = pingSize + 'px';
+  // Sprawdź czy ten generał jest zbity w genState
+  const ch = g.ch;
+  const chSlots = genState[ch] || [];
+  // Znajdź slot powiązany z tym generałem (po id)
+  const slot = chSlots.find(sl => sl.genId === g.id);
+  const isKilled = slot ? slot.killed : false;
+  const dotStyle = isKilled ? 'opacity:0.5;filter:grayscale(0.8);' : '';
   m.innerHTML = `
-    <div class="general-dot" onclick="removeGeneral('${g.id}')" title="Kliknij aby usunąć"
-         style="width:${sz};height:${sz}">
-      <div class="general-pulse" style="width:${sz};height:${sz}"></div>
-      <img src="${GEN_ICON}" alt="general" style="width:${sz};height:${sz};">
-      <div class="general-ch-badge">${g.ch}</div>
+    <div class="general-dot" onclick="toggleGenKilled('${g.id}', ${ch})"
+         title="${isKilled ? 'Zbity — kliknij aby usunąć' : 'Kliknij aby oznaczyć jako zbity'}"
+         style="width:${sz};height:${sz};${dotStyle}">
+      <div class="general-pulse" style="width:${sz};height:${sz};${isKilled?'display:none':''}"></div>
+      <img src="${GEN_ICON}" alt="general" style="width:${sz};height:${sz};background:none;">
+      <div class="general-ch-badge">${ch}</div>
     </div>`;
   generalLayer.appendChild(m);
+}
+
+// Kliknięcie na generała na mapie: pierwsze = zbity, drugie kliknięcie = usuń
+function toggleGenKilled(id, ch) {
+  const chSlots = genState[ch] || [];
+  const slotIdx = chSlots.findIndex(sl => sl.genId === id);
+  if (slotIdx >= 0 && chSlots[slotIdx].killed) {
+    // Już zbity — drugie kliknięcie usuwa z mapy
+    socket.emit('grotaRemoveGeneral', id);
+    // Usuń genId ze slotu
+    chSlots[slotIdx].genId = null;
+    chSlots[slotIdx].killed = false;
+    chSlots[slotIdx].found = false;
+    genState[ch] = chSlots;
+    socket.emit('grotaGenState', genState);
+  } else {
+    // Zaznacz jako zbity
+    if (!genState[ch]) genState[ch] = [{found:false,killed:false,genId:null},{found:false,killed:false,genId:null}];
+    // Znajdź wolny slot lub slot z tym genId
+    let idx = genState[ch].findIndex(sl => sl.genId === id);
+    if (idx < 0) idx = genState[ch].findIndex(sl => !sl.genId);
+    if (idx < 0) idx = 0;
+    genState[ch][idx] = {found:true, killed:true, genId:id};
+    socket.emit('grotaGenState', genState);
+    // Odśwież marker
+    const marker = document.getElementById('gmarker_' + id);
+    if (marker) {
+      const dot = marker.querySelector('.general-dot');
+      if (dot) { dot.style.opacity='0.5'; dot.style.filter='grayscale(0.8)'; dot.title='Zbity — kliknij aby usunąć'; }
+      const pulse = marker.querySelector('.general-pulse');
+      if (pulse) pulse.style.display='none';
+    }
+    renderGenSidebar();
+  }
 }
 
 function removeGeneral(id) { socket.emit('grotaRemoveGeneral', id); }
@@ -695,7 +747,7 @@ function renderGenerals() {
       </div>
       <div class="gen-slots">
         ${slots.map((sl,i) => `
-          <div class="gen-slot ${sl.killed?'killed':sl.found?'found':''}" onclick="genClickSlot(${ch},${i})">
+          <div class="gen-slot ${sl.killed?'killed':sl.found?'found':''}" id="gslot_${ch}_${i}" onclick="genClickSlot(${ch},${i})">
             <img src="${GEN_ICON}" alt="gen">
             <div class="gen-slot-info">
               <div class="gen-slot-name">Generał ${i+1}</div>
@@ -888,7 +940,23 @@ mapImg.addEventListener('load', () => { if (heatOn) syncCanvas(); });
 
 /* SOCKET */
 socket.on('grotaGeneralsUpdate', data => {
+  const prevIds = new Set(Object.keys(generals));
   generals = data;
+  // Nowo dodane generały → automatycznie found=true w sidebarze
+  for (const id in generals) {
+    if (!prevIds.has(id)) {
+      const g = generals[id];
+      const ch = g.ch;
+      if (!genState[ch]) genState[ch] = [{found:false,killed:false,genId:null},{found:false,killed:false,genId:null}];
+      // Znajdź wolny slot
+      let idx = genState[ch].findIndex(sl => sl.genId === id);
+      if (idx < 0) idx = genState[ch].findIndex(sl => !sl.genId && !sl.found);
+      if (idx < 0) idx = genState[ch].findIndex(sl => !sl.genId);
+      if (idx < 0) idx = 0;
+      genState[ch][idx] = {found:true, killed:false, genId:id};
+      socket.emit('grotaGenState', genState);
+    }
+  }
   renderGenerals();
 });
 
@@ -896,6 +964,20 @@ socket.on('grotaGenState', data => {
   genState = data || {};
   renderGenerals();
 });
+
+function renderGenSidebar() {
+  // Odśwież tylko sloty w sidebarze bez resetowania timerów
+  for (let ch = 1; ch <= 8; ch++) {
+    const slots = genState[ch] || [{found:false,killed:false,genId:null},{found:false,killed:false,genId:null}];
+    slots.forEach((sl, i) => {
+      const slotEl = document.getElementById('gslot_' + ch + '_' + i);
+      if (!slotEl) return;
+      slotEl.className = 'gen-slot ' + (sl.killed ? 'killed' : sl.found ? 'found' : '');
+      const statusEl = slotEl.querySelector('.gen-slot-status');
+      if (statusEl) statusEl.textContent = sl.killed ? '💀 Zbity' : sl.found ? '✓ Znaleziony' : '? Nieznany';
+    });
+  }
+}
 
 socket.on('grotaSnapshotsUpdate', data => {
   snapshots = data;
