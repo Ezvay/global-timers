@@ -607,8 +607,11 @@ io.on("connection",(socket)=>{
   socket.on("grotaAddGeneral",(data)=>{
     const id="g_"+Date.now()+"_"+Math.random().toString(36).slice(2,6)
     grotaGenerals[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}
+    grotaGenHistory.push({x:data.x,y:data.y,ch:data.ch,ts:Date.now()})
+    if(grotaGenHistory.length>2000) grotaGenHistory=grotaGenHistory.slice(-2000)
     saveData()
     io.emit("grotaGeneralsUpdate",grotaGenerals)
+    io.emit("grotaGenHistoryUpdate",grotaGenHistory)
   })
   socket.on("grotaGenState",(data)=>{
     grotaGenState = data || {}

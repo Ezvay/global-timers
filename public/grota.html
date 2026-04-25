@@ -1104,7 +1104,10 @@ socket.on('grotaPingsUpdate', data => {
 
 socket.on('grotaGenHistoryUpdate', data => {
   genHistory = Array.isArray(data) ? data : [];
-  if (heatOn) drawGenHeatmap();
+  if (heatOn) {
+    heatGenCanvas.style.opacity = '1';
+    drawGenHeatmap();
+  }
 });
 
 socket.on('grotaHistoryUpdate', data => {
