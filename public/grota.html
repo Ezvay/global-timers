@@ -857,7 +857,7 @@ function clusterPoints(pts) {
       clusters.push({ x: pt.x, y: pt.y, count: 1, weight: w, chWeights });
     }
   }
-  return clusters.filter(c=>c.weight>0.1).sort((a,b) => b.weight - a.weight);
+  return clusters.filter(c=>c.weight>0.01).sort((a,b) => b.weight - a.weight);
 }
 
 // Kolory CH dla heatmapy metinów (ciepłe odcienie)
@@ -873,6 +873,14 @@ const CH_HEAT_COLORS = [
 ];
 
 function drawHeatmap() {
+  // Jeśli canvas nie ma rozmiaru - pobierz z obrazka
+  if (!heatCanvas.width || heatCanvas.width < 10) {
+    const rect = mapImg.getBoundingClientRect();
+    if (rect.width > 0) {
+      heatCanvas.width  = rect.width;
+      heatCanvas.height = rect.height;
+    } else return;
+  }
   const w = heatCanvas.width;
   const h = heatCanvas.height;
   heatCtx.clearRect(0, 0, w, h);
@@ -1029,10 +1037,13 @@ function updateHeatBtn() {
     heatBtn.classList.add('on');
     heatCanvas.classList.add('visible');
     heatGenCanvas.classList.add('visible');
+    // Upewnij się że canvas ma rozmiar
+    if (!heatCanvas.width || heatCanvas.width < 10) syncCanvas();
   } else {
     heatBtn.textContent = '🔥 Heatmapa OFF';
     heatBtn.classList.remove('on');
     heatCanvas.classList.remove('visible');
+    heatGenCanvas.classList.remove('visible');
   }
 }
 
