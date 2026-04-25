@@ -66,17 +66,8 @@
   }
 
   /* CANVAS HEATMAP — sits exactly over image */
-  #heatCanvas{
-    position:absolute;top:0;left:0;width:100%;height:100%;
-    pointer-events:none;border-radius:3px;
-    opacity:0;transition:opacity 0.4s;
-  }
-  #heatGenCanvas{
-    position:absolute;inset:0;pointer-events:none;z-index:3;
-    transition:opacity 0.4s;opacity:0;
-  }
-  #heatGenCanvas.visible{opacity:1;}
   #heatCanvas.visible{opacity:1;}
+  #heatGenCanvas.visible{opacity:1;}
 
   /* PING MARKERS */
   .ping-marker{position:absolute;transform:translate(-50%,-50%);pointer-events:all;z-index:5;display:flex;flex-direction:column;align-items:center;}
@@ -381,11 +372,11 @@
   <div class="map-wrap">
     <div class="map-container" id="mapContainer">
       <img src="/grota_mapa.png" id="mapImg" alt="Mapa Groty" draggable="false">
-      <canvas id="heatCanvas"></canvas>
-      <canvas id="heatGenCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;opacity:0;transition:opacity 0.4s;"></canvas>
-      <canvas id="routeCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;"></canvas>
-      <div id="pingLayer"></div>
-      <div id="generalLayer"></div>
+      <canvas id="heatCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;opacity:0;transition:opacity 0.4s;"></canvas>
+      <canvas id="heatGenCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;opacity:0;transition:opacity 0.4s;"></canvas>
+      <canvas id="routeCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;"></canvas>
+      <div id="pingLayer" style="position:absolute;inset:0;z-index:5;pointer-events:none;"></div>
+      <div id="generalLayer" style="position:absolute;inset:0;z-index:6;pointer-events:none;"></div>
       <div class="map-hint" id="mapHint">Kliknij na mapę aby pingować metina</div>
     </div>
   </div>
@@ -833,23 +824,40 @@ function deleteSnapshot(id) { socket.emit('grotaDeleteSnapshot', id); }
 /* Cluster history points with radius 4% of map */
 const CLUSTER_R = 0.04;
 
+// Decay: aktywność zanika wykładniczo — połowiczny czas zaniku = DECAY_HALF_MS
+const DECAY_HALF_MS = 2 * 60 * 60 * 1000; // 2 godziny
+
+function pointWeight(pt) {
+  if (!pt.ts) return 1;
+  const ageMs = Date.now() - pt.ts;
+  return Math.pow(0.5, ageMs / DECAY_HALF_MS); // 1.0 → 0.5 po 2h → 0.25 po 4h
+}
+
 function clusterPoints(pts) {
   const clusters = [];
   for (const pt of pts) {
+    const w = pointWeight(pt);
+    if (w < 0.05) continue; // ignoruj bardzo stare punkty
     let found = false;
     for (const cl of clusters) {
       const dx = cl.x - pt.x, dy = cl.y - pt.y;
       if (Math.sqrt(dx*dx + dy*dy) < CLUSTER_R) {
+        cl.weight += w;
         cl.count++;
-        // moving centroid
         cl.x = (cl.x * (cl.count-1) + pt.x) / cl.count;
         cl.y = (cl.y * (cl.count-1) + pt.y) / cl.count;
+        // Śledź CH
+        if (!cl.chWeights) cl.chWeights = {};
+        cl.chWeights[pt.ch||1] = (cl.chWeights[pt.ch||1]||0) + w;
         found = true; break;
       }
     }
-    if (!found) clusters.push({ x: pt.x, y: pt.y, count: 1 });
+    if (!found) {
+      const chWeights = {}; chWeights[pt.ch||1] = w;
+      clusters.push({ x: pt.x, y: pt.y, count: 1, weight: w, chWeights });
+    }
   }
-  return clusters.sort((a,b) => b.count - a.count);
+  return clusters.filter(c=>c.weight>0.1).sort((a,b) => b.weight - a.weight);
 }
 
 // Kolory CH dla heatmapy metinów (ciepłe odcienie)
@@ -870,52 +878,61 @@ function drawHeatmap() {
   heatCtx.clearRect(0, 0, w, h);
   if (!heatOn || history.length === 0) return;
 
-  // Grupuj punkty per CH
-  const byCh = {};
-  for (const pt of history) {
-    const ch = pt.ch || 1;
-    if (!byCh[ch]) byCh[ch] = [];
-    byCh[ch].push(pt);
-  }
-
-  // Oblicz globalne max dla normalizacji
-  let globalMax = 1;
   const allClusters = clusterPoints(history);
-  if (allClusters.length) globalMax = allClusters[0].count;
+  if (!allClusters.length) return;
+  const maxWeight = allClusters[0].weight || 1;
 
-  // Rysuj każdy CH osobnym kolorem
-  for (let ch = 1; ch <= 8; ch++) {
-    if (!byCh[ch] || byCh[ch].length === 0) continue;
-    const clusters = clusterPoints(byCh[ch]);
-    const [r, g, b] = CH_HEAT_COLORS[(ch-1) % CH_HEAT_COLORS.length];
+  for (const cl of allClusters) {
+    const cx = cl.x * w;
+    const cy = cl.y * h;
+    const intensity = cl.weight / maxWeight; // 0..1 z uwzględnieniem decay
 
-    for (const cl of clusters) {
-      const cx = cl.x * w;
-      const cy = cl.y * h;
-      const intensity = cl.count / globalMax;
-      const radius = (0.04 + intensity * 0.05) * w;
-      const alpha = 0.2 + intensity * 0.6;
+    // Znajdź dominujący CH w tym klastrze
+    const domCh = cl.chWeights
+      ? parseInt(Object.entries(cl.chWeights).sort((a,b)=>b[1]-a[1])[0][0])
+      : 1;
+    const [r, g, b] = CH_HEAT_COLORS[(domCh-1) % CH_HEAT_COLORS.length];
 
-      const grad = heatCtx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-      grad.addColorStop(0,   `rgba(${r},${g},${b},${alpha})`);
-      grad.addColorStop(0.45,`rgba(${Math.round(r*0.7)},${Math.round(g*0.7)},${Math.round(b*0.7)},${alpha*0.55})`);
-      grad.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+    // Większy radius
+    const radius = (0.07 + intensity * 0.09) * w;
+    const alpha  = 0.22 + intensity * 0.58;
 
-      heatCtx.beginPath();
-      heatCtx.arc(cx, cy, radius, 0, Math.PI*2);
-      heatCtx.fillStyle = grad;
-      heatCtx.fill();
+    const grad = heatCtx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    grad.addColorStop(0,    `rgba(${r},${g},${b},${alpha})`);
+    grad.addColorStop(0.4,  `rgba(${Math.round(r*0.8)},${Math.round(g*0.8)},${Math.round(b*0.8)},${alpha*0.6})`);
+    grad.addColorStop(0.75, `rgba(${r},${g},${b},${alpha*0.18})`);
+    grad.addColorStop(1,    `rgba(${r},${g},${b},0)`);
+
+    heatCtx.beginPath();
+    heatCtx.arc(cx, cy, radius, 0, Math.PI*2);
+    heatCtx.fillStyle = grad;
+    heatCtx.fill();
+
+    // Etykieta CH — półprzezroczysty napis
+    if (intensity > 0.15) {
+      const fontSize = Math.max(11, Math.round(12 + intensity * 8));
+      heatCtx.save();
+      heatCtx.font = `bold ${fontSize}px 'Cinzel', serif`;
+      heatCtx.textAlign = 'center';
+      heatCtx.textBaseline = 'middle';
+      const labelAlpha = 0.35 + intensity * 0.45;
+      heatCtx.fillStyle = `rgba(255,255,255,${labelAlpha})`;
+      heatCtx.shadowColor = `rgba(${r},${g},${b},0.9)`;
+      heatCtx.shadowBlur = 8;
+      heatCtx.fillText(`CH${domCh}`, cx, cy);
+      heatCtx.restore();
     }
   }
 
   // Update sidebar hotspot list
-  updateHotspots(allClusters.slice(0, 5), globalMax);
+  updateHotspots(allClusters.slice(0, 5), maxWeight);
 }
 
-// Heatmapa generałów — niebieska
+// Heatmapa generałów — niebieska z decay
 function drawGenHeatmap() {
-  heatGenCanvas.width  = heatCanvas.width  || mapImg.offsetWidth;
-  heatGenCanvas.height = heatCanvas.height || mapImg.offsetHeight;
+  const rect = mapImg.getBoundingClientRect();
+  heatGenCanvas.width  = rect.width  || mapImg.offsetWidth;
+  heatGenCanvas.height = rect.height || mapImg.offsetHeight;
   const w = heatGenCanvas.width;
   const h = heatGenCanvas.height;
   heatGenCtx.clearRect(0, 0, w, h);
@@ -923,25 +940,39 @@ function drawGenHeatmap() {
 
   const clusters = clusterPoints(genHistory);
   if (!clusters.length) return;
-  const maxCount = clusters[0].count;
+  const maxWeight = clusters[0].weight || 1;
 
   for (const cl of clusters) {
     const cx = cl.x * w;
     const cy = cl.y * h;
-    const intensity = cl.count / maxCount;
-    const radius = (0.05 + intensity * 0.06) * w;
-    const alpha = 0.18 + intensity * 0.55;
+    const intensity = cl.weight / maxWeight;
+    const radius = (0.08 + intensity * 0.10) * w;
+    const alpha  = 0.20 + intensity * 0.55;
 
     const grad = heatGenCtx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-    grad.addColorStop(0,   `rgba(40,180,255,${alpha})`);
-    grad.addColorStop(0.35,`rgba(20,100,220,${alpha*0.6})`);
-    grad.addColorStop(0.7, `rgba(10,40,180,${alpha*0.25})`);
-    grad.addColorStop(1,   'rgba(0,20,120,0)');
+    grad.addColorStop(0,   `rgba(40,200,255,${alpha})`);
+    grad.addColorStop(0.3, `rgba(20,120,240,${alpha*0.65})`);
+    grad.addColorStop(0.65,`rgba(10,50,200,${alpha*0.25})`);
+    grad.addColorStop(1,   'rgba(0,20,140,0)');
 
     heatGenCtx.beginPath();
     heatGenCtx.arc(cx, cy, radius, 0, Math.PI*2);
     heatGenCtx.fillStyle = grad;
     heatGenCtx.fill();
+
+    // Etykieta generała
+    if (intensity > 0.2) {
+      const fontSize = Math.max(10, Math.round(11 + intensity * 7));
+      heatGenCtx.save();
+      heatGenCtx.font = `bold ${fontSize}px 'Cinzel', serif`;
+      heatGenCtx.textAlign = 'center';
+      heatGenCtx.textBaseline = 'middle';
+      heatGenCtx.fillStyle = `rgba(180,230,255,${0.3 + intensity*0.45})`;
+      heatGenCtx.shadowColor = 'rgba(40,160,255,0.9)';
+      heatGenCtx.shadowBlur = 10;
+      heatGenCtx.fillText('GEN', cx, cy);
+      heatGenCtx.restore();
+    }
   }
 }
 
@@ -951,7 +982,7 @@ function updateHotspots(top, maxCount) {
   if (!heatOn || top.length === 0) { sec.style.display = 'none'; return; }
   sec.style.display = 'block';
   list.innerHTML = top.map((cl, i) => {
-    const intensity = cl.count / maxCount;
+    const intensity = cl.weight / maxCount;
     const color = intensity > 0.7 ? '#ffda28' : intensity > 0.35 ? '#ff8c1e' : '#b45014';
     // Znajdź dominujący CH w tym obszarze
     const nearby = history.filter(pt => Math.hypot(pt.x-cl.x, pt.y-cl.y) < 0.08);
@@ -1628,6 +1659,8 @@ function doReset() {
 }
 
 // ── INIT ──
+// Auto-odśwież heatmapę co 5 minut (decay widoczny)
+setInterval(() => { if (heatOn) syncCanvas(); }, 5 * 60 * 1000);
 rtLoad();
 rtRoutes.forEach((r,i) => { if (r.visible) rtStartAnim(i); });
 
