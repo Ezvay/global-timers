@@ -69,6 +69,7 @@ let grotaGenerals = {}
 let grotaSnapshots= []
 let grotaDeadHistory = []  // historia zbitych metinów z timerami
 let grotaGenState    = {}  // stan generałów per CH
+let grotaGenHistory  = []  // historia pozycji generałów
 let charOrder     = []
 
 /* ======================
@@ -101,6 +102,7 @@ async function connectDB() {
     // Wczytaj dead history, odfiltruj wygasłe (>35min)
     grotaDeadHistory = (doc.grotaDeadHistory || []).filter(d => Date.now() - d.killedAt < 35*60*1000)
     grotaGenState    = doc.grotaGenState    || {}
+    grotaGenHistory  = doc.grotaGenHistory  || []
     charOrder           = doc.charOrder           || []
   charsList           = doc.charsList           || {}
   skarbiec            = doc.skarbiec            || { inwestycje: {}, udzialy: {}, sprzedaz: [], zakupy: [] }
@@ -164,7 +166,7 @@ async function saveNow() {
       { _id: DOC_ID },
       { _id: DOC_ID, timers, characters, tasks, resetHour, resetMinute,
         customPlaces, customTimers, grotaPings, grotaHistory,
-        grotaGenerals, grotaSnapshots, grotaDeadHistory, grotaGenState, charOrder, charsList, skarbiec,
+        grotaGenerals, grotaSnapshots, grotaDeadHistory, grotaGenState, grotaGenHistory, charOrder, charsList, skarbiec,
         runningTimers: [...runningTimers],
         runningCustomTimers: [...runningCustomTimers] },
       { upsert: true }
@@ -561,7 +563,7 @@ io.on("connection",(socket)=>{
   socket.on("grotaAddPing",(data)=>{
     const id="g_"+Date.now()+"_"+Math.random().toString(36).slice(2,6)
     grotaPings[id]={id,x:data.x,y:data.y,ch:data.ch,startedAt:Date.now()}
-    grotaHistory.push({x:data.x,y:data.y,ts:Date.now()})
+    grotaHistory.push({x:data.x,y:data.y,ch:data.ch,ts:Date.now()})
     if(grotaHistory.length>2000) grotaHistory=grotaHistory.slice(-2000)
     saveData()
     io.emit("grotaPingsUpdate",grotaPings)
@@ -668,6 +670,7 @@ io.on("connection",(socket)=>{
   grotaDeadHistory = grotaDeadHistory.filter(d => Date.now() - d.killedAt < 35*60*1000)
   socket.emit("grotaDeadHistoryUpdate", grotaDeadHistory)
   socket.emit("grotaGenState", grotaGenState)
+  socket.emit("grotaGenHistoryUpdate", grotaGenHistory)
 })
 
 /* ======================
