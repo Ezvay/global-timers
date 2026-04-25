@@ -1022,11 +1022,11 @@ function toggleHeat() {
   updateHeatBtn();
   syncCanvas();
   if (heatOn) {
-    heatCanvas.classList.add('visible');
-    heatGenCanvas.classList.add('visible');
+    heatCanvas.style.opacity    = '1';
+    heatGenCanvas.style.opacity = '1';
   } else {
-    heatCanvas.classList.remove('visible');
-    heatGenCanvas.classList.remove('visible');
+    heatCanvas.style.opacity    = '0';
+    heatGenCanvas.style.opacity = '0';
     document.getElementById('hotspotSection').style.display='none';
   }
 }
@@ -1035,15 +1035,14 @@ function updateHeatBtn() {
   if (heatOn) {
     heatBtn.textContent = '🔥 Heatmapa ON';
     heatBtn.classList.add('on');
-    heatCanvas.classList.add('visible');
-    heatGenCanvas.classList.add('visible');
-    // Upewnij się że canvas ma rozmiar
+    heatCanvas.style.opacity    = '1';
+    heatGenCanvas.style.opacity = '1';
     if (!heatCanvas.width || heatCanvas.width < 10) syncCanvas();
   } else {
     heatBtn.textContent = '🔥 Heatmapa OFF';
     heatBtn.classList.remove('on');
-    heatCanvas.classList.remove('visible');
-    heatGenCanvas.classList.remove('visible');
+    heatCanvas.style.opacity    = '0';
+    heatGenCanvas.style.opacity = '0';
   }
 }
 
