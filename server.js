@@ -464,9 +464,9 @@ io.on("connection",(socket)=>{
     saveNow(); io.emit("skarbiecUpdate", skarbiec)
   })
   socket.on("skarbiecAddSprzedaz",(data)=>{
-    const {opis, kwota, imgUrl} = data
+    const {opis, kwota, kto, imgUrl} = data
     if(!skarbiec.sprzedaz) skarbiec.sprzedaz = []
-    skarbiec.sprzedaz.unshift({ id:'sp_'+Date.now(), opis, kwota:parseFloat(kwota)||0, imgUrl:imgUrl||'', ts:Date.now() })
+    skarbiec.sprzedaz.unshift({ id:'sp_'+Date.now(), opis, kwota:parseFloat(kwota)||0, kto:kto||'', imgUrl:imgUrl||'', ts:Date.now() })
     saveNow(); io.emit("skarbiecUpdate", skarbiec)
   })
   socket.on("skarbiecRemoveSprzedaz",(id)=>{
